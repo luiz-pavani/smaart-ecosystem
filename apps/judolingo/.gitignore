@@ -1,0 +1,37 @@
+# WordPress config with credentials
+wp-config.php
+
+# Media files (videos and images)
+*.mp4
+*.MP4
+*.png
+*.PNG
+*.jpg
+*.JPG
+*.jpeg
+*.JPEG
+*.gif
+*.GIF
+
+# WordPress uploads
+wp-content/uploads/
+wp-content/cache/
+wp-content/backup/
+
+# WordPress plugins that can be reinstalled
+wp-content/plugins/
+
+# Temporary and cache files
+.tmb/
+.private/
+*.log
+
+# Server configs
+.htaccess
+.htaccess.bk
+
+# Editor files
+.DS_Store
+*.swp
+*.swo
+*~

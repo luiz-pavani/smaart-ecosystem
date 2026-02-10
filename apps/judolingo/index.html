@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <title>JudoLingo - Profep Max</title>
+    
+    <link rel="manifest" href="manifest.json?v=44">
+    <meta name="theme-color" content="#020617"> 
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* =========================================
+           1. ESTILOS GLOBAIS E SAFE AREA
+           ========================================= */
+        :root {
+            --sat: env(safe-area-inset-top);
+            --sab: env(safe-area-inset-bottom);
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #020617; 
+            color: #f8fafc; 
+            user-select: none; 
+            -webkit-tap-highlight-color: transparent; 
+            overspray-behavior-y: none; 
+            height: 100dvh; 
+            width: 100vw; 
+            overflow: hidden; 
+        }
+
+        .pt-safe { padding-top: max(1rem, var(--sat)); }
+        .pb-safe { padding-bottom: max(1rem, var(--sab)); }
+        .top-safe { top: var(--sat); }
+        
+        .scroll-container {
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .scroll-container::-webkit-scrollbar { display: none; }
+
+        .fade-in { animation: fadeIn 0.6s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* =========================================
+           2. CORES DAS FAIXAS (JUDOCA)
+           ========================================= */
+        .text-belt-Branca { color: #f8fafc; } 
+        .text-belt-Cinza { color: #94a3b8; } 
+        .text-belt-Azul { color: #3b82f6; }
+        .text-belt-Amarela { color: #eab308; } 
+        .text-belt-Laranja { color: #f97316; } 
+        .text-belt-Verde { color: #22c55e; }
+        .text-belt-Roxa { color: #a855f7; } 
+        .text-belt-Marrom { color: #78350f; } 
+        .text-belt-Preta { color: #ffffff; }
+
+        /* =========================================
+           3. CORES DOS NÍVEIS (ARBITRAGEM)
+           ========================================= */
+        .text-ref-Aspirante { color: #94a3b8; } 
+        .text-ref-EstadualC { color: #22d3ee; } 
+        .text-ref-EstadualB { color: #0ea5e9; } 
+        .text-ref-EstadualA { color: #2563eb; }
+        .text-ref-NacionalC { color: #fde047; } 
+        .text-ref-NacionalB { color: #eab308; } 
+        .text-ref-NacionalA { color: #ca8a04; }
+        .text-ref-InternacionalC { color: #f87171; } 
+        .text-ref-InternacionalB { color: #ef4444; } 
+        .text-ref-InternacionalA { color: #b91c1c; }
+
+        /* =========================================
+           4. ELEMENTOS DA TRILHA (NODES)
+           ========================================= */
+        .path-node { 
+            width: 80px; height: 80px; 
+            border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 24px; font-weight: 900; 
+            position: relative; z-index: 10; 
+            transition: all 0.2s; border-width: 4px; 
+        }
+        .node-locked { 
+            background-color: #1e293b; 
+            border-color: #334155; 
+            color: #475569; 
+            cursor: not-allowed; 
+        }
+        .node-active { 
+            background-color: #2563eb; 
+            border-color: #60a5fa; 
+            color: white; 
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.6); 
+            animation: pulseBlue 2s infinite; 
+            cursor: pointer; 
+        }
+        .node-completed { 
+            background-color: #059669; 
+            border-color: #10b981; 
+            color: white; 
+            cursor: pointer; 
+        }
+        .node-completed:active { transform: scale(0.95); }
+        
+        .path-line { 
+            width: 6px; height: 60px; 
+            background-color: #334155; 
+            z-index: 0; margin: -5px 0; 
+        }
+        
+        @keyframes pulseBlue { 
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); } 
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); } 
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } 
+        }
+
+        /* =========================================
+           5. QUIZ E INTERFACE
+           ========================================= */
+        .quiz-option { 
+            transition: all 0.2s; 
+            border: 2px solid #1e293b; 
+            background: #1e293b; 
+            color: #94a3b8; 
+            position: relative; 
+        }
+        .quiz-option:active { transform: scale(0.98); }
+        .option-selected { 
+            background: #172554; 
+            border-color: #3b82f6; 
+            color: #60a5fa; 
+        }
+        
+        .media-container { 
+            width: 100%; max-height: 250px; 
+            overflow: hidden; border-radius: 12px; margin-bottom: 20px; 
+            display: flex; justify-content: center; 
+            background: #0f172a; border: 1px solid #1e293b; 
+        }
+        .media-content { 
+            max-width: 100%; max-height: 250px; 
+            object-fit: contain; 
+        }
+
+        .timer-bar-container { 
+            position: absolute; top: 0; left: 0; right: 0; 
+            height: 4px; background: #334155; z-index: 30; 
+        }
+        .timer-bar-fill { 
+            height: 100%; background: #22c55e; 
+            transition: width 1s linear, background-color 0.5s; 
+        }
+        
+        /* =========================================
+           6. MODAIS E ANIMAÇÕES
+           ========================================= */
+        #feedback-modal, #promotion-modal, #gameover-modal, #ranking-modal, #medal-modal, #admin-modal { 
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        .modal-hidden { transform: translateY(110%); }
+        .modal-visible { transform: translateY(0); }
+        
+        #streak-toast { 
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); 
+            transform: translateY(-150%); 
+        }
+        .toast-visible { transform: translateY(20px) !important; }
+
+        .order-badge { 
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%); 
+            background: #3b82f6; color: white; width: 24px; height: 24px; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+            font-size: 12px; font-weight: bold; 
+        }
+        
+        /* Tabs & Gallery */
+        .tab-active { background-color: #4f46e5; color: white; border-color: #6366f1; }
+        .tab-inactive { background-color: #1e293b; color: #94a3b8; border-color: #334155; }
+        
+        .gallery-item { transition: all 0.3s; }
+        .item-locked { filter: grayscale(100%) opacity(30%); }
+        .item-unlocked { filter: grayscale(0%) opacity(100%); transform: scale(1); }
+        .item-unlocked:hover { transform: scale(1.1); }
+        
+        /* Medal Animation */
+        @keyframes spin3D { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
+        .medal-spin { animation: spin3D 4s infinite ease-in-out; transform-style: preserve-3d; }
+    </style>
+</head>
+<body class="bg-slate-950">
+
+    <div id="streak-toast" class="fixed top-safe left-0 right-0 z-[60] flex justify-center pointer-events-none px-4 pt-4">
+        <div class="bg-orange-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border-2 border-orange-400">
+            <i class="fa-solid fa-fire text-yellow-300 animate-pulse text-xl"></i>
+            <div>
+                <div class="font-black uppercase text-xs tracking-widest text-orange-200">Disciplina Diária</div>
+                <div class="font-bold text-sm">Ofensiva aumentada!</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-start" class="h-full w-full flex flex-col bg-slate-950 relative z-50 fade-in overflow-hidden">
+        <div class="flex-1 overflow-y-auto scroll-container flex flex-col items-center w-full pt-safe pb-safe px-6">
+            <div class="flex flex-col items-center justify-start w-full min-h-full py-6 gap-6">
+                
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl px-6 py-3 flex items-center gap-4 shadow-lg transform hover:scale-105 transition shrink-0">
+                    <i class="fa-solid fa-fire text-3xl text-orange-500 drop-shadow-[0_0_10px_rgba(249,115,22,0.5)] animate-pulse"></i>
+                    <div class="text-left">
+                        <div class="text-2xl font-black text-white leading-none" id="streak-counter">1</div>
+                        <div class="text-[9px] font-bold text-slate-500 uppercase tracking-widest" id="streak-label">Dia Seguido</div>
+                    </div>
+                </div>
+                <div class="text-orange-500/80 text-[10px] font-bold uppercase tracking-widest -mt-4 mb-2" id="streak-msg">Mantenha o Zanshin!</div>
+
+                <div class="flex flex-col items-center shrink-0" onclick="triggerAdmin()" class="cursor-pointer">
+                    <div class="w-24 h-24 bg-slate-900 rounded-full flex items-center justify-center mb-4 border-4 border-slate-800 shadow-[0_0_40px_rgba(0,0,0,0.5)] active:scale-95 transition">
+                        <i class="fa-solid fa-torii-gate text-4xl text-slate-200"></i>
+                    </div>
+                    <h1 class="text-4xl font-black text-white tracking-tighter mb-2 drop-shadow-lg">JUDO<span class="text-red-600">LINGO</span></h1>
+                    <span class="bg-yellow-500/10 text-yellow-500 text-[10px] font-bold px-3 py-1 rounded-full border border-yellow-500/30 tracking-widest uppercase">Beta V44</span>
+                </div>
+                
+                <div class="grid grid-cols-1 gap-3 w-full max-w-sm shrink-0">
+                    
+                    <button onclick="enterPathMode('judoka')" class="group relative bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-slate-700 flex items-center gap-4 transition shadow-lg shrink-0">
+                        <div class="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white text-xl shadow-lg shadow-red-900/50 shrink-0"><i class="fa-solid fa-user-ninja"></i></div>
+                        <div class="text-left">
+                            <div class="text-white font-black uppercase tracking-wider text-sm">Caminho do Judoca</div>
+                            <div class="text-slate-400 text-xs">Sua jornada técnica</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right ml-auto text-slate-500"></i>
+                    </button>
+
+                    <button onclick="enterGallery()" class="group relative bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-slate-700 flex items-center gap-4 transition shadow-lg shrink-0">
+                        <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white text-xl shadow-lg shadow-purple-900/50 shrink-0"><i class="fa-solid fa-medal"></i></div>
+                        <div class="text-left">
+                            <div class="text-white font-black uppercase tracking-wider text-sm">Galeria de Conquistas</div>
+                            <div class="text-slate-400 text-xs">Suas Medalhas e Faixas</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right ml-auto text-slate-500"></i>
+                    </button>
+
+                    <button onclick="enterPathMode('referee')" class="group relative bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-slate-700 flex items-center gap-4 transition shadow-lg shrink-0">
+                        <div class="w-12 h-12 rounded-full bg-slate-950 flex items-center justify-center text-white text-xl shadow-lg border border-slate-600 shrink-0">
+                            <i class="fa-solid fa-scale-balanced text-yellow-500"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-white font-black uppercase tracking-wider text-sm">Carreira do Árbitro</div>
+                            <div class="text-slate-400 text-xs">Domine as Regras</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right ml-auto text-slate-500"></i>
+                    </button>
+
+                    <button onclick="openRanking('golden')" class="group relative bg-indigo-600 hover:bg-indigo-500 p-3 rounded-xl border border-indigo-400 flex items-center justify-center gap-2 transition shadow-lg shrink-0 w-full mb-1">
+                        <i class="fa-solid fa-earth-americas text-white"></i>
+                        <span class="text-white font-black uppercase tracking-widest text-xs">Ranking Global</span>
+                    </button>
+
+                    <button onclick="startMode('golden')" class="group relative bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-yellow-500/30 flex items-center gap-4 transition shadow-lg shrink-0">
+                        <div class="w-12 h-12 rounded-full bg-yellow-500 flex items-center justify-center text-slate-900 text-xl shadow-lg shadow-yellow-500/20 shrink-0"><i class="fa-solid fa-trophy"></i></div>
+                        <div class="text-left">
+                            <div class="text-yellow-500 font-black uppercase tracking-wider text-sm">Golden Score</div>
+                            <div class="text-slate-400 text-xs" id="record-golden">Recorde: 0</div>
+                        </div>
+                        <i class="fa-solid fa-play ml-auto text-yellow-500"></i>
+                    </button>
+
+                    <div class="grid grid-cols-2 gap-3 shrink-0">
+                        <button onclick="startMode('randori')" class="group relative bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-slate-700 flex flex-col items-center justify-center gap-2 transition shadow-lg h-32 shrink-0">
+                            <div class="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white shadow-lg"><i class="fa-solid fa-stopwatch"></i></div>
+                            <div class="text-center">
+                                <div class="text-white font-bold uppercase text-xs">Randori</div>
+                                <div class="text-slate-500 text-[10px]" id="record-randori">Rec: 0</div>
+                            </div>
+                        </button>
+
+                        <button onclick="startMode('kata')" class="group relative bg-slate-800 hover:bg-slate-700 p-4 rounded-xl border border-slate-700 flex flex-col items-center justify-center gap-2 transition shadow-lg h-32 shrink-0">
+                            <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white shadow-lg"><i class="fa-solid fa-scroll"></i></div>
+                            <div class="text-center">
+                                <div class="text-white font-bold uppercase text-xs">Kata</div>
+                                <div class="text-slate-500 text-[10px]">Sequência</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <p id="loading-text" class="mt-4 text-xs text-slate-600 animate-pulse hidden">Carregando dojo...</p>
+                
+                <div class="shrink-0 text-center opacity-60 pb-12 mt-8 w-full">
+                    <a href="https://www.profepmax.com.br" target="_blank" class="font-black text-lg text-slate-300 hover:text-white transition">PROFEP <span class="text-red-600 italic">MAX</span></a>
+                    <div class="mt-4">
+                        <a href="mailto:me@masteresportes.com?subject=Sugestão%20JudoLingo" class="text-[10px] font-bold text-sky-500 hover:text-sky-300 border border-sky-500/30 px-3 py-1.5 rounded-full bg-sky-500/10 inline-flex items-center gap-1"><i class="fa-solid fa-paper-plane"></i> Enviar Questão</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-path" class="hidden h-full flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] overflow-hidden">
+        <header class="absolute top-0 w-full bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-4 z-30 shadow-lg pt-safe pb-2 min-h-[5rem]">
+            <button onclick="backToHome()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="flex flex-col items-center">
+                <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1" id="path-label-type">Nível Atual</div>
+                <div id="current-belt-display" class="font-black text-xl flex items-center gap-2"><i class="fa-solid fa-ribbon" id="belt-icon"></i><span id="belt-name">...</span></div>
+            </div>
+            <a href="https://www.profepmax.com.br" target="_blank" class="flex flex-col items-end group">
+                <span class="text-[8px] uppercase font-bold tracking-widest text-slate-500 mb-0.5 group-hover:text-sky-400 transition">Conteúdo</span>
+                <div class="font-black text-sm tracking-tighter text-slate-300 group-hover:text-white transition">PROFEP<span class="text-red-600 italic">MAX</span></div>
+            </a>
+        </header>
+
+        <div id="nav-up-container" class="absolute top-[5.5rem] w-full flex justify-center py-2 bg-slate-900/50 hidden z-20 mt-safe">
+            <button onclick="navigateBelts(1)" class="text-slate-400 hover:text-white flex flex-col items-center animate-bounce"><i class="fa-solid fa-chevron-up text-2xl"></i><span class="text-[10px] uppercase font-bold tracking-widest">Avançar Nível</span></button>
+        </div>
+
+        <main id="path-scroll-area" class="flex-1 overflow-y-auto scroll-container flex flex-col items-center relative pt-36 pb-32">
+            <div id="nodes-container" class="relative flex flex-col items-center w-full max-w-md pt-6"></div>
+        </main>
+
+        <div id="nav-down-container" class="absolute bottom-0 w-full flex justify-center py-4 bg-slate-900 border-t border-slate-800 z-30 shrink-0 hidden cursor-pointer hover:bg-slate-800 transition pb-safe" onclick="navigateBelts(-1)">
+            <div class="flex flex-col items-center text-slate-400 group"><span class="text-[10px] uppercase font-bold tracking-widest mb-1 group-hover:text-white">Nível Anterior</span><i class="fa-solid fa-chevron-down text-2xl group-hover:text-white group-hover:translate-y-1 transition"></i></div>
+        </div>
+    </div>
+
+    <div id="screen-gallery" class="hidden h-full flex flex-col bg-slate-950 relative overflow-hidden">
+        <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-4 z-30 shadow-lg pt-safe pb-4 min-h-[5rem] shrink-0">
+            <button onclick="backToHome()" class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2 class="text-lg font-black text-white uppercase tracking-widest">Sala de Troféus</h2>
+            <div class="w-10"></div>
+        </header>
+        <main class="flex-1 overflow-y-auto scroll-container p-6 pb-24">
+            <div class="mb-8">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2"><i class="fa-solid fa-ribbon mr-2"></i>Faixas Conquistadas</h3>
+                <div id="gallery-belts" class="grid grid-cols-3 gap-4"></div>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-800 pb-2"><i class="fa-solid fa-medal mr-2"></i>Medalhas de Mérito</h3>
+                <div id="gallery-medals" class="grid grid-cols-3 gap-4"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="screen-quiz" class="hidden h-full flex flex-col bg-slate-950 relative overflow-hidden">
+        <div id="randori-timer-bar" class="timer-bar-container hidden"><div id="randori-fill" class="timer-bar-fill" style="width: 100%"></div></div>
+
+        <header class="bg-slate-900 z-20 shrink-0 pt-safe pb-2 border-b border-slate-800 flex items-center justify-between px-4 min-h-[5rem]">
+            <button onclick="backToContext()" class="text-slate-400 hover:text-white w-16 text-left"><i class="fa-solid fa-chevron-left text-xl mr-2"></i></button>
+            <div class="flex flex-col items-center">
+                <div id="quiz-header-title" class="text-slate-200 font-bold text-sm">Fase <span id="quiz-level-num">1</span></div>
+                <a href="https://www.profepmax.com.br" target="_blank" class="text-[9px] text-slate-500 font-bold hover:text-sky-400 flex items-center gap-1 mt-0.5 tracking-tight">PROFEP <span class="text-red-600 italic">MAX</span></a>
+            </div>
+            <div class="flex gap-1 text-lg w-20 justify-end items-center" id="lives-container"></div>
+        </header>
+
+        <main class="flex-1 flex flex-col items-center p-6 pb-32 w-full max-w-2xl mx-auto relative overflow-y-auto scroll-container">
+            <div class="w-full h-2 bg-slate-800 rounded-full mb-4 overflow-hidden shrink-0"><div id="quiz-progress-bar" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div></div>
+            <div id="mode-badge" class="hidden mb-4 px-4 py-2 rounded-lg text-sm font-bold border flex items-center gap-2 shrink-0 w-full justify-center"></div>
+            <div id="question-media-container" class="media-container hidden shrink-0"></div>
+            <h3 id="question-text" class="text-xl md:text-2xl font-bold text-white mb-6 leading-snug text-left w-full shrink-0 pt-2"></h3>
+            <div id="options-grid" class="space-y-3 w-full mb-6 shrink-0"></div>
+            <div id="question-credit" class="text-xs text-slate-500 w-full text-center border-t border-slate-800 pt-4 pb-2 mt-auto hidden shrink-0">
+                <span class="opacity-60 uppercase tracking-wide text-[10px]">Questão enviada por</span><br>
+                <span id="credit-name" class="font-bold text-slate-300 text-sm"></span>
+                <a id="credit-link" href="#" target="_blank" class="text-sky-500 hover:text-sky-400 block mt-1 transition"></a>
+            </div>
+            <div class="w-full text-center pb-8 mt-4 shrink-0">
+                <a href="mailto:me@masteresportes.com?subject=Erro%20JudoLingo" class="text-[10px] text-slate-600 hover:text-sky-500 transition flex items-center justify-center gap-1"><i class="fa-solid fa-circle-exclamation"></i> Reportar erro</a>
+            </div>
+        </main>
+        
+        <div id="quiz-footer" class="fixed bottom-0 w-full p-4 bg-slate-950/90 backdrop-blur-md border-t border-slate-800 z-50 pb-safe">
+            <button id="btn-check" onclick="checkAnswer()" class="w-full py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-700 shadow-lg" disabled>Verificar</button>
+        </div>
+    </div>
+
+    <div id="feedback-modal" class="hidden absolute bottom-0 left-0 right-0 p-6 modal-hidden z-[60] bg-slate-900 border-t border-slate-700 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.6)] pb-safe">
+        <div class="flex items-center gap-4 mb-6">
+            <div id="feedback-icon" class="w-14 h-14 rounded-full flex items-center justify-center text-3xl bg-slate-800 border-2 border-slate-700"></div>
+            <div>
+                <h4 id="feedback-title" class="font-black text-2xl text-white mb-1"></h4>
+                <p id="feedback-msg" class="text-slate-400 font-medium"></p>
+            </div>
+        </div>
+        <button id="btn-feedback-action" onclick="nextQuestion()" class="w-full bg-white hover:bg-slate-200 text-slate-950 font-black py-4 rounded-xl uppercase tracking-wider text-lg transition shadow-lg mb-4">Continuar</button>
+    </div>
+
+    <div id="promotion-modal" class="hidden absolute inset-0 z-50 bg-slate-950/98 flex flex-col items-center justify-center p-6 text-center modal-hidden">
+        <div class="mb-8 relative"><i class="fa-solid fa-certificate text-9xl text-yellow-500 animate-spin-slow absolute top-0 left-0 opacity-30 blur-xl"></i><i class="fa-solid fa-trophy text-7xl text-yellow-400 relative z-10 animate-bounce"></i></div>
+        <h2 class="text-4xl font-black text-white mb-4 uppercase tracking-tight">Promoção!</h2>
+        <p class="text-slate-400 text-lg mb-8 max-w-xs">Você completou o nível e avançou para:</p>
+        <div class="text-3xl font-black mb-12 px-10 py-6 border-4 rounded-2xl uppercase tracking-widest bg-slate-900 shadow-2xl flex items-center gap-4" id="new-belt-badge"><i class="fa-solid fa-ribbon"></i><span id="new-belt-name">FAIXA CINZA</span></div>
+        <button onclick="closePromotion()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black py-5 px-12 rounded-xl shadow-lg shadow-yellow-500/30 transition uppercase tracking-widest text-xl"><i class="fa-solid fa-check mr-2"></i> Continuar</button>
+    </div>
+
+    <div id="medal-modal" class="hidden absolute inset-0 z-[70] bg-slate-950/98 flex flex-col items-center justify-center p-6 text-center modal-hidden">
+        <div class="mb-12 relative scale-150 flex items-center justify-center z-0">
+            <div class="absolute bg-gradient-to-b from-slate-800 to-slate-900 w-48 h-48 rounded-full border-4 border-yellow-500/30 shadow-[0_0_50px_rgba(234,179,8,0.3)] z-0"></div>
+            <i class="fa-solid fa-sun text-9xl text-yellow-500/20 animate-spin-slow absolute blur-2xl z-10"></i>
+            <i id="medal-unlock-icon" class="fa-solid fa-medal text-9xl text-yellow-400 relative z-20 medal-spin drop-shadow-[0_0_30px_rgba(250,204,21,0.8)]"></i>
+        </div>
+        <h2 class="text-3xl font-black text-white mb-2 uppercase tracking-tight relative z-30">Nova Conquista!</h2>
+        <div class="mb-8 relative z-30">
+             <p class="text-yellow-400 text-xl font-black bg-slate-950 px-10 py-6 rounded-2xl border-4 border-yellow-500 shadow-[0_0_40px_rgba(234,179,8,0.4)] inline-block mx-auto max-w-sm" id="medal-unlock-msg">
+                Você dominou a História!
+            </p>
+        </div>
+        <button onclick="closeMedalModal()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black py-4 px-10 rounded-xl shadow-lg transition uppercase tracking-widest text-lg relative z-30">Incrível!</button>
+    </div>
+
+    <div id="gameover-modal" class="hidden absolute inset-0 z-50 bg-slate-950/98 flex flex-col items-center justify-center p-6 text-center modal-hidden">
+        <div class="mb-8 relative" id="go-icon-container">
+            <i class="fa-solid fa-skull text-8xl text-red-600/50 absolute top-0 left-0 blur-xl"></i>
+            <i class="fa-solid fa-xmark text-7xl text-red-500 relative z-10"></i>
+        </div>
+        <h2 class="text-4xl font-black text-white mb-2 uppercase tracking-tight" id="go-title">Fim de Luta!</h2>
+        <p class="text-slate-400 text-lg mb-8" id="go-msg">Você errou.</p>
+        <div class="flex gap-4 mb-10 w-full justify-center">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 w-32">
+                <div class="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Placar</div>
+                <div class="text-3xl font-black text-white" id="go-score">0</div>
+            </div>
+            <div class="bg-slate-900 p-4 rounded-xl border border-yellow-500/30 w-32">
+                <div class="text-[10px] text-yellow-500 uppercase font-bold tracking-widest mb-1">Recorde</div>
+                <div class="text-3xl font-black text-yellow-500" id="go-best">0</div>
+            </div>
+        </div>
+        
+        <div id="ranking-input-container" class="w-full max-w-xs mb-4 hidden">
+            <input type="text" id="player-name-input" placeholder="Seu Apelido" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-white text-center mb-2 uppercase font-bold" maxlength="15">
+            <button onclick="saveToRanking()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg uppercase text-sm tracking-wide">Salvar no Ranking</button>
+        </div>
+
+        <button onclick="restartCurrentMode()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black py-5 px-12 rounded-xl shadow-lg shadow-yellow-500/30 transition uppercase tracking-widest text-xl w-full max-w-xs mb-4"><i class="fa-solid fa-rotate-right mr-2"></i> Tentar de Novo</button>
+        <button onclick="backToHome()" class="text-slate-500 font-bold uppercase tracking-widest text-xs hover:text-white p-4">Voltar ao Menu</button>
+    </div>
+
+    <div id="ranking-modal" class="hidden absolute inset-0 z-50 bg-slate-950/98 flex flex-col items-center p-6 modal-hidden overflow-hidden pt-safe">
+        <div class="w-full flex justify-between items-center mb-4">
+            <button onclick="closeRanking()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-chevron-down text-2xl"></i></button>
+            <h2 class="text-xl font-black text-white uppercase tracking-widest text-center"><i class="fa-solid fa-earth-americas text-indigo-500 mr-2"></i> Ranking Global</h2>
+            <div class="w-6"></div>
+        </div>
+        <div class="flex gap-2 mb-4 w-full max-w-md">
+            <button onclick="openRanking('golden')" id="tab-golden" class="flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider border transition tab-active">Golden Score</button>
+            <button onclick="openRanking('randori')" id="tab-randori" class="flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider border transition tab-inactive">Randori</button>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md flex-1 overflow-hidden flex flex-col shadow-xl">
+            <div class="p-4 border-b border-slate-800 bg-slate-900/50"><div class="flex justify-between text-[10px] uppercase font-bold text-slate-500 tracking-widest"><span>Judoca</span><span>Pontos</span></div></div>
+            <div id="ranking-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+                <div class="text-center text-slate-500 py-10 text-sm animate-pulse">Carregando dados do tatame...</div>
+            </div>
+        </div>
+        <p class="text-[10px] text-slate-600 mt-4 text-center pb-safe">Top 20 Guerreiros • Identificação por Apelido</p>
+    </div>
+
+    <div id="admin-modal" class="hidden absolute inset-0 z-[80] bg-slate-950/98 flex flex-col items-center p-6 modal-hidden overflow-hidden pt-safe">
+        <div class="w-full flex justify-between items-center mb-8">
+            <button onclick="closeAdmin()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-chevron-down text-2xl"></i></button>
+            <h2 class="text-xl font-black text-white uppercase tracking-widest text-center text-red-500"><i class="fa-solid fa-user-secret mr-2"></i> Área do Sensei</h2>
+            <div class="w-6"></div>
+        </div>
+        
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-xl space-y-6">
+            <div class="text-center">
+                <div class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Total de Acessos</div>
+                <div class="text-4xl font-black text-white" id="admin-visits">0</div>
+            </div>
+            
+            <div class="h-px bg-slate-800 w-full"></div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-center">
+                    <div class="text-yellow-500 text-[10px] font-bold uppercase tracking-widest mb-1">Golden Score</div>
+                    <div class="text-2xl font-black text-white" id="admin-golden-count">-</div>
+                </div>
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-center">
+                    <div class="text-green-500 text-[10px] font-bold uppercase tracking-widest mb-1">Randori</div>
+                    <div class="text-2xl font-black text-white" id="admin-randori-count">-</div>
+                </div>
+            </div>
+        </div>
+        <p class="text-[10px] text-slate-600 mt-8 text-center pb-safe">Estatísticas em Tempo Real via Firebase</p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, doc, setDoc, updateDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // CHAVES DO FIREBASE
+        const firebaseConfig = {
+          apiKey: "AIzaSyD33Bt5RtSZsL9BRthWbPW-zCwjG9WGC58",
+          authDomain: "judolingo-f71b9.firebaseapp.com",
+          projectId: "judolingo-f71b9",
+          storageBucket: "judolingo-f71b9.firebasestorage.app",
+          messagingSenderId: "30254437426",
+          appId: "1:30254437426:web:fe82327c326210fa04182b"
+        };
+
+        let db;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            window.db = db; 
+            window.dbCollection = collection;
+            window.dbAddDoc = addDoc;
+            window.dbQuery = query;
+            window.dbOrderBy = orderBy;
+            window.dbLimit = limit;
+            window.dbGetDocs = getDocs;
+            window.dbDoc = doc;
+            window.dbSetDoc = setDoc;
+            window.dbUpdateDoc = updateDoc;
+            window.dbIncrement = increment;
+            window.dbGetDoc = getDoc;
+            
+            // Inicia o contador de visita
+            trackVisit();
+        } catch (e) { console.error("Erro Firebase:", e); }
+        
+        async function trackVisit() {
+            if(!window.db) return;
+            const visited = sessionStorage.getItem('judolingo_visit_session');
+            if (!visited) {
+                sessionStorage.setItem('judolingo_visit_session', 'true');
+                const statRef = window.dbDoc(window.db, "stats", "general");
+                try {
+                    await window.dbUpdateDoc(statRef, { visits: window.dbIncrement(1) });
+                } catch (e) {
+                    await window.dbSetDoc(statRef, { visits: 1 });
+                }
+            }
+        }
+    </script>
+
+    <script>
+        // CONFIGURAÇÕES GERAIS
+        const BELTS = ["Branca", "Cinza", "Azul", "Amarela", "Laranja", "Verde", "Roxa", "Marrom", "Preta"];
+        const REFEREE_LEVELS = ["Aspirante", "Estadual C", "Estadual B", "Estadual A", "Nacional C", "Nacional B", "Nacional A", "Internacional C", "Internacional B", "Internacional A"];
+        const QUESTIONS_PER_LEVEL = 5;
+        const PASS_SCORE = 3;
+        const LEVELS_CONFIG = { "Branca": 4, "Cinza": 5, "Azul": 5, "Amarela": 5, "Laranja": 7, "Verde": 7, "Roxa": 7, "Marrom": 10, "Preta": 10 };
+        const MEDAL_CATEGORIES = ["Historia", "Waza", "Kata", "Terminologia", "Arbitragem"];
+
+        const FALLBACK_QUESTIONS = [
+            {q:"Quem fundou o Judô?", options:["Jigoro Kano","Mitsuyo Maeda","Masahiko Kimura","Yasuhiro Yamashita"], a:["Jigoro Kano"], belt:"Branca", category:"Historia", isMulti:false},
+            {q:"Em que ano o Judô foi fundado?", options:["1882","1890","1900","1964"], a:["1882"], belt:"Branca", category:"Historia", isMulti:false},
+            {q:"O que significa 'Judô'?", options:["Caminho Suave","Arte da Guerra","Mãos Vazias","Caminho da Espada"], a:["Caminho Suave"], belt:"Branca", category:"Terminologia", isMulti:false},
+            {q:"Qual a cor da primeira faixa?", options:["Branca","Azul","Preta","Amarela"], a:["Branca"], belt:"Branca", category:"Geral", isMulti:false},
+            {q:"Onde se pratica o Judô?", options:["Dojo","Ringue","Octógono","Campo"], a:["Dojo"], belt:"Branca", category:"Geral", isMulti:false}
+        ];
+
+        let globalLives = 3;
+        
+        // SISTEMA DE SAVE SEGURO
+        const SAVE_KEY = 'judolingo_master_save';
+        let saved = localStorage.getItem(SAVE_KEY);
+        if(!saved) { saved = localStorage.getItem('judolingo_save_v22'); } // Migração
+
+        let gameState = JSON.parse(saved) || { 
+            judokaIndex: 0, 
+            judokaLevels: [false,false,false,false,false], 
+            refereeIndex: 0, 
+            refereeLevels: [false,false,false,false,false], 
+            answered: [], 
+            mistakes: [], 
+            stats: {} 
+        };
+        if(!gameState.stats) gameState.stats = {};
+        
+        function saveGame() {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+        }
+
+        let scores = JSON.parse(localStorage.getItem('judolingo_scores')) || { golden: 0, randori: 0 };
+        let streakData = JSON.parse(localStorage.getItem('judolingo_streak_data')) || { count: 0, lastVisit: "" };
+        let playerName = localStorage.getItem('judolingo_player_name') || "";
+        let currentRankingMode = 'golden';
+        let questionsBank = [];
+        let currentSession = { mode: '', queue: [], currentQ: 0, lives: 3, score: 0, selectedOptions: [], timeLeft: 60, shidos: 0 };
+        let currentPathMode = 'judoka';
+        let currentViewLevelIndex = 0;
+        
+        // ADMIN VARS
+        let adminClicks = 0;
+        let adminTimer = null;
+
+        function getTotalLevels(mode, index) { 
+            if (mode === 'judoka') { 
+                const beltName = BELTS[index]; 
+                return LEVELS_CONFIG[beltName] || 5; 
+            } else { return 5; } 
+        }
+
+        // --- STREAK & INIT ---
+        function checkStreak() {
+            const today = new Date().toLocaleDateString('en-CA');
+            let showToast = false;
+            if (streakData.lastVisit !== today) {
+                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toLocaleDateString('en-CA');
+                if (streakData.lastVisit === yesterdayStr) { streakData.count++; showToast = true; } 
+                else { if (streakData.lastVisit === "" || streakData.lastVisit !== today) streakData.count = 1; }
+                streakData.lastVisit = today;
+                localStorage.setItem('judolingo_streak_data', JSON.stringify(streakData));
+            }
+            updateStreakUI(showToast);
+        }
+
+        function updateStreakUI(showToast) {
+            document.getElementById('streak-counter').innerText = streakData.count;
+            document.getElementById('streak-label').innerText = (streakData.count === 1) ? "Dia Seguido" : "Dias Seguidos";
+            let msg = "Mantenha o Zanshin!";
+            if (streakData.count <= 2) msg = "Começando a Jornada"; else if (streakData.count >= 7) msg = "Espírito Indomável!";
+            document.getElementById('streak-msg').innerText = msg;
+            if (showToast) {
+                const toast = document.getElementById('streak-toast');
+                toast.classList.add('toast-visible');
+                setTimeout(() => { toast.classList.remove('toast-visible'); }, 3000);
+            }
+        }
+
+        function init() {
+            document.getElementById('record-golden').innerText = `Recorde: ${scores.golden}`;
+            document.getElementById('record-randori').innerText = `Rec: ${scores.randori}`;
+            checkStreak(); 
+            loadCSV();
+        }
+        
+        // --- ADMIN SYSTEM ---
+        function triggerAdmin() {
+            adminClicks++;
+            if(adminTimer) clearTimeout(adminTimer);
+            adminTimer = setTimeout(() => { adminClicks = 0; }, 2000);
+            
+            if(adminClicks >= 5) {
+                adminClicks = 0;
+                openAdminPanel();
+            }
+        }
+        
+        async function openAdminPanel() {
+            const modal = document.getElementById('admin-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('modal-hidden'); modal.classList.add('modal-visible'); }, 10);
+            
+            if(!window.db) {
+                document.getElementById('admin-visits').innerText = "Erro DB";
+                return;
+            }
+            
+            try {
+                const statRef = window.dbDoc(window.db, "stats", "general");
+                const statSnap = await window.dbGetDoc(statRef);
+                if(statSnap.exists()) {
+                    document.getElementById('admin-visits').innerText = statSnap.data().visits || 0;
+                }
+                
+                // Placeholder para contagem real (custoso ler tudo)
+                document.getElementById('admin-golden-count').innerText = "-"; 
+                document.getElementById('admin-randori-count').innerText = "-";
+                
+            } catch(e) {
+                console.error(e);
+            }
+        }
+        
+        function closeAdmin() {
+            const modal = document.getElementById('admin-modal');
+            modal.classList.remove('modal-visible');
+            modal.classList.add('modal-hidden');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        // --- CSV LOADING ---
+        async function loadCSV() {
+            try {
+                document.getElementById('loading-text').classList.remove('hidden');
+                document.getElementById('loading-text').innerText = "Baixando CSV...";
+                
+                const response = await fetch('questions.csv?v=' + Date.now());
+                if (!response.ok) throw new Error("CSV não encontrado");
+                
+                const text = await response.text();
+                if (text.trim().startsWith("<")) throw new Error("Arquivo inválido (HTML)");
+                
+                parseCSV(text);
+            } catch (e) {
+                console.warn("Usando perguntas de backup:", e);
+                questionsBank = [...FALLBACK_QUESTIONS];
+            } finally { document.getElementById('loading-text').classList.add('hidden'); }
+        }
+
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n');
+            questionsBank = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const delimiter = line.includes(';') ? ';' : ',';
+                let matches = []; let match;
+                const regex = new RegExp(`(?:^|${delimiter})(\"(?:[^\"]|\"\")*\"|[^${delimiter}]*)`, 'g');
+                while (match = regex.exec(line)) { matches.push(match[1].replace(/^"|"$/g, '').replace(/""/g, '"').trim()); }
+                if (line.endsWith(delimiter)) matches.pop(); 
+
+                let parts = matches;
+                if (parts.length >= 6 && parts[0]) {
+                    let qText = parts[0];
+                    let op1 = parts[1];
+                    let op2 = parts[2];
+                    let op3 = parts[3];
+                    let op4 = parts[4];
+                    let op5 = (parts.length > 5) ? parts[5] : "";
+                    let rawAnswer = (parts.length > 6) ? parts[6] : ""; 
+                    let beltColor = (parts.length > 7) ? parts[7] : "Branca"; 
+                    let mediaFile = (parts.length > 8) ? parts[8] : "";
+                    let credName = (parts.length > 9) ? parts[9] : "";
+                    let credLink = (parts.length > 10) ? parts[10] : "";
+                    let explanationText = (parts.length > 11) ? parts[11] : "";
+                    let category = (parts.length > 12) ? parts[12] : "Geral";
+
+                    let correctAnswers = rawAnswer.split('|').map(s => s.trim());
+                    let optionsList = [op1, op2, op3, op4];
+                    if (op5 && op5.trim() !== "") optionsList.push(op5);
+
+                    questionsBank.push({
+                        q: qText,
+                        options: optionsList,
+                        a: correctAnswers,
+                        belt: beltColor,
+                        media: mediaFile,
+                        creditName: credName,
+                        creditLink: credLink,
+                        explanation: explanationText,
+                        category: category ? category.trim() : "Geral",
+                        isMulti: correctAnswers.length > 1
+                    });
+                }
+            }
+            if (questionsBank.length === 0) questionsBank = [...FALLBACK_QUESTIONS];
+        }
+
+        // --- NAVIGATION ---
+        function backToHome() {
+            clearInterval(currentSession.timerInterval);
+            const mediaBox = document.getElementById('question-media-container'); mediaBox.innerHTML = ''; mediaBox.classList.add('hidden');
+            document.getElementById('screen-path').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-gallery').classList.add('hidden'); 
+            
+            ['feedback-modal', 'promotion-modal', 'gameover-modal', 'ranking-modal', 'medal-modal', 'admin-modal'].forEach(id => {
+                const el = document.getElementById(id);
+                el.classList.remove('modal-visible');
+                el.classList.add('modal-hidden');
+                setTimeout(() => el.classList.add('hidden'), 300);
+            });
+
+            document.getElementById('screen-start').classList.remove('hidden');
+            document.getElementById('record-golden').innerText = `Recorde: ${scores.golden}`;
+            document.getElementById('record-randori').innerText = `Rec: ${scores.randori}`;
+            
+            globalLives = 3;
+            checkStreak();
+        }
+
+        function backToContext() {
+            if (currentSession.mode === 'path') backToPath();
+            else backToHome();
+        }
+
+        function enterPathMode(type) {
+            currentPathMode = type;
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-path').classList.remove('hidden');
+            
+            if (type === 'judoka') {
+                currentViewLevelIndex = gameState.judokaIndex;
+                if (currentViewLevelIndex >= BELTS.length) currentViewLevelIndex = BELTS.length - 1;
+            } else {
+                currentViewLevelIndex = gameState.refereeIndex;
+                if (currentViewLevelIndex >= REFEREE_LEVELS.length) currentViewLevelIndex = REFEREE_LEVELS.length - 1;
+            }
+            renderPathUI();
+            setTimeout(() => { document.getElementById('path-scroll-area').scrollTop = document.getElementById('path-scroll-area').scrollHeight; }, 100);
+        }
+
+        function enterGallery() {
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-gallery').classList.remove('hidden');
+            renderGallery();
+        }
+
+        function renderGallery() {
+            const beltsContainer = document.getElementById('gallery-belts');
+            beltsContainer.innerHTML = '';
+            BELTS.forEach((belt, index) => {
+                const isUnlocked = index <= gameState.judokaIndex;
+                const statusClass = isUnlocked ? 'item-unlocked' : 'item-locked';
+                beltsContainer.innerHTML += `
+                    <div class="gallery-item flex flex-col items-center ${statusClass}">
+                        <div class="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mb-2 shadow-lg">
+                            <i class="fa-solid fa-ribbon text-3xl text-belt-${belt.replace(" ", "")}"></i>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400">${belt}</span>
+                    </div>
+                `;
+            });
+
+            const medalsContainer = document.getElementById('gallery-medals');
+            medalsContainer.innerHTML = '';
+            MEDAL_CATEGORIES.forEach(cat => {
+                const count = gameState.stats[cat] || 0;
+                const tiers = [
+                    { name: 'Bronze', limit: 10, color: '#cd7f32' },
+                    { name: 'Prata', limit: 20, color: '#c0c0c0' },
+                    { name: 'Ouro', limit: 30, color: '#ffd700' }
+                ];
+                tiers.forEach(tier => {
+                    const isUnlocked = count >= tier.limit;
+                    const statusClass = isUnlocked ? 'item-unlocked' : 'item-locked';
+                    medalsContainer.innerHTML += `
+                        <div class="gallery-item flex flex-col items-center ${statusClass}">
+                            <div class="w-16 h-16 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mb-2 shadow-lg relative">
+                                <i class="fa-solid fa-medal text-3xl" style="color: ${tier.color}"></i>
+                                <div class="absolute -top-1 -right-1 bg-blue-600 text-[8px] font-bold px-1.5 rounded-full text-white">${cat.substring(0,3)}</div>
+                            </div>
+                            <span class="text-[10px] font-bold uppercase text-slate-400">${tier.name}</span>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        // --- GAMEPLAY ---
+        function startMode(modeName) {
+            document.getElementById('question-media-container').innerHTML = '';
+            currentSession = { mode: modeName, queue: [], currentQ: 0, lives: 3, score: 0, selectedOptions: [], timeLeft: 60, shidos: 0 };
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            document.getElementById('randori-timer-bar').classList.add('hidden');
+            
+            let basePool = [...questionsBank];
+            if (modeName === 'kata') {
+                basePool = questionsBank.filter(q => q.isMulti);
+                if(basePool.length === 0) basePool = [...questionsBank];
+            }
+            currentSession.queue = basePool.sort(() => 0.5 - Math.random());
+
+            if (modeName === 'golden') {
+                currentSession.lives = 1;
+                document.getElementById('quiz-header-title').innerHTML = '<span class="text-yellow-500 font-black uppercase tracking-widest">Golden Score</span>';
+            } else if (modeName === 'randori') {
+                document.getElementById('quiz-header-title').innerHTML = '<span class="text-green-500 font-black uppercase tracking-widest">Randori Time</span>';
+                document.getElementById('randori-timer-bar').classList.remove('hidden');
+                startRandoriTimer();
+            } else if (modeName === 'kata') {
+                document.getElementById('quiz-header-title').innerHTML = '<span class="text-purple-500 font-black uppercase tracking-widest">Kata Mode</span>';
+            }
+            updateLivesUI();
+            loadQuestion();
+        }
+
+        function restartCurrentMode() {
+            document.getElementById('gameover-modal').classList.remove('modal-visible');
+            document.getElementById('gameover-modal').classList.add('modal-hidden');
+            setTimeout(() => document.getElementById('gameover-modal').classList.add('hidden'), 300);
+            
+            globalLives = 3;
+            if (currentSession.mode === 'path') startLevel(currentSession.levelIndex + 1);
+            else startMode(currentSession.mode);
+        }
+
+        function startRandoriTimer() {
+            updateTimerVisual();
+            currentSession.timerInterval = setInterval(() => {
+                currentSession.timeLeft--;
+                updateTimerVisual();
+                if (currentSession.timeLeft <= 0) {
+                    clearInterval(currentSession.timerInterval);
+                    gameOver('randori', "Tempo Esgotado! Vitória!");
+                }
+            }, 1000);
+        }
+
+        function updateTimerVisual() {
+            const bar = document.getElementById('randori-fill');
+            const pct = (currentSession.timeLeft / 60) * 100;
+            bar.style.width = `${Math.max(0, pct)}%`;
+            if(pct < 30) bar.style.backgroundColor = '#ef4444'; else if(pct < 60) bar.style.backgroundColor = '#eab308'; else bar.style.backgroundColor = '#22c55e';
+        }
+
+        function startLevel(levelNum) {
+            document.getElementById('question-media-container').innerHTML = '';
+            
+            const LEVEL_LIST = (currentPathMode === 'judoka') ? BELTS : REFEREE_LEVELS;
+            const targetName = LEVEL_LIST[currentViewLevelIndex];
+            
+            let levelQuestions = [];
+            if (currentPathMode === 'judoka') {
+                levelQuestions = questionsBank.filter(q => q.belt && q.belt.trim().toLowerCase() === targetName.toLowerCase());
+            } else {
+                // LOGICA UNIVERSAL ARBITRAGEM (V43)
+                // Pega QUALQUER questao que tenha categoria 'Arbitragem', independente da faixa
+                levelQuestions = questionsBank.filter(q => q.category && q.category.trim().toLowerCase() === 'arbitragem');
+            }
+
+            // Fallback se nao tiver perguntas
+            if (levelQuestions.length === 0) {
+                 levelQuestions = questionsBank; 
+            }
+
+            let mistakesQueue = [];
+            let newQueue = [];
+            let reviewQueue = [];
+
+            levelQuestions.forEach(q => {
+                if (gameState.mistakes.includes(q.q)) mistakesQueue.push(q);
+                else if (!gameState.answered.includes(q.q)) newQueue.push(q);
+                else reviewQueue.push(q);
+            });
+
+            mistakesQueue.sort(() => 0.5 - Math.random());
+            newQueue.sort(() => 0.5 - Math.random());
+            reviewQueue.sort(() => 0.5 - Math.random());
+
+            let finalQueue = [];
+            finalQueue = finalQueue.concat(mistakesQueue);
+            if (finalQueue.length < QUESTIONS_PER_LEVEL) finalQueue = finalQueue.concat(newQueue);
+            if (finalQueue.length < QUESTIONS_PER_LEVEL) finalQueue = finalQueue.concat(reviewQueue);
+
+            // Garante 5 perguntas repetindo se necessário
+            while (finalQueue.length < QUESTIONS_PER_LEVEL && finalQueue.length > 0) {
+                 finalQueue = finalQueue.concat(finalQueue);
+            }
+            finalQueue = finalQueue.slice(0, QUESTIONS_PER_LEVEL);
+            
+            currentSession = { 
+                mode: 'path', 
+                levelIndex: levelNum - 1, 
+                queue: finalQueue, 
+                currentQ: 0, 
+                lives: globalLives, 
+                score: 0, 
+                selectedOptions: [] 
+            };
+
+            document.getElementById('screen-path').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            document.getElementById('randori-timer-bar').classList.add('hidden');
+            document.getElementById('quiz-header-title').innerHTML = `Fase <span id="quiz-level-num">${levelNum}</span>`;
+            updateLivesUI();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = currentSession.queue[currentSession.currentQ];
+            if (!q) { 
+                if (currentSession.mode === 'path') finishLevel(); 
+                else { alert("Sem mais perguntas!"); backToHome(); }
+                return; 
+            }
+
+            currentSession.selectedOptions = []; 
+            document.getElementById('question-text').innerText = q.q;
+            
+            if (currentSession.mode === 'path') document.getElementById('quiz-progress-bar').style.width = `${((currentSession.currentQ) / QUESTIONS_PER_LEVEL) * 100}%`;
+            else document.getElementById('quiz-progress-bar').style.width = '100%';
+            
+            const mediaBox = document.getElementById('question-media-container');
+            if (q.media && q.media.length > 3) {
+                mediaBox.classList.remove('hidden');
+                const ext = q.media.split('.').pop().toLowerCase();
+                mediaBox.innerHTML = (ext === 'mp4' || ext === 'webm') ? `<video src="${q.media}" class="media-content" autoplay loop muted playsinline></video>` : `<img src="${q.media}" class="media-content" alt="Mídia">`;
+            } else { mediaBox.classList.add('hidden'); mediaBox.innerHTML = ""; }
+
+            const creditBox = document.getElementById('question-credit');
+            if (q.creditName) {
+                creditBox.classList.remove('hidden');
+                document.getElementById('credit-name').innerText = q.creditName;
+                const linkEl = document.getElementById('credit-link');
+                if (q.creditLink) {
+                    linkEl.classList.remove('hidden');
+                    let safeLink = q.creditLink;
+                    if (!safeLink.startsWith('http')) safeLink = 'https://' + safeLink;
+                    linkEl.href = safeLink; linkEl.innerText = "Ver fonte/perfil";
+                } else { linkEl.classList.add('hidden'); }
+            } else { creditBox.classList.add('hidden'); }
+
+            const badge = document.getElementById('mode-badge');
+            badge.classList.add('hidden');
+
+            if (q.isMulti) {
+                badge.className = "mb-4 px-4 py-2 rounded-lg text-sm font-bold border border-purple-500/30 flex items-center gap-2 shrink-0 w-full justify-center bg-purple-900/50 text-purple-200";
+                badge.innerHTML = '<i class="fa-solid fa-arrow-down-1-9"></i> Ordene a sequência correta';
+                badge.classList.remove('hidden');
+            }
+
+            const grid = document.getElementById('options-grid'); grid.innerHTML = '';
+            let opts = q.options.map(t => t).sort(() => 0.5 - Math.random());
+            
+            opts.forEach(optText => {
+                const btn = document.createElement('button');
+                btn.className = `quiz-option w-full p-4 rounded-xl font-bold text-lg text-left option-default`;
+                btn.innerHTML = `<span class="opt-text">${optText}</span>`;
+                btn.onclick = () => selectOption(btn, optText, q.isMulti);
+                grid.appendChild(btn);
+            });
+            resetQuizFooter();
+        }
+
+        function selectOption(el, text, isMulti) {
+            if(document.getElementById('feedback-modal').classList.contains('modal-visible')) return;
+            
+            if (isMulti) {
+                if (currentSession.selectedOptions.includes(text)) {
+                    currentSession.selectedOptions = currentSession.selectedOptions.filter(item => item !== text);
+                    el.classList.remove('option-selected');
+                    const badge = el.querySelector('.order-badge');
+                    if(badge) badge.remove();
+                    document.querySelectorAll('.order-badge').forEach((b, i) => b.innerText = i + 1);
+                } else {
+                    currentSession.selectedOptions.push(text);
+                    el.classList.add('option-selected');
+                    el.innerHTML += `<div class="order-badge fade-in">${currentSession.selectedOptions.length}</div>`;
+                }
+            } else {
+                document.querySelectorAll('.quiz-option').forEach(e => e.className = e.className.replace('option-selected', ''));
+                currentSession.selectedOptions = [text];
+                el.classList.add('option-selected');
+            }
+            const btn = document.getElementById('btn-check'); 
+            if (currentSession.selectedOptions.length > 0) { btn.disabled = false; btn.className = "w-full py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all bg-blue-600 hover:bg-blue-500 text-white cursor-pointer shadow-[0_4px_0_rgb(37,99,235)] active:shadow-none active:translate-y-1"; btn.innerHTML = "Confirmar"; } 
+            else { btn.disabled = true; btn.className = "w-full py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-700"; }
+        }
+
+        function checkAnswer() {
+            const q = currentSession.queue[currentSession.currentQ];
+            const userSelections = currentSession.selectedOptions.map(s => s.trim().toLowerCase());
+            const correctAnswers = q.a.map(s => s.trim().toLowerCase());
+            
+            let isCorrect = false;
+            if (q.isMulti) {
+                isCorrect = userSelections.join('|') === correctAnswers.join('|');
+            } else {
+                const isCorrectLength = userSelections.length === correctAnswers.length;
+                const allMatch = userSelections.every(val => correctAnswers.includes(val));
+                isCorrect = isCorrectLength && allMatch;
+            }
+
+            const icon = document.getElementById('feedback-icon');
+            let explanationHTML = "";
+            if (q.explanation && q.explanation.trim() !== "") {
+                explanationHTML = `<div class="mt-3 p-3 bg-slate-800 rounded-lg text-xs text-slate-300 border border-slate-700 text-left"><strong class="text-yellow-500 uppercase text-[10px] tracking-wider block mb-1">Sensei Diz:</strong>${q.explanation}</div>`;
+            }
+
+            if(isCorrect) {
+                currentSession.score++;
+                updateLivesUI();
+                
+                if (!gameState.answered.includes(q.q)) gameState.answered.push(q.q);
+                gameState.mistakes = gameState.mistakes.filter(item => item !== q.q);
+                
+                let cat = q.category || "Geral";
+                if(!gameState.stats[cat]) gameState.stats[cat] = 0;
+                gameState.stats[cat]++;
+                
+                saveGame();
+                checkMedalUnlock(cat, gameState.stats[cat]);
+
+                icon.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+                icon.className = "w-14 h-14 rounded-full flex items-center justify-center text-3xl bg-green-900/30 border-2 border-green-500";
+                showFeedback("Correto!", "Mandou bem!" + explanationHTML, true);
+            } else {
+                let correctText = q.a.join(", ");
+                if (!gameState.mistakes.includes(q.q)) gameState.mistakes.push(q.q);
+                saveGame();
+                icon.innerHTML = '<i class="fa-solid fa-xmark text-red-400"></i>';
+                icon.className = "w-14 h-14 rounded-full flex items-center justify-center text-3xl bg-red-900/30 border-2 border-red-500";
+
+                if (currentSession.mode === 'golden') {
+                    gameOver('golden', `A resposta certa era: ${correctText}`);
+                } else if (currentSession.mode === 'randori') {
+                    currentSession.shidos++;
+                    updateLivesUI();
+                    if (currentSession.shidos >= 3) {
+                        clearInterval(currentSession.timerInterval);
+                        gameOver('randori', "Hansoku-make! (3 Shidos)");
+                    } else {
+                        showFeedback(`Shido! (${currentSession.shidos}/3)`, `Correto: ${correctText}${explanationHTML}`, false);
+                    }
+                } else {
+                    currentSession.lives--;
+                    if(currentSession.mode === 'path') globalLives = currentSession.lives; 
+                    updateLivesUI();
+                    if(currentSession.lives === 0 && currentSession.mode === 'path') {
+                        document.getElementById('btn-feedback-action').innerText = "Tentar Novamente";
+                        document.getElementById('btn-feedback-action').onclick = backToPath;
+                        showFeedback("Ah não!", "Suas vidas acabaram.", false);
+                    } else {
+                        showFeedback("Incorreto", `Correto: ${correctText}${explanationHTML}`, false);
+                    }
+                }
+            }
+            document.getElementById('quiz-footer').classList.add('hidden');
+        }
+
+        // --- MEDALHA ---
+        function checkMedalUnlock(category, count) {
+            let unlocked = false; let msg = ""; let color = "";
+            if (count === 10) { unlocked = true; msg = `Medalha de Bronze em ${category}!`; color = "text-orange-400"; }
+            else if (count === 20) { unlocked = true; msg = `Medalha de Prata em ${category}!`; color = "text-slate-300"; }
+            else if (count === 30) { unlocked = true; msg = `Medalha de OURO em ${category}!`; color = "text-yellow-400"; }
+
+            if (unlocked) {
+                setTimeout(() => {
+                    const icon = document.getElementById('medal-unlock-icon');
+                    icon.className = `fa-solid fa-medal text-9xl relative z-20 medal-spin drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] ${color}`;
+                    document.getElementById('medal-unlock-msg').innerText = msg;
+                    
+                    document.getElementById('feedback-modal').classList.add('hidden');
+                    const modal = document.getElementById('medal-modal');
+                    modal.classList.remove('hidden');
+                    setTimeout(() => { modal.classList.remove('modal-hidden'); modal.classList.add('modal-visible'); }, 10);
+                }, 1000);
+            }
+        }
+
+        function closeMedalModal() {
+            const modal = document.getElementById('medal-modal');
+            modal.classList.remove('modal-visible');
+            modal.classList.add('modal-hidden');
+            setTimeout(() => { modal.classList.add('hidden'); nextQuestion(); }, 300);
+        }
+
+        function gameOver(mode, msg) {
+            let title = "Fim de Luta!"; let best = 0; let iconHtml = '<i class="fa-solid fa-skull text-8xl text-red-600/50 absolute top-0 left-0 blur-xl"></i><i class="fa-solid fa-xmark text-7xl text-red-500 relative z-10"></i>';
+            let showRankingInput = false;
+            
+            if (mode === 'golden') {
+                if (currentSession.score > scores.golden) {
+                    scores.golden = currentSession.score;
+                    localStorage.setItem('judolingo_scores', JSON.stringify(scores));
+                    title = "Novo Recorde!";
+                }
+                best = scores.golden;
+                if (currentSession.score > 0) showRankingInput = true;
+            } else if (mode === 'randori') {
+                if (msg.includes("Vitória")) {
+                    title = "Vitória!";
+                    iconHtml = '<i class="fa-solid fa-trophy text-8xl text-yellow-600/50 absolute top-0 left-0 blur-xl"></i><i class="fa-solid fa-medal text-7xl text-yellow-500 relative z-10"></i>';
+                    if (currentSession.score > scores.randori) {
+                        scores.randori = currentSession.score;
+                        localStorage.setItem('judolingo_scores', JSON.stringify(scores));
+                        title = "Novo Recorde!";
+                    }
+                }
+                best = scores.randori;
+                if (currentSession.score > 0) showRankingInput = true;
+            }
+
+            document.getElementById('go-icon-container').innerHTML = iconHtml;
+            document.getElementById('go-title').innerText = title;
+            document.getElementById('go-msg').innerText = msg;
+            document.getElementById('go-score').innerText = currentSession.score;
+            document.getElementById('go-best').innerText = best;
+
+            const rankingBox = document.getElementById('ranking-input-container');
+            if (showRankingInput && window.db) {
+                rankingBox.classList.remove('hidden');
+                if (playerName) document.getElementById('player-name-input').value = playerName;
+            } else {
+                rankingBox.classList.add('hidden');
+            }
+
+            document.getElementById('screen-quiz').classList.add('hidden');
+            
+            const goModal = document.getElementById('gameover-modal');
+            goModal.classList.remove('hidden');
+            setTimeout(() => { goModal.classList.remove('modal-hidden'); goModal.classList.add('modal-visible'); }, 10);
+        }
+
+        async function saveToRanking() {
+            const nameInput = document.getElementById('player-name-input').value.trim();
+            if (nameInput.length < 2) { alert("Digite um nome válido (min 2 letras)."); return; }
+            playerName = nameInput; localStorage.setItem('judolingo_player_name', playerName);
+            
+            const btn = document.querySelector('#ranking-input-container button');
+            btn.innerText = "Enviando..."; btn.disabled = true;
+            
+            const collectionName = (currentSession.mode === 'randori') ? "ranking_randori" : "ranking_golden";
+
+            try {
+                await window.dbAddDoc(window.dbCollection(window.db, collectionName), {
+                    name: playerName,
+                    score: currentSession.score,
+                    date: new Date().toISOString()
+                });
+                alert("Pontuação salva no Ranking!");
+                document.getElementById('ranking-input-container').classList.add('hidden');
+                openRanking(currentSession.mode === 'randori' ? 'randori' : 'golden');
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao salvar. Verifique a conexão.");
+                btn.innerText = "Tentar Novamente"; btn.disabled = false;
+            }
+        }
+
+        async function openRanking(type) {
+            if(!type) type = 'golden'; currentRankingMode = type;
+            
+            document.getElementById('tab-golden').className = (type === 'golden') ? "flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider border transition tab-active" : "flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider border transition tab-inactive";
+            document.getElementById('tab-randori').className = (type === 'randori') ? "flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider border transition tab-active" : "flex-1 py-2 rounded-lg font-bold text-xs uppercase tracking-wider border transition tab-inactive";
+
+            const goModal = document.getElementById('gameover-modal');
+            goModal.classList.remove('modal-visible');
+            goModal.classList.add('modal-hidden');
+            setTimeout(() => goModal.classList.add('hidden'), 300);
+            
+            const modal = document.getElementById('ranking-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('modal-hidden'); modal.classList.add('modal-visible'); }, 10);
+            
+            const list = document.getElementById('ranking-list');
+            list.innerHTML = '<div class="text-center text-slate-500 py-10 text-sm animate-pulse">Carregando dados do tatame...</div>';
+
+            if (!window.db) {
+                list.innerHTML = '<div class="text-center text-red-500 py-4">Erro de conexão com o banco de dados.</div>';
+                return;
+            }
+
+            const collectionName = (type === 'randori') ? "ranking_randori" : "ranking_golden";
+
+            try {
+                const q = window.dbQuery(window.dbCollection(window.db, collectionName), window.dbOrderBy("score", "desc"), window.dbLimit(20));
+                const querySnapshot = await window.dbGetDocs(q);
+                
+                let html = '';
+                let rank = 1;
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    let medal = `<span class="w-6 text-center text-slate-500 font-bold">${rank}</span>`;
+                    if (rank === 1) medal = '🥇';
+                    if (rank === 2) medal = '🥈';
+                    if (rank === 3) medal = '🥉';
+                    
+                    html += `
+                        <div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg mb-1 border border-slate-800">
+                            <div class="flex items-center gap-3">
+                                <div class="text-lg">${medal}</div>
+                                <div class="font-bold text-white truncate max-w-[150px]">${data.name}</div>
+                            </div>
+                            <div class="font-black text-yellow-500 text-xl">${data.score}</div>
+                        </div>
+                    `;
+                    rank++;
+                });
+                
+                list.innerHTML = html || '<div class="text-center text-slate-500 py-4">Nenhum guerreiro registrado ainda.</div>';
+
+            } catch (e) {
+                console.error(e);
+                list.innerHTML = '<div class="text-center text-red-500 py-4">Erro ao carregar ranking.</div>';
+            }
+        }
+
+        function closeRanking() {
+            const modal = document.getElementById('ranking-modal');
+            modal.classList.remove('modal-visible'); 
+            modal.classList.add('modal-hidden');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function showFeedback(title, msg, isSuccess) {
+            document.getElementById('feedback-title').innerText = title;
+            document.getElementById('feedback-title').className = isSuccess ? "font-black text-2xl text-green-400 mb-1" : "font-black text-2xl text-red-400 mb-1";
+            document.getElementById('feedback-msg').innerHTML = msg;
+            const modal = document.getElementById('feedback-modal');
+            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('modal-hidden'); modal.classList.add('modal-visible'); }, 10);
+        }
+
+        function nextQuestion() {
+            const modal = document.getElementById('feedback-modal');
+            modal.classList.remove('modal-visible');
+            modal.classList.add('modal-hidden');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+
+            currentSession.currentQ++;
+            if (currentSession.mode !== 'path') loadQuestion(); 
+            else {
+                if (currentSession.currentQ < QUESTIONS_PER_LEVEL) loadQuestion();
+                else finishLevel();
+            }
+        }
+
+        function finishLevel() {
+            const TOTAL_LEVELS = getTotalLevels(currentPathMode, currentViewLevelIndex);
+            
+            if (currentSession.score >= PASS_SCORE) {
+                if (currentPathMode === 'judoka') {
+                    if (currentViewLevelIndex === gameState.judokaIndex) {
+                        gameState.judokaLevels[currentSession.levelIndex] = true;
+                        saveGame();
+                        if (currentSession.levelIndex === TOTAL_LEVELS - 1) showPromotionModal(); else { renderPathUI(); backToPath(); }
+                    }
+                } else {
+                    if (currentViewLevelIndex === gameState.refereeIndex) {
+                        gameState.refereeLevels[currentSession.levelIndex] = true;
+                        saveGame();
+                        if (currentSession.levelIndex === TOTAL_LEVELS - 1) showPromotionModal(); else { renderPathUI(); backToPath(); }
+                    }
+                }
+            } else {
+                alert(`Você acertou ${currentSession.score} de ${QUESTIONS_PER_LEVEL}. Precisa de ${PASS_SCORE} para passar.`);
+                backToPath();
+            }
+        }
+
+        function showPromotionModal() {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            const LIST = (currentPathMode === 'judoka') ? BELTS : REFEREE_LEVELS;
+            const currentIndex = (currentPathMode === 'judoka') ? gameState.judokaIndex : gameState.refereeIndex;
+            const nextIndex = Math.min(currentIndex + 1, LIST.length - 1);
+            const nextName = LIST[nextIndex];
+            
+            const badge = document.getElementById('new-belt-badge');
+            document.getElementById('new-belt-name').innerText = (currentPathMode === 'judoka') ? `FAIXA ${nextName.toUpperCase()}` : `NÍVEL ${nextName.toUpperCase()}`;
+            
+            if (currentPathMode === 'judoka') {
+                badge.className = `text-3xl font-black mb-12 px-10 py-6 border-4 rounded-2xl uppercase tracking-widest shadow-2xl flex items-center gap-4 text-belt-${nextName.replace(" ", "")} bg-slate-900 border-belt-${nextName.replace(" ", "")}`;
+            } else {
+                const safeName = nextName.replace(/\s+/g, '');
+                badge.className = `text-3xl font-black mb-12 px-10 py-6 border-4 rounded-2xl uppercase tracking-widest shadow-2xl flex items-center gap-4 text-ref-${safeName} bg-slate-900 border-slate-500`;
+            }
+            
+            const modal = document.getElementById('promotion-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('modal-hidden');
+                modal.classList.add('modal-visible');
+            }, 10);
+        }
+
+        function closePromotion() {
+            const LIST = (currentPathMode === 'judoka') ? BELTS : REFEREE_LEVELS;
+            if (currentPathMode === 'judoka') {
+                if (gameState.judokaIndex < LIST.length - 1) gameState.judokaIndex++;
+                const nextBeltName = BELTS[gameState.judokaIndex];
+                const nextTotalLevels = LEVELS_CONFIG[nextBeltName];
+                gameState.judokaLevels = new Array(nextTotalLevels).fill(false);
+                currentViewLevelIndex = gameState.judokaIndex;
+            } else {
+                if (gameState.refereeIndex < LIST.length - 1) gameState.refereeIndex++;
+                gameState.refereeLevels = [false, false, false, false, false];
+                currentViewLevelIndex = gameState.refereeIndex;
+            }
+            saveGame();
+            
+            const modal = document.getElementById('promotion-modal');
+            modal.classList.remove('modal-visible');
+            modal.classList.add('modal-hidden');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+            
+            backToPath();
+        }
+
+        function backToPath() {
+            document.getElementById('feedback-modal').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-path').classList.remove('hidden');
+            renderPathUI();
+        }
+
+        function resetQuizFooter() {
+            const btn = document.getElementById('btn-check'); btn.disabled = true;
+            btn.className = "w-full py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-700 shadow-lg";
+            btn.innerHTML = "Verificar";
+            document.getElementById('quiz-footer').classList.remove('hidden');
+        }
+
+        function updateLivesUI() {
+            const container = document.getElementById('lives-container'); 
+            if (currentSession.mode === 'randori') {
+                let html = '';
+                for(let i=0; i<currentSession.shidos; i++) html += '<div class="w-4 h-6 bg-yellow-400 rounded-sm border border-yellow-600 shadow-sm mx-0.5"></div>';
+                for(let i=currentSession.shidos; i<2; i++) html += '<div class="w-4 h-6 bg-slate-800 rounded-sm border border-slate-700 border-dashed mx-0.5 opacity-50"></div>';
+                container.innerHTML = html;
+            } else if (currentSession.mode === 'golden' || currentSession.mode === 'kata') {
+                container.innerHTML = `<span class="text-yellow-500 font-black text-2xl">${currentSession.score}</span>`;
+            } else {
+                container.innerHTML = '';
+                for(let i=0; i<3; i++) { container.innerHTML += (i < currentSession.lives) ? '<span>🥋</span>' : '<span class="opacity-20 grayscale">🥋</span>'; }
+            }
+        }
+        
+        function navigateBelts(direction) {
+            const LIST = (currentPathMode === 'judoka') ? BELTS : REFEREE_LEVELS;
+            const MAX_IDX = (currentPathMode === 'judoka') ? gameState.judokaIndex : gameState.refereeIndex;
+            let newIndex = currentViewLevelIndex + direction;
+            if (newIndex >= 0 && newIndex <= MAX_IDX) { currentViewLevelIndex = newIndex; renderPathUI(); }
+        }
+
+        function renderPathUI() {
+            const LIST = (currentPathMode === 'judoka') ? BELTS : REFEREE_LEVELS;
+            const NAME = LIST[currentViewLevelIndex] || "Nível";
+            const TOTAL_LEVELS = getTotalLevels(currentPathMode, currentViewLevelIndex);
+            
+            document.getElementById('belt-name').innerText = NAME;
+            document.getElementById('path-label-type').innerText = (currentPathMode === 'judoka') ? "Faixa Atual" : "Nível de Arbitragem";
+            
+            const beltIcon = document.getElementById('belt-icon');
+            const display = document.getElementById('current-belt-display');
+            
+            if (currentPathMode === 'judoka') {
+                beltIcon.className = `fa-solid fa-ribbon text-belt-${NAME.replace(" ", "")}`;
+                display.className = `font-black text-2xl flex items-center gap-3 text-belt-${NAME.replace(" ", "")}`;
+            } else {
+                const safeName = NAME.replace(/\s+/g, '');
+                beltIcon.className = `fa-solid fa-scale-balanced text-ref-${safeName}`;
+                display.className = `font-black text-2xl flex items-center gap-3 text-ref-${safeName}`;
+            }
+
+            let isHistoricalView = false;
+            let currentLevels = [];
+            
+            if (currentPathMode === 'judoka') {
+                isHistoricalView = currentViewLevelIndex < gameState.judokaIndex;
+                currentLevels = gameState.judokaLevels;
+            } else {
+                isHistoricalView = currentViewLevelIndex < gameState.refereeIndex;
+                currentLevels = gameState.refereeLevels;
+            }
+
+            const container = document.getElementById('nodes-container');
+            container.innerHTML = ''; 
+
+            for (let i = TOTAL_LEVELS; i >= 1; i--) {
+                const nodeBtn = document.createElement('button');
+                let isCompleted, isNextToPlay, isLocked;
+
+                if (isHistoricalView) {
+                    isCompleted = true; isNextToPlay = false; isLocked = false;
+                } else {
+                    isCompleted = currentLevels[i-1];
+                    isNextToPlay = !isCompleted && (i === 1 || currentLevels[i-2]);
+                    isLocked = !isCompleted && !isNextToPlay;
+                }
+
+                let marginClass = (i % 2 === 0) ? "ml-24" : "mr-24";
+                nodeBtn.className = `path-node shadow-lg ${marginClass} z-20 mb-2`; 
+                
+                if (isCompleted) { 
+                    nodeBtn.classList.add('node-completed'); 
+                    nodeBtn.innerHTML = '<i class="fa-solid fa-check"></i>'; 
+                    nodeBtn.onclick = () => startLevel(i);
+                } else if (isNextToPlay) { 
+                    nodeBtn.classList.add('node-active'); 
+                    nodeBtn.innerHTML = `<span>${i}</span>`;
+                    nodeBtn.onclick = () => startLevel(i);
+                } else { 
+                    nodeBtn.classList.add('node-locked'); 
+                    nodeBtn.disabled = true;
+                    nodeBtn.innerHTML = `<span>${i}</span>`;
+                    
+                    if (i === TOTAL_LEVELS) {
+                         nodeBtn.innerHTML = '<i class="fa-solid fa-lock"></i><i class="fa-solid fa-trophy absolute -top-10 text-slate-700 text-5xl drop-shadow-lg"></i>'; 
+                    }
+                }
+                
+                if(i === TOTAL_LEVELS && (isNextToPlay || isCompleted)) {
+                     let inner = isCompleted ? '<i class="fa-solid fa-check"></i>' : `<span>${i}</span>`;
+                     nodeBtn.innerHTML = `${inner}<i class="fa-solid fa-trophy absolute -top-10 text-yellow-500 text-5xl drop-shadow-lg animate-bounce"></i>`;
+                }
+
+                container.appendChild(nodeBtn);
+
+                if (i > 1) {
+                    const line = document.createElement('div');
+                    line.className = 'path-line';
+                    container.appendChild(line);
+                }
+            }
+            
+            const startLabel = document.createElement('div');
+            startLabel.className = "text-xs font-bold text-slate-500 mt-2 mr-24 uppercase tracking-widest";
+            startLabel.innerText = "Início";
+            container.appendChild(startLabel);
+
+            const navDown = document.getElementById('nav-down-container');
+            const navUp = document.getElementById('nav-up-container');
+            
+            const MAX_IDX = (currentPathMode === 'judoka') ? gameState.judokaIndex : gameState.refereeIndex;
+            
+            if (currentViewLevelIndex > 0) navDown.classList.remove('hidden'); else navDown.classList.add('hidden');
+            if (currentViewLevelIndex < MAX_IDX) navUp.classList.remove('hidden'); else navUp.classList.add('hidden');
+            
+            setTimeout(() => { document.getElementById('path-scroll-area').scrollTop = document.getElementById('path-scroll-area').scrollHeight; }, 50);
+        }
+
+        init();
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js?v=43'); }
+    </script>
+</body>
+</html>

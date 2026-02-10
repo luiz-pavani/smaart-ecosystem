@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>JudoLingo - Profep Max</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#020617"> 
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Estilos Globais --- */
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #f8fafc; user-select: none; -webkit-tap-highlight-color: transparent; overspray-behavior-y: contain; height: 100dvh; }
+        .fade-in { animation: fadeIn 0.6s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* --- Cores das Faixas --- */
+        .text-belt-Branca { color: #f8fafc; } 
+        .text-belt-Cinza { color: #94a3b8; }  
+        .text-belt-Azul { color: #3b82f6; }   
+        .text-belt-Amarela { color: #eab308; }
+        .text-belt-Laranja { color: #f97316; }
+        .text-belt-Verde { color: #22c55e; }  
+        .text-belt-Roxa { color: #a855f7; }   
+        .text-belt-Marrom { color: #78350f; } 
+        .text-belt-Preta { color: #ffffff; }
+
+        /* --- Estilos do Caminho (Path) --- */
+        .path-node { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; position: relative; z-index: 10; transition: all 0.2s; border-width: 4px; }
+        .node-locked { background-color: #1e293b; border-color: #334155; color: #475569; cursor: not-allowed; }
+        .node-active { background-color: #2563eb; border-color: #60a5fa; color: white; box-shadow: 0 0 20px rgba(37, 99, 235, 0.6); animation: pulseBlue 2s infinite; cursor: pointer; }
+        .node-completed { background-color: #059669; border-color: #10b981; color: white; cursor: pointer; }
+        .node-completed:active { transform: scale(0.95); }
+        .path-line { width: 6px; height: 60px; background-color: #334155; z-index: 0; margin: -5px 0; }
+        @keyframes pulseBlue { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); } 70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(37, 99, 235, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
+
+        /* --- Estilos do Quiz --- */
+        .quiz-option { transition: all 0.2s; border: 2px solid #1e293b; background: #1e293b; color: #94a3b8; }
+        .quiz-option:active { transform: scale(0.98); }
+        .option-selected { background: #172554; border-color: #3b82f6; color: #60a5fa; }
+        .option-correct { border-color: #22c55e; background-color: #064e3b; color: #4ade80; }
+        .option-missing { border-color: #eab308; border-style: dashed; }
+        .media-container { width: 100%; max-height: 250px; overflow: hidden; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: center; background: #0f172a; border: 1px solid #1e293b; }
+        .media-content { max-width: 100%; max-height: 250px; object-fit: contain; }
+
+        #feedback-modal, #promotion-modal { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-hidden { transform: translateY(110%); }
+        .modal-visible { transform: translateY(0); }
+    </style>
+</head>
+<body class="h-screen flex flex-col bg-slate-950 overflow-hidden">
+
+    <div id="screen-start" class="h-full flex flex-col items-center justify-center bg-slate-950 relative z-50 fade-in p-6">
+        <div class="flex-1 flex flex-col items-center justify-center w-full">
+            <div class="w-40 h-40 bg-slate-900 rounded-full flex items-center justify-center mb-10 border-4 border-slate-800 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+                <i class="fa-solid fa-torii-gate text-7xl text-slate-200"></i>
+            </div>
+            <h1 class="text-5xl md:text-6xl font-black text-white tracking-tighter mb-4 drop-shadow-lg">JUDO<span class="text-red-600">LINGO</span></h1>
+            <div class="mb-8"><span class="bg-yellow-500/10 text-yellow-500 text-[10px] font-bold px-3 py-1 rounded-full border border-yellow-500/30 tracking-widest uppercase">Beta V11</span></div>
+            <p class="text-slate-500 text-lg uppercase tracking-[0.3em] font-bold mb-16">Dojo Virtual</p>
+            <button onclick="enterGame()" class="group relative bg-red-600 hover:bg-red-500 text-white font-black py-5 px-16 rounded-2xl shadow-lg shadow-red-900/30 text-xl uppercase tracking-widest transition-all transform hover:scale-105 active:scale-95">
+                <span class="relative z-10">Entrar</span>
+                <div class="absolute inset-0 h-full w-full rounded-2xl border-2 border-white/20 group-hover:border-white/40"></div>
+            </button>
+            <p id="loading-text" class="mt-6 text-xs text-slate-600 animate-pulse hidden">Carregando conteúdo...</p>
+        </div>
+        <div class="shrink-0 text-center pb-10">
+            <div class="mb-10">
+                <p class="text-[10px] text-slate-500 mb-3 uppercase tracking-wide font-bold">Quer contribuir com o Judolingo?</p>
+                <a href="mailto:me@masteresportes.com?subject=Sugestão%20de%20Questão%20JudoLingo" class="text-xs font-bold text-sky-400 hover:text-sky-300 border border-sky-500/30 px-6 py-3 rounded-full transition bg-sky-500/10 hover:bg-sky-500/20 shadow-lg shadow-sky-900/20 inline-flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> Envie sua própria questão!</a>
+            </div>
+            <div class="opacity-70 hover:opacity-100 transition duration-300">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Powered by</p>
+                <a href="https://www.profepmax.com.br" target="_blank" class="font-black text-xl tracking-tighter text-slate-300 mb-2 inline-block hover:text-white hover:scale-105 transition transform">PROFEP <span class="text-red-600 italic">MAX</span></a>
+                <p class="text-[10px] text-slate-600 font-medium">Luiz Pavani, 2025. Direitos Reservados.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-path" class="hidden flex-1 flex flex-col relative bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] h-full">
+        <header class="h-24 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-6 z-30 shadow-lg shrink-0">
+            <div>
+                <div class="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Faixa Atual</div>
+                <div id="current-belt-display" class="font-black text-2xl flex items-center gap-3"><i class="fa-solid fa-ribbon" id="belt-icon"></i><span id="belt-name">...</span></div>
+            </div>
+            <a href="https://www.profepmax.com.br" target="_blank" class="flex flex-col items-end group">
+                <span class="text-[8px] uppercase font-bold tracking-widest text-slate-500 mb-0.5 group-hover:text-sky-400 transition">Conteúdo Oficial</span>
+                <div class="font-black text-sm tracking-tighter text-slate-300 group-hover:text-white transition">PROFEP <span class="text-red-600 italic">MAX</span> <i class="fa-solid fa-external-link-alt text-[10px] ml-1 opacity-50"></i></div>
+            </a>
+        </header>
+
+        <div id="nav-up-container" class="w-full flex justify-center py-2 bg-slate-900/50 hidden z-20">
+            <button onclick="navigateBelts(1)" class="text-slate-400 hover:text-white flex flex-col items-center animate-bounce"><i class="fa-solid fa-chevron-up text-2xl"></i><span class="text-[10px] uppercase font-bold tracking-widest">Voltar à Faixa Atual</span></button>
+        </div>
+        <main id="path-scroll-area" class="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth flex flex-col items-center pt-32 pb-48">
+            <div class="relative flex flex-col items-center w-full max-w-md">
+                <button id="node-5" onclick="startLevel(5)" class="path-node node-locked mb-2 shadow-xl relative z-20"><i class="fa-solid fa-trophy absolute -top-10 text-yellow-500 text-5xl drop-shadow-lg animate-bounce"></i><i class="fa-solid fa-star"></i></button>
+                <div class="path-line"></div>
+                <button id="node-4" onclick="startLevel(4)" class="path-node node-locked ml-24 shadow-lg z-20"><span>4</span></button>
+                <div class="path-line"></div>
+                <button id="node-3" onclick="startLevel(3)" class="path-node node-locked mr-24 shadow-lg z-20"><span>3</span></button>
+                <div class="path-line"></div>
+                <button id="node-2" onclick="startLevel(2)" class="path-node node-locked ml-24 shadow-lg z-20"><span>2</span></button>
+                <div class="path-line"></div>
+                <button id="node-1" onclick="startLevel(1)" class="path-node node-locked mr-24 shadow-lg z-20"><span>1</span></button>
+                <div class="text-xs font-bold text-slate-500 mt-2 mr-24 uppercase tracking-widest">Início</div>
+            </div>
+        </main>
+        <div id="nav-down-container" class="w-full flex justify-center py-4 bg-slate-900 border-t border-slate-800 z-30 shrink-0 hidden cursor-pointer hover:bg-slate-800 transition" onclick="navigateBelts(-1)">
+            <div class="flex flex-col items-center text-slate-400 group"><span class="text-[10px] uppercase font-bold tracking-widest mb-1 group-hover:text-white">Ver Faixa Anterior</span><i class="fa-solid fa-chevron-down text-2xl group-hover:text-white group-hover:translate-y-1 transition"></i></div>
+        </div>
+    </div>
+
+    <div id="screen-quiz" class="hidden h-full flex flex-col bg-slate-950">
+        <header class="h-16 border-b border-slate-800 flex items-center justify-between px-4 bg-slate-900 z-20 shrink-0">
+            <button onclick="backToPath()" class="text-slate-400 hover:text-white w-16 text-left"><i class="fa-solid fa-chevron-left text-xl mr-2"></i></button>
+            
+            <div class="flex flex-col items-center">
+                <div class="text-slate-200 font-bold text-sm">Fase <span id="quiz-level-num">1</span></div>
+                <a href="https://www.profepmax.com.br" target="_blank" class="text-[9px] text-slate-500 font-bold hover:text-sky-400 flex items-center gap-1 mt-0.5 tracking-tight">
+                    PROFEP <span class="text-red-600 italic">MAX</span> <i class="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+                </a>
+            </div>
+
+            <div class="flex gap-1 text-lg w-16 justify-end" id="lives-container"><span>🥋</span><span>🥋</span><span>🥋</span></div>
+        </header>
+
+        <main class="flex-1 flex flex-col items-center p-6 w-full max-w-2xl mx-auto relative overflow-y-auto">
+            <div class="w-full h-2 bg-slate-800 rounded-full mb-4 overflow-hidden shrink-0"><div id="quiz-progress-bar" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div></div>
+            <div id="multi-select-badge" class="hidden mb-4 bg-blue-900/50 text-blue-200 px-4 py-2 rounded-lg text-sm font-bold border border-blue-500/30 flex items-center gap-2 shrink-0 w-full justify-center"><i class="fa-solid fa-list-check"></i> Múltipla Escolha: Selecione todas</div>
+            <div id="question-media-container" class="media-container hidden shrink-0"></div>
+            <h3 id="question-text" class="text-xl md:text-2xl font-bold text-white mb-6 leading-snug text-left w-full shrink-0"></h3>
+            <div id="options-grid" class="space-y-3 w-full mb-6 shrink-0"></div>
+            <div id="question-credit" class="text-xs text-slate-500 w-full text-center border-t border-slate-800 pt-4 pb-2 mt-auto hidden shrink-0">
+                <span class="opacity-60 uppercase tracking-wide text-[10px]">Questão enviada por</span><br>
+                <span id="credit-name" class="font-bold text-slate-300 text-sm"></span>
+                <a id="credit-link" href="#" target="_blank" class="block text-sky-500 hover:text-sky-400 truncate mt-1 font-medium transition"></a>
+            </div>
+            <div class="w-full text-center pb-8 mt-4 shrink-0">
+                <a href="mailto:me@masteresportes.com?subject=Erro%20ou%20Sugestão%20JudoLingo" class="text-[10px] text-slate-600 hover:text-sky-500 transition flex items-center justify-center gap-1"><i class="fa-solid fa-circle-exclamation"></i> Viu um erro ou quer contribuir? Enviar questão</a>
+            </div>
+        </main>
+        <div id="quiz-footer" class="p-4 bg-slate-900 border-t border-slate-800 z-20 shrink-0">
+            <button id="btn-check" onclick="checkAnswer()" class="w-full py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-700" disabled>Verificar</button>
+        </div>
+    </div>
+
+    <div id="feedback-modal" class="absolute bottom-0 left-0 right-0 p-6 modal-hidden z-40 bg-slate-900 border-t border-slate-700 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
+        <div class="flex items-center gap-4 mb-6">
+            <div id="feedback-icon" class="w-14 h-14 rounded-full flex items-center justify-center text-3xl bg-slate-800 border-2 border-slate-700"></div>
+            <div>
+                <h4 id="feedback-title" class="font-black text-2xl text-white mb-1"></h4>
+                <p id="feedback-msg" class="text-slate-400 font-medium"></p>
+            </div>
+        </div>
+        <button id="btn-feedback-action" onclick="nextQuestion()" class="w-full bg-white hover:bg-slate-200 text-slate-950 font-black py-4 rounded-xl uppercase tracking-wider text-lg transition shadow-lg">Continuar</button>
+    </div>
+
+    <div id="promotion-modal" class="absolute inset-0 z-50 bg-slate-950/98 flex flex-col items-center justify-center p-6 text-center modal-hidden">
+        <div class="mb-8 relative"><i class="fa-solid fa-certificate text-9xl text-yellow-500 animate-spin-slow absolute top-0 left-0 opacity-30 blur-xl"></i><i class="fa-solid fa-trophy text-7xl text-yellow-400 relative z-10 animate-bounce"></i></div>
+        <h2 class="text-4xl font-black text-white mb-4 uppercase tracking-tight">Promoção!</h2>
+        <p class="text-slate-400 text-lg mb-8 max-w-xs">Você completou as 5 fases e alcançou a graduação:</p>
+        <div class="text-3xl font-black mb-12 px-10 py-6 border-4 rounded-2xl uppercase tracking-widest bg-slate-900 shadow-2xl flex items-center gap-4" id="new-belt-badge"><i class="fa-solid fa-ribbon"></i><span id="new-belt-name">FAIXA CINZA</span></div>
+        <button onclick="closePromotion()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-black py-5 px-12 rounded-xl shadow-lg shadow-yellow-500/30 transition uppercase tracking-widest text-xl"><i class="fa-solid fa-check mr-2"></i> Receber Faixa</button>
+    </div>
+
+    <script>
+        const BELTS = ["Branca", "Cinza", "Azul", "Amarela", "Laranja", "Verde", "Roxa", "Marrom", "Preta"];
+        const QUESTIONS_PER_LEVEL = 5;
+        const PASS_SCORE = 3;
+
+        let gameState = JSON.parse(localStorage.getItem('judolingo_path_save')) || { beltIndex: 0, completedLevels: [false, false, false, false, false] };
+        let currentViewBelt = gameState.beltIndex; 
+        
+        let questionsBank = [];
+        let beltDeck = []; 
+        let currentSession = { levelIndex: 0, queue: [], currentQ: 0, lives: 3, score: 0, selectedOptions: [] };
+
+        function enterGame() {
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-path').classList.remove('hidden');
+            currentViewBelt = gameState.beltIndex;
+            renderPathUI();
+            setTimeout(() => { document.getElementById('path-scroll-area').scrollTop = document.getElementById('path-scroll-area').scrollHeight; }, 100);
+        }
+
+        async function loadCSV() {
+            try {
+                document.getElementById('loading-text').classList.remove('hidden');
+                const response = await fetch('questions.csv?v=' + Date.now());
+                if (!response.ok) throw new Error();
+                const text = await response.text();
+                parseCSV(text);
+            } catch (e) { console.error(e); } finally { document.getElementById('loading-text').classList.add('hidden'); }
+        }
+
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n');
+            questionsBank = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line) {
+                    let parts = line.includes(';') ? line.split(';') : line.split(',');
+                    if (parts.length >= 6 && parts[0]) {
+                        let beltColor = (parts.length >= 7 && parts[6]) ? parts[6].replace(/"/g, "").trim() : "Branca";
+                        let mediaFile = (parts.length >= 8 && parts[7]) ? parts[7].replace(/"/g, "").trim() : "";
+                        let credName = (parts.length >= 9 && parts[8]) ? parts[8].replace(/"/g, "").trim() : "";
+                        let credLink = (parts.length >= 10 && parts[9]) ? parts[9].replace(/"/g, "").trim() : "";
+                        let rawAnswer = parts[5].replace(/"/g, "").trim();
+                        let correctAnswers = rawAnswer.split('|').map(s => s.trim());
+
+                        questionsBank.push({
+                            q: parts[0].replace(/"/g, ""),
+                            options: [parts[1], parts[2], parts[3], parts[4]].map(s => s.replace(/"/g, "").trim()),
+                            a: correctAnswers,
+                            belt: beltColor,
+                            media: mediaFile,
+                            creditName: credName,
+                            creditLink: credLink,
+                            isMulti: correctAnswers.length > 1
+                        });
+                    }
+                }
+            }
+            renderPathUI();
+        }
+
+        function navigateBelts(direction) {
+            let newIndex = currentViewBelt + direction;
+            if (newIndex >= 0 && newIndex <= gameState.beltIndex) {
+                currentViewBelt = newIndex;
+                renderPathUI();
+            }
+        }
+
+        function renderPathUI() {
+            const viewBeltName = BELTS[currentViewBelt];
+            document.getElementById('belt-name').innerText = viewBeltName;
+            const beltIcon = document.getElementById('belt-icon');
+            beltIcon.className = `fa-solid fa-ribbon text-belt-${viewBeltName.replace(" ", "")}`;
+            document.getElementById('current-belt-display').className = `font-black text-2xl flex items-center gap-3 text-belt-${viewBeltName.replace(" ", "")}`;
+
+            const isHistoricalView = currentViewBelt < gameState.beltIndex;
+
+            for (let i = 1; i <= 5; i++) {
+                const nodeBtn = document.getElementById(`node-${i}`);
+                let isCompleted, isNextToPlay;
+
+                if (isHistoricalView) {
+                    isCompleted = true; 
+                    isNextToPlay = false;
+                } else {
+                    isCompleted = gameState.completedLevels[i-1];
+                    isNextToPlay = !isCompleted && (i === 1 || gameState.completedLevels[i-2]);
+                }
+
+                nodeBtn.className = "path-node shadow-lg " + (i % 2 === 0 ? "ml-24" : "mr-24") + " z-20"; 
+                nodeBtn.classList.remove('node-completed', 'node-active', 'node-locked');
+                nodeBtn.disabled = false;
+                nodeBtn.innerHTML = `<span>${i}</span>`;
+
+                if (isCompleted) { 
+                    nodeBtn.classList.add('node-completed'); 
+                    nodeBtn.innerHTML = '<i class="fa-solid fa-check"></i>'; 
+                    nodeBtn.onclick = () => startLevel(i, currentViewBelt);
+                } 
+                else if (isNextToPlay) { 
+                    nodeBtn.classList.add('node-active'); 
+                    nodeBtn.onclick = () => startLevel(i, currentViewBelt);
+                } 
+                else { 
+                    nodeBtn.classList.add('node-locked'); 
+                    nodeBtn.disabled = true;
+                    if (i === 5) nodeBtn.innerHTML = '<i class="fa-solid fa-lock"></i><i class="fa-solid fa-trophy absolute -top-10 text-slate-700 text-5xl drop-shadow-lg"></i>'; 
+                }
+                
+                if(i === 5 && (isNextToPlay || isCompleted)) {
+                     let inner = isCompleted ? '<i class="fa-solid fa-check"></i>' : '<span>5</span>';
+                     nodeBtn.innerHTML = `${inner}<i class="fa-solid fa-trophy absolute -top-10 text-yellow-500 text-5xl drop-shadow-lg animate-bounce"></i>`;
+                }
+            }
+
+            const navDown = document.getElementById('nav-down-container');
+            const navUp = document.getElementById('nav-up-container');
+
+            if (currentViewBelt > 0) navDown.classList.remove('hidden');
+            else navDown.classList.add('hidden');
+
+            if (currentViewBelt < gameState.beltIndex) navUp.classList.remove('hidden');
+            else navUp.classList.add('hidden');
+
+            setTimeout(() => { document.getElementById('path-scroll-area').scrollTop = document.getElementById('path-scroll-area').scrollHeight; }, 50);
+        }
+
+        function startLevel(levelNum, beltIdx) {
+            const targetBeltName = BELTS[beltIdx];
+            let levelQuestions = questionsBank.filter(q => q.belt && q.belt.trim().toLowerCase() === targetBeltName.toLowerCase());
+            
+            if (levelQuestions.length === 0) {
+                console.warn(`Nenhuma pergunta encontrada para a faixa ${targetBeltName}.`);
+                levelQuestions = questionsBank;
+            }
+
+            levelQuestions = levelQuestions.sort(() => 0.5 - Math.random()).slice(0, QUESTIONS_PER_LEVEL);
+
+            currentSession = {
+                levelIndex: levelNum - 1,
+                queue: levelQuestions, 
+                currentQ: 0,
+                lives: 3,
+                score: 0,
+                selectedOptions: [],
+                playingBeltIndex: beltIdx 
+            };
+
+            document.getElementById('screen-path').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            document.getElementById('quiz-level-num').innerText = levelNum;
+            updateLivesUI();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = currentSession.queue[currentSession.currentQ];
+            currentSession.selectedOptions = []; 
+            document.getElementById('question-text').innerText = q.q;
+            document.getElementById('quiz-progress-bar').style.width = `${((currentSession.currentQ) / QUESTIONS_PER_LEVEL) * 100}%`;
+            
+            const mediaBox = document.getElementById('question-media-container');
+            if (q.media && q.media.length > 3) {
+                mediaBox.classList.remove('hidden');
+                const ext = q.media.split('.').pop().toLowerCase();
+                if (ext === 'mp4' || ext === 'webm') mediaBox.innerHTML = `<video src="${q.media}" class="media-content" autoplay loop muted playsinline></video>`;
+                else mediaBox.innerHTML = `<img src="${q.media}" class="media-content" alt="Mídia">`;
+            } else { mediaBox.classList.add('hidden'); mediaBox.innerHTML = ""; }
+
+            const creditBox = document.getElementById('question-credit');
+            if (q.creditName && q.creditName.trim().length > 0) {
+                creditBox.classList.remove('hidden');
+                document.getElementById('credit-name').innerText = q.creditName;
+                const linkEl = document.getElementById('credit-link');
+                if (q.creditLink && q.creditLink.trim().length > 0) {
+                    linkEl.classList.remove('hidden');
+                    let safeLink = q.creditLink;
+                    if (!safeLink.startsWith('http')) safeLink = 'https://' + safeLink;
+                    linkEl.href = safeLink;
+                    linkEl.innerText = q.creditLink;
+                } else { linkEl.classList.add('hidden'); }
+            } else { creditBox.classList.add('hidden'); }
+
+            const multiBadge = document.getElementById('multi-select-badge');
+            if(q.isMulti) multiBadge.classList.remove('hidden'); else multiBadge.classList.add('hidden');
+
+            const grid = document.getElementById('options-grid'); grid.innerHTML = '';
+            let opts = q.options.map(t => t).sort(() => 0.5 - Math.random());
+            opts.forEach(optText => {
+                const btn = document.createElement('button');
+                btn.className = `quiz-option w-full p-4 rounded-xl font-bold text-lg text-left option-default`;
+                btn.innerText = optText;
+                btn.onclick = () => selectOption(btn, optText, q.isMulti);
+                grid.appendChild(btn);
+            });
+            resetQuizFooter();
+        }
+
+        function selectOption(el, text, isMulti) {
+            if(document.getElementById('feedback-modal').classList.contains('modal-visible')) return;
+            if (isMulti) {
+                if (currentSession.selectedOptions.includes(text)) {
+                    currentSession.selectedOptions = currentSession.selectedOptions.filter(item => item !== text);
+                    el.classList.remove('option-selected'); el.classList.add('option-default');
+                } else {
+                    currentSession.selectedOptions.push(text);
+                    el.classList.remove('option-default'); el.classList.add('option-selected');
+                }
+            } else {
+                document.querySelectorAll('.quiz-option').forEach(e => e.className = e.className.replace('option-selected', 'option-default'));
+                currentSession.selectedOptions = [text];
+                el.classList.remove('option-default'); el.classList.add('option-selected');
+            }
+            const btn = document.getElementById('btn-check'); 
+            if (currentSession.selectedOptions.length > 0) { btn.disabled = false; btn.className = "w-full py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all bg-blue-600 hover:bg-blue-500 text-white cursor-pointer shadow-[0_4px_0_rgb(37,99,235)] active:shadow-none active:translate-y-1"; btn.innerHTML = "Confirmar"; } 
+            else { btn.disabled = true; btn.className = "w-full py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-700"; }
+        }
+
+        function checkAnswer() {
+            const q = currentSession.queue[currentSession.currentQ];
+            const userSelections = currentSession.selectedOptions.map(s => s.trim().toLowerCase());
+            const correctAnswers = q.a.map(s => s.trim().toLowerCase());
+            
+            const isCorrectLength = userSelections.length === correctAnswers.length;
+            const allMatch = userSelections.every(val => correctAnswers.includes(val));
+            const isCorrect = isCorrectLength && allMatch;
+
+            const icon = document.getElementById('feedback-icon');
+
+            if(isCorrect) {
+                currentSession.score++;
+                icon.innerHTML = '<i class="fa-solid fa-check text-green-400"></i>';
+                icon.className = "w-14 h-14 rounded-full flex items-center justify-center text-3xl bg-green-900/30 border-2 border-green-500";
+                showFeedback("Correto!", "Mandou bem!", true);
+            } else {
+                currentSession.lives--;
+                updateLivesUI();
+                icon.innerHTML = '<i class="fa-solid fa-xmark text-red-400"></i>';
+                icon.className = "w-14 h-14 rounded-full flex items-center justify-center text-3xl bg-red-900/30 border-2 border-red-500";
+                let correctText = q.a.join(", ");
+                if(currentSession.lives === 0) {
+                    document.getElementById('btn-feedback-action').innerText = "Tentar Novamente";
+                    document.getElementById('btn-feedback-action').onclick = backToPath;
+                    showFeedback("Ah não!", "Suas vidas acabaram.", false);
+                } else {
+                    showFeedback("Incorreto", `Correto: ${correctText}`, false);
+                }
+            }
+            document.getElementById('quiz-footer').classList.add('hidden');
+        }
+
+        function showFeedback(title, msg, isSuccess) {
+            document.getElementById('feedback-title').innerText = title;
+            document.getElementById('feedback-title').className = isSuccess ? "font-black text-2xl text-green-400 mb-1" : "font-black text-2xl text-red-400 mb-1";
+            document.getElementById('feedback-msg').innerText = msg;
+            const modal = document.getElementById('feedback-modal');
+            modal.classList.remove('modal-hidden'); modal.classList.add('modal-visible');
+        }
+
+        function nextQuestion() {
+            document.getElementById('feedback-modal').classList.remove('modal-visible');
+            document.getElementById('feedback-modal').classList.add('modal-hidden');
+            currentSession.currentQ++;
+            if (currentSession.currentQ < QUESTIONS_PER_LEVEL) loadQuestion();
+            else finishLevel();
+        }
+
+        function finishLevel() {
+            if (currentSession.score >= PASS_SCORE) {
+                if (currentSession.playingBeltIndex === gameState.beltIndex) {
+                    gameState.completedLevels[currentSession.levelIndex] = true;
+                    localStorage.setItem('judolingo_path_save', JSON.stringify(gameState));
+                    if (currentSession.levelIndex === 4) showPromotionModal();
+                    else { renderPathUI(); backToPath(); }
+                } else {
+                    renderPathUI(); backToPath();
+                }
+            } else {
+                alert(`Você acertou ${currentSession.score} de ${QUESTIONS_PER_LEVEL}. Precisa de ${PASS_SCORE} para passar.`);
+                backToPath();
+            }
+        }
+
+        function showPromotionModal() {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            const nextBeltName = BELTS[gameState.beltIndex + 1] || BELTS[gameState.beltIndex]; 
+            const badge = document.getElementById('new-belt-badge');
+            document.getElementById('new-belt-name').innerText = `FAIXA ${nextBeltName.toUpperCase()}`;
+            badge.className = `text-3xl font-black mb-12 px-10 py-6 border-4 rounded-2xl uppercase tracking-widest shadow-2xl flex items-center gap-4 text-belt-${nextBeltName.replace(" ", "")} bg-slate-900 border-belt-${nextBeltName.replace(" ", "")}`;
+            document.getElementById('promotion-modal').classList.remove('modal-hidden');
+        }
+
+        function closePromotion() {
+            if (gameState.beltIndex < BELTS.length - 1) gameState.beltIndex++;
+            gameState.completedLevels = [false, false, false, false, false];
+            localStorage.setItem('judolingo_path_save', JSON.stringify(gameState));
+            currentViewBelt = gameState.beltIndex;
+            document.getElementById('promotion-modal').classList.add('modal-hidden');
+            backToPath();
+        }
+
+        function backToPath() {
+            document.getElementById('feedback-modal').classList.add('modal-hidden');
+            document.getElementById('feedback-modal').classList.remove('modal-visible');
+            document.getElementById('btn-feedback-action').innerText = "Continuar";
+            document.getElementById('btn-feedback-action').onclick = nextQuestion;
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-path').classList.remove('hidden');
+            renderPathUI();
+        }
+
+        function resetQuizFooter() {
+            const btn = document.getElementById('btn-check'); btn.disabled = true;
+            btn.className = "w-full py-4 rounded-xl font-black text-lg uppercase tracking-wider transition-all bg-slate-800 text-slate-500 cursor-not-allowed border-2 border-slate-700";
+            btn.innerHTML = "Verificar";
+            document.getElementById('quiz-footer').classList.remove('hidden');
+        }
+
+        function updateLivesUI() {
+            const container = document.getElementById('lives-container'); container.innerHTML = '';
+            for(let i=0; i<3; i++) {
+                container.innerHTML += (i < currentSession.lives) ? '<span>🥋</span>' : '<span class="opacity-20 grayscale">🥋</span>';
+            }
+        }
+
+        loadCSV();
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+    </script>
+</body>
+</html>
