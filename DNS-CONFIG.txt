@@ -1,0 +1,59 @@
+🎯 CONFIGURAÇÃO DNS - SMAART PRO
+================================
+
+✅ Domínios adicionados no Vercel com sucesso!
+
+## 📋 CONFIGURAR NO HOSTINGER:
+
+Acesse: https://hpanel.hostinger.com/domain/smaartpro.com/dns
+
+### SMAART PRO (smaartpro.com):
+
+**Registro A (root domain):**
+- Type: A
+- Name: @ (ou deixe vazio)
+- Value: 76.76.21.21
+- TTL: 3600
+
+**Registro CNAME (www):**
+- Type: CNAME
+- Name: www
+- Value: cname.vercel-dns.com
+- TTL: 3600
+
+---
+
+Acesse: https://hpanel.hostinger.com/domain/judolingo.com/dns
+
+### JUDOLINGO (judolingo.com):
+
+**Registro A (root domain):**
+- Type: A
+- Name: @ (ou deixe vazio)
+- Value: 76.76.21.21
+- TTL: 3600
+
+**Registro CNAME (www):**
+- Type: CNAME
+- Name: www
+- Value: cname.vercel-dns.com
+- TTL: 3600
+
+---
+
+## ⏰ PROPAGAÇÃO DNS:
+
+Pode levar de 5 minutos a 48 horas para propagar.
+Use https://dnschecker.org para verificar.
+
+## 🔗 CONFERIR NO VERCEL:
+
+Dashboard: https://vercel.com/luiz-pavanis-projects
+
+Quando DNS propagar, os sites estarão em:
+- https://smaartpro.com
+- https://www.smaartpro.com
+- https://judolingo.com
+- https://www.judolingo.com
+
+HTTPS será configurado automaticamente pelo Vercel!
