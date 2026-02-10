@@ -268,16 +268,28 @@ async function handleSubscriptionCreated(payload: Safe2PayPayload, subscriptionI
   // Determinar plano
   let planoInterno = "anual";
   let descricaoVenda = "Plano Anual";
-  
-  if (amount === 35 || amount === 35.0) {
+  const referenceLower = reference.toLowerCase();
+
+  if (referenceLower.includes("mensal")) {
     planoInterno = "mensal";
     descricaoVenda = "Plano Mensal";
-  } else if (reference.toLowerCase().includes("mensal")) {
-    planoInterno = "mensal";
-    descricaoVenda = "Plano Mensal";
-  } else if (reference.toLowerCase().includes("vital")) {
+  } else if (referenceLower.includes("vital")) {
     planoInterno = "vitalicio";
     descricaoVenda = "Plano Vitalício";
+  } else if (referenceLower.includes("anual")) {
+    planoInterno = "anual";
+    descricaoVenda = "Plano Anual";
+  } else if (amount > 0) {
+    if (amount >= 900) {
+      planoInterno = "vitalicio";
+      descricaoVenda = "Plano Vitalício";
+    } else if (amount >= 200) {
+      planoInterno = "anual";
+      descricaoVenda = "Plano Anual";
+    } else {
+      planoInterno = "mensal";
+      descricaoVenda = "Plano Mensal";
+    }
   }
 
   // 1. Ativar perfil (preferindo profiles.id = auth uid)

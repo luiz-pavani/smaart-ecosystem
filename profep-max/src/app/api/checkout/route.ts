@@ -190,9 +190,14 @@ export async function POST(req: Request) {
 
 		console.log(`[CHECKOUT] Plan ID: ${planId} | Plan: ${plan} | Email: ${normalizedEmail}`);
 
+		const normalizedPaymentMethod = paymentMethod === "2" ? "2" : paymentMethod === "6" ? "6" : "1";
+		const subscriptionReference = normalizedEmail
+			? `SUBSCRIPTION:${plan}:${normalizedEmail}`
+			: `SUBSCRIPTION:${plan}`;
+
 		// 5. Tokenizar cartão (se for pagamento via cartão)
 		let cardToken: string | undefined;
-		if (paymentMethod === "2" && card?.cardNumber) {
+		if (normalizedPaymentMethod === "2" && card?.cardNumber) {
 			console.log('[CHECKOUT] Tokenizando cartão...');
 			const tokenResult = await tokenizeCard({
 				cardNumber: card.cardNumber,
@@ -219,9 +224,22 @@ export async function POST(req: Request) {
 		console.log('[CHECKOUT] Criando assinatura...');
 		const subscriptionResult = await createSubscription({
 			planId,
-			paymentMethod: paymentMethod === "2" ? "2" : "1", // 1=Boleto, 2=Cartão
+			paymentMethod: normalizedPaymentMethod, // 1=Boleto, 2=Cartao, 6=Pix
+			reference: subscriptionReference,
 			customerEmails: [normalizedEmail || email],
-			cardToken: paymentMethod === "2" ? cardToken : undefined,
+			customerName: String(name || '').trim() || undefined,
+			customerIdentity: cpf?.replace(/\D/g, "") || undefined,
+			customerPhone: phone?.replace(/\D/g, "") || undefined,
+			customerAddress: {
+				ZipCode: address?.zipCode || undefined,
+				Street: address?.street || undefined,
+				Number: address?.number || undefined,
+				District: address?.district || undefined,
+				CityName: address?.city || undefined,
+				StateInitials: address?.state || undefined,
+				CountryName: "Brasil",
+			},
+			cardToken: normalizedPaymentMethod === "2" ? cardToken : undefined,
 			vendor: 'PROFEPMAX EDUCAÇÃO',
 			apiToken: process.env.SAFE2PAY_API_TOKEN || process.env.SAFE2PAY_TOKEN || '',
 		});
@@ -257,6 +275,7 @@ export async function POST(req: Request) {
 		return NextResponse.json({
 			subscriptionId: subscriptionResult.subscriptionId,
 			paymentUrl: subscriptionResult.paymentUrl, // Para boleto/pix pode ter URL de pagamento
+			url: subscriptionResult.paymentUrl,
 			cupom: cupomResult.cupomAplicado,
 			message: 'Assinatura criada com sucesso!',
 		});

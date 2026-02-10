@@ -63,9 +63,22 @@ export async function tokenizeCard(params: {
  */
 export async function createSubscription(params: {
   planId: string;
-  paymentMethod: '1' | '2'; // 1=Boleto, 2=Cartão
+  paymentMethod: '1' | '2' | '6'; // 1=Boleto, 2=Cartao, 6=Pix
+  reference?: string;
   customerEmails: string[];
-  cardToken?: string; // Obrigatório se paymentMethod=2
+  customerName?: string;
+  customerIdentity?: string;
+  customerPhone?: string;
+  customerAddress?: {
+    ZipCode?: string;
+    Street?: string;
+    Number?: string;
+    District?: string;
+    CityName?: string;
+    StateInitials?: string;
+    CountryName?: string;
+  };
+  cardToken?: string; // Obrigatorio se paymentMethod=2
   vendor?: string;
   apiToken: string;
 }): Promise<{
@@ -73,7 +86,19 @@ export async function createSubscription(params: {
   paymentUrl?: string;
   error?: string;
 }> {
-  const { planId, paymentMethod, customerEmails, cardToken, vendor, apiToken } = params;
+  const {
+    planId,
+    paymentMethod,
+    reference,
+    customerEmails,
+    customerName,
+    customerIdentity,
+    customerPhone,
+    customerAddress,
+    cardToken,
+    vendor,
+    apiToken,
+  } = params;
 
   const payload: any = {
     PaymentMethod: paymentMethod,
@@ -81,6 +106,13 @@ export async function createSubscription(params: {
       Emails: customerEmails,
     },
   };
+
+  if (reference) payload.Reference = reference;
+
+  if (customerName) payload.Customer.Name = customerName;
+  if (customerIdentity) payload.Customer.Identity = customerIdentity;
+  if (customerPhone) payload.Customer.Phone = customerPhone;
+  if (customerAddress) payload.Customer.Address = customerAddress;
 
   // Se for cartão e tiver token, adicionar
   if (paymentMethod === '2' && cardToken) {

@@ -91,8 +91,8 @@ Quando o usuário finalizar o checkout:
 2. **Se for cartão:**
    - Tokeniza o cartão: `POST /payment/v2/card/token`
    - Cria assinatura com token: `POST /recurrence/v1/plans/{planId}/subscriptions` + `Token`
-3. **Se for boleto:**
-   - Cria assinatura diretamente: `POST /recurrence/v1/plans/{planId}/subscriptions`
+3. **Se for boleto ou Pix:**
+   - Cria assinatura diretamente: `POST /recurrence/v1/plans/{planId}/subscriptions` (PaymentMethod 1=Boleto, 6=Pix)
 4. **Armazena `subscription_id`** no perfil do usuário (profiles.id_subscription)
 
 ---
