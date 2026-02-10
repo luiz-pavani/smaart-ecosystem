@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * Utilitários para Safe2Pay - API de Recorrência
  */

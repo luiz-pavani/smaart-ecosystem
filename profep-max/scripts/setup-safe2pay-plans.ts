@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+/// <reference types="node" />
 /**
  * Script de Setup - Criar Planos de Recorrência no Safe2Pay
  * Execute apenas UMA VEZ para criar os planos Mensal, Anual e Vitalício
@@ -13,11 +14,9 @@
  */
 
 import axios from 'axios';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
+import dotenv from 'dotenv';
 
-// Carregar .env.local
-dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+dotenv.config({ path: '.env.local' });
 
 const SAFE2PAY_TOKEN = process.env.SAFE2PAY_API_TOKEN || process.env.SAFE2PAY_TOKEN;
 const WEBHOOK_URL = process.env.NEXT_PUBLIC_SITE_URL 
