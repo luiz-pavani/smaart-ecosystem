@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smaart Pro VAR - Firebase Setup</title>
+
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        .status { padding: 10px; background: #f0f0f0; border-radius: 5px; margin-top: 20px; }
+        .success { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Smaart Pro VAR</h1>
+    <p>Inicializando aplicação...</p>
+
+    <div id="app-status" class="status">Carregando Firebase...</div>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js"
+      }
+    }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getAnalytics } from "firebase/analytics";
+
+        async function loadFirebaseConfig() {
+            const res = await fetch('./config.json', { cache: 'no-store' });
+            if (!res.ok) throw new Error('config.json não encontrado');
+            return res.json();
+        }
+
+        try {
+            const firebaseConfig = await loadFirebaseConfig();
+            const app = initializeApp(firebaseConfig);
+            getAnalytics(app);
+            
+            console.log("Firebase inicializado com sucesso para: " + firebaseConfig.projectId);
+            document.getElementById('app-status').innerHTML = 
+                `<span class="success">✓ Firebase Conectado!</span><br>Project ID: ${firebaseConfig.projectId}`;
+        } catch (error) {
+            console.error("Erro ao inicializar Firebase:", error);
+            document.getElementById('app-status').innerText = "Erro ao conectar: " + error.message;
+        }
+    </script>
+
+</body>
+</html>

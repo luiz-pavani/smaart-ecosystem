@@ -1,0 +1,6 @@
+.DS_Store
+APP/config.json
+APP/.env.local
+.vercel
+.env.local
+.env*.local

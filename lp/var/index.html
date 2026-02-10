@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMAART PRO VAR | Beta 6 + DB</title>
+    
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <h1>SMAART PRO VAR <small>BETA 6</small></h1>
+        </div>
+        <div class="system-status">
+            <button id="btn-folder" class="btn-small btn-primary">📂 1. PASTA</button>
+            <button id="btn-cam" class="btn-small btn-primary">📹 2. CÂMERA</button>
+            <button id="btn-screen" class="btn-small btn-primary">🖥️ 3. PLACAR</button>
+            <button id="btn-toggle-zones" class="btn-small btn-tool active">👁️ ZONAS</button>
+            <div id="status-link" class="status-item"><span class="dot active"></span> LIVE</div>
+        </div>
+    </header>
+
+    <aside class="sidebar-left">
+        <div class="panel-header">
+            <h3>ARQUIVOS</h3>
+            <button id="btn-refresh" class="btn-icon-small"><span class="material-icons" style="font-size:16px;">refresh</span></button>
+        </div>
+        <div id="file-list" class="file-list">
+            <div class="empty-state">Selecione pasta.</div>
+        </div>
+    </aside>
+
+    <main class="video-stage">
+        <video id="vid-cam" autoplay playsinline muted style="display:none"></video>
+        <video id="vid-screen" autoplay playsinline muted style="display:none"></video>
+        <canvas id="main-canvas"></canvas>
+
+        <div id="replay-overlay" style="display: none;">
+            <div class="replay-badge">REPLAY</div>
+            <button id="btn-live" class="btn-live">VOLTAR AO VIVO</button>
+        </div>
+    </main>
+
+    <aside class="sidebar-right">
+        
+        <div id="robot-eyes-panel" class="panel debug-panel">
+            <h3>OLHO DO ROBÔ</h3>
+            <div class="debug-grid">
+                <div class="debug-item">
+                    <span class="debug-label">ID</span>
+                    <canvas id="debug-canvas-id" width="100" height="100"></canvas>
+                    <div id="debug-text-id" class="debug-value">---</div>
+                </div>
+                <div class="debug-item">
+                    <span class="debug-label">RELÓGIO</span>
+                    <canvas id="debug-canvas-clock" width="215" height="100"></canvas>
+                    <div id="debug-text-clock" class="debug-value">---</div>
+                </div>
+            </div>
+            <div class="zone-controls">
+                <div class="zone-title">ZONAS (PLACAR)</div>
+                <div class="zone-group">
+                    <div class="zone-label">ID (azul)</div>
+                    <div class="zone-row">
+                        <input id="zone-id-x" type="number" class="zone-input" placeholder="X">
+                        <input id="zone-id-y" type="number" class="zone-input" placeholder="Y">
+                        <input id="zone-id-w" type="number" class="zone-input" placeholder="W">
+                        <input id="zone-id-h" type="number" class="zone-input" placeholder="H">
+                    </div>
+                </div>
+                <div class="zone-group">
+                    <div class="zone-label">CRONÔMETRO (amarelo)</div>
+                    <div class="zone-row">
+                        <input id="zone-clock-x" type="number" class="zone-input" placeholder="X">
+                        <input id="zone-clock-y" type="number" class="zone-input" placeholder="Y">
+                        <input id="zone-clock-w" type="number" class="zone-input" placeholder="W">
+                        <input id="zone-clock-h" type="number" class="zone-input" placeholder="H">
+                    </div>
+                </div>
+                <div class="zone-actions">
+                    <button id="btn-zone-apply" class="btn-small btn-primary">Aplicar</button>
+                    <button id="btn-zone-reset" class="btn-small">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel flex-grow" style="padding:0; display:flex; flex-direction:column; overflow:hidden;">
+            <div class="panel-header" style="padding: 5px 15px;">
+                <h3>LOG DE EVENTOS</h3>
+                <span id="db-status" style="font-size:9px; color:#aaa;">DB: ...</span>
+            </div>
+            <div id="event-log" class="log-list">
+                <div class="log-item neutral"><span class="log-text">Pronto.</span></div>
+            </div>
+        </div>
+
+        <div class="bottom-dock">
+            
+            <div class="dock-section recording-section">
+                <div class="rec-row">
+                    <input type="text" id="match-id-input" value="AGUARDANDO..." class="match-input" title="ID da Luta">
+                    <div class="rec-timer" id="rec-duration">00:00</div>
+                </div>
+                <div id="rec-status-text" style="font-size:9px; color:#666; margin-bottom:5px; text-align:center;">STATUS: PRONTO</div>
+                <div class="btn-grid">
+                    <button id="btn-new-match" class="btn-primary">GRAVAR</button>
+                    <button id="btn-stop-rec" class="btn-danger" disabled>PARAR</button>
+                </div>
+            </div>
+
+            <div class="dock-section playback-section">
+                
+                <div class="control-row">
+                    <button id="btn-frame-back" class="btn-icon" title="← (seta esquerda)"><span class="material-icons">skip_previous</span></button>
+                    <button id="btn-play-pause" class="btn-icon" title="Espaço"><span class="material-icons">play_arrow</span></button>
+                    <button id="btn-frame-fwd" class="btn-icon" title="→ (seta direita)"><span class="material-icons">skip_next</span></button>
+                </div>
+
+                <div class="control-row speed-group">
+                    <button id="btn-speed-025" class="btn-text" title="4">0.25x</button>
+                    <button id="btn-speed-050" class="btn-text" title="2">0.5x</button>
+                    <button id="btn-speed-100" class="btn-text active" title="1">1x</button>
+                </div>
+
+                <div class="control-row ab-group">
+                    <button id="btn-loop-a" class="btn-text" title="A">A</button>
+                    <button id="btn-loop-b" class="btn-text" title="B">B</button>
+                    <button id="btn-loop-clr" class="btn-text" title="C">CLR</button>
+                    <button id="btn-footer-live" class="btn-text" style="color:#ff5252; font-weight:bold;" title="Enter / Esc">🔴 LIVE</button>
+                </div>
+
+                <div class="jog-section">
+                    <span class="time-code" id="replay-time">LIVE</span>
+                    <div class="jog-wheel-wrapper">
+                        <div id="jog-wheel" class="jog-wheel" title="Gire para ajuste fino">
+                            <div class="jog-marker"></div>
+                            <div class="jog-inner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <footer>
+        <div class="slider-container">
+            <input type="range" id="seek-slider" min="0" max="100" value="100" step="0.1">
+        </div>
+    </footer>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"
+      }
+    }
+    </script>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

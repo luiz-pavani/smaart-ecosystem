@@ -1,0 +1,36 @@
+-- Create PRIMEIROS20 coupon (1º mês R$14,90 e recorrência R$24,90, cartão, 20 usos)
+INSERT INTO public.coupons (
+  code,
+  description,
+  discount_percent,
+  discount_fixed,
+  first_month_discount_percent,
+  first_month_discount_fixed,
+  recurring_discount_percent,
+  recurring_discount_fixed,
+  valid_from,
+  valid_until,
+  max_uses,
+  used_count,
+  status,
+  payment_method,
+  landing_plan,
+  landing_payment_method
+) VALUES (
+  'PRIMEIROS20',
+  'Campanha 20 primeiros: R$14,90 no 1º mês e R$24,90 nos demais (cartão)',
+  NULL,
+  NULL,
+  NULL,
+  14.90,
+  NULL,
+  24.90,
+  NOW(),
+  NOW() + INTERVAL '365 days',
+  20,
+  0,
+  'ACTIVE',
+  '2',
+  'mensal',
+  '2'
+);
