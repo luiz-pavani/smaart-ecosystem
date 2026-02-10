@@ -139,3 +139,4 @@ Vercel: vercel.com/dashboard
 🎉 READY TO DEPLOY!
 
 Run: ./deploy.sh  (or follow manual steps above)
+Path: /Users/judo365/Documents/MASTER ESPORTES/SMAART PRO/smaart-ecosystem/

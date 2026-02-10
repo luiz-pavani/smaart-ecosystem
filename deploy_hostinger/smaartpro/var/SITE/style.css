@@ -1,0 +1,51 @@
+/* Fonte futurista para títulos */
+body {
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, .navbar-brand {
+    font-family: 'Chakra Petch', sans-serif;
+}
+
+/* Fundo da área principal */
+.hero-section {
+    min-height: 85vh;
+    background: radial-gradient(circle at center, #1a2a3a 0%, #000000 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Efeito de brilho no botão principal */
+.glow-effect {
+    box-shadow: 0 0 20px rgba(13, 110, 253, 0.5);
+    transition: all 0.3s ease;
+}
+
+.glow-effect:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 40px rgba(13, 110, 253, 0.8);
+}
+
+/* Cards de funcionalidades */
+.bg-darker {
+    background-color: #050505;
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s ease, background 0.3s;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(13, 110, 253, 0.3);
+}
+
+/* Detalhes */
+.text-primary {
+    color: #0d6efd !important;
+}

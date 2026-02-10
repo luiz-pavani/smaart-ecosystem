@@ -195,6 +195,7 @@ RESEND_API_KEY=your_resend_key
 ### Deploy All Landing Pages (Hostinger)
 ```bash
 # From local smaart-ecosystem directory
+# Path: /Users/judo365/Documents/MASTER ESPORTES/SMAART PRO/smaart-ecosystem/
 
 # 1. Create deployment package
 mkdir -p deploy_package/smaartpro

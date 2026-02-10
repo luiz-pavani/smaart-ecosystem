@@ -1,6 +1,7 @@
 #!/bin/bash
 # SMAART PRO Ecosystem - Quick Deploy Script
 # Run this script to deploy all landing pages and apps
+# Location: /Users/judo365/Documents/MASTER ESPORTES/SMAART PRO/smaart-ecosystem/
 
 echo "🚀 SMAART PRO Ecosystem Deployment"
 echo "=================================="

@@ -11,7 +11,7 @@ STATUS: ✅ ALL PACKAGES READY FOR DEPLOYMENT
 
 📦 DEPLOYMENT PACKAGES CREATED:
 
-Location: /Users/judo365/smaart-ecosystem/deploy_hostinger/
+Location: /Users/judo365/Documents/MASTER ESPORTES/SMAART PRO/smaart-ecosystem/deploy_hostinger/
 
 1. smaartpro_landing_pages.zip (115 KB)
    ├── Master Landing Page (index.html, style.css)
