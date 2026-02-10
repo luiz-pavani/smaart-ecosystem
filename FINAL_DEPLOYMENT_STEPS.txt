@@ -1,0 +1,157 @@
+🚀 COMPLETE DEPLOYMENT GUIDE - FINAL STEPS
+═══════════════════════════════════════════════════════════════════
+
+📋 VERCEL CUSTOM DOMAINS (3 Browser Tabs Now Open)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tab 1: J1 App Domain Settings
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Click "Add Domain"
+2. Enter: j1.smaartpro.com
+3. Click "Add"
+4. Copy the DNS records shown
+5. Go to Hostinger DNS settings for smaartpro.com
+6. Add CNAME record:
+   - Name: j1
+   - Value: cname.vercel-dns.com
+7. Wait for DNS propagation (5-10 minutes)
+8. ✅ J1 App will be live at: https://j1.smaartpro.com
+
+Tab 2: TITAN Domain Settings
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Click "Add Domain"
+2. Enter: titan.smaartpro.com
+3. Click "Add"
+4. Go to Hostinger DNS settings for smaartpro.com
+5. Add CNAME record:
+   - Name: titan
+   - Value: cname.vercel-dns.com
+6. Wait for DNS propagation
+7. ✅ TITAN will be live at: https://titan.smaartpro.com
+
+Tab 3: Profep Max Domain Settings
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Click "Add Domain"
+2. Enter: profepmax.com.br
+3. Click "Add"
+4. Copy the DNS records shown
+5. Go to your profepmax.com.br DNS provider
+6. Add the records shown (A and CNAME)
+7. Wait for DNS propagation
+8. ✅ Profep Max will be live at: https://profepmax.com.br
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 HOSTINGER LANDING PAGES UPLOAD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Hostinger File Manager should be open. If not:
+👉 https://hpanel.hostinger.com/websites/files
+
+FILES TO UPLOAD (in Finder window):
+📁 deploy_hostinger/
+   ├── smaartpro_landing_pages.zip (115 KB)
+   └── judolingo_landing_page.zip (2.7 KB)
+
+UPLOAD STEPS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ SMAARTPRO.COM LANDING PAGES:
+────────────────────────────────────────
+In Hostinger File Manager:
+   a) Select domain: smaartpro.com
+   b) Navigate to: public_html/
+   c) Drag & drop: smaartpro_landing_pages.zip
+   d) Right-click → Extract
+   e) Open extracted 'smaartpro' folder
+   f) Select these files and MOVE to public_html root:
+      • index.html (Master LP)
+      • style.css (Master LP styles)
+   g) Keep these folders in public_html:
+      • var/ (VAR Landing Page)
+      • j1/ (J1 Landing Page)
+      • titan/ (TITAN Landing Page)
+   h) Delete the empty 'smaartpro' folder
+   
+   ✅ Result:
+      - https://smaartpro.com (Master LP)
+      - https://smaartpro.com/var/ (VAR LP)
+      - https://smaartpro.com/j1/ (J1 LP)
+      - https://smaartpro.com/titan/ (TITAN LP)
+
+2️⃣ JUDOLINGO LANDING PAGE:
+────────────────────────────────────────
+In Hostinger File Manager:
+   a) Switch to domain: judolingo.com
+   b) Navigate to: public_html/
+   c) Create new folder: lp
+   d) Enter the lp/ folder
+   e) Drag & drop: judolingo_landing_page.zip
+   f) Right-click → Extract
+   g) Open extracted 'judolingo' folder
+   h) Move both files to public_html/lp/:
+      • index.html
+      • style.css
+   i) Delete the empty 'judolingo' folder
+   
+   ✅ Result:
+      - https://judolingo.com/lp/ (Judolingo LP)
+      - https://judolingo.com (WordPress - unchanged)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 FINAL VERIFICATION CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After ALL steps above are complete, verify these URLs:
+
+Landing Pages:
+□ https://smaartpro.com
+□ https://smaartpro.com/var/
+□ https://smaartpro.com/j1/
+□ https://smaartpro.com/titan/
+□ https://judolingo.com/lp/
+
+Applications:
+□ https://smaartpro.com/varapp/ (already live)
+□ https://j1.smaartpro.com (after DNS setup)
+□ https://titan.smaartpro.com (after DNS setup)
+□ https://judolingo.com (already live)
+□ https://profepmax.com.br (after DNS setup)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️ ESTIMATED TIME:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Hostinger upload & extract: 5 minutes
+- Vercel domain configuration: 5 minutes
+- DNS propagation: 10-30 minutes (automatic)
+
+Total hands-on time: ~10 minutes
+Total wait time: ~30 minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🆘 QUICK DNS HELP:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Hostinger DNS for smaartpro.com:
+1. Go to: https://hpanel.hostinger.com/domain/smaartpro.com/dns
+2. Add CNAME records:
+   
+   Name: j1
+   Type: CNAME
+   Value: cname.vercel-dns.com
+   TTL: 3600
+   
+   Name: titan
+   Type: CNAME
+   Value: cname.vercel-dns.com
+   TTL: 3600
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ YOU'RE ALMOST THERE! Just follow the steps above!
+
+═══════════════════════════════════════════════════════════════════
