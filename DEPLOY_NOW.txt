@@ -1,0 +1,141 @@
+🚀 QUICK DEPLOYMENT INSTRUCTIONS
+================================
+
+📦 FILES READY TO DEPLOY:
+- deploy_hostinger/smaartpro_landing_pages.zip (115 KB)
+- deploy_hostinger/judolingo_landing_page.zip (2.7 KB)
+
+════════════════════════════════════════════════════════════════
+
+STEP 1: DEPLOY LANDING PAGES TO HOSTINGER
+------------------------------------------
+
+A) SMAARTPRO.COM Landing Pages:
+
+1. Open Hostinger: https://hpanel.hostinger.com/websites/files
+2. Select domain: smaartpro.com
+3. Navigate to: public_html/
+4. Upload: smaartpro_landing_pages.zip
+5. Right-click → Extract
+6. You'll see a 'smaartpro' folder
+7. Move these files TO public_html root:
+   - smaartpro/index.html → public_html/index.html
+   - smaartpro/style.css → public_html/style.css
+8. Keep these folders in public_html:
+   - smaartpro/var/ → public_html/var/
+   - smaartpro/j1/ → public_html/j1/
+   - smaartpro/titan/ → public_html/titan/
+
+✅ Verify:
+   - https://smaartpro.com (Master LP)
+   - https://smaartpro.com/var/ (VAR LP)
+   - https://smaartpro.com/j1/ (J1 LP)
+   - https://smaartpro.com/titan/ (TITAN LP)
+
+B) JUDOLINGO.COM Landing Page:
+
+1. In Hostinger, switch to: judolingo.com
+2. Navigate to: public_html/
+3. Create folder: lp/
+4. Upload to public_html/lp/: judolingo_landing_page.zip
+5. Extract the zip
+6. Move files:
+   - judolingo/index.html → public_html/lp/index.html
+   - judolingo/style.css → public_html/lp/style.css
+
+✅ Verify: https://judolingo.com/lp/
+
+NOTE: WordPress app at https://judolingo.com stays unchanged
+
+════════════════════════════════════════════════════════════════
+
+STEP 2: DEPLOY APPS TO VERCEL
+------------------------------------------
+
+Prerequisites:
+- Install Vercel CLI: npm install -g vercel
+- Login: vercel login
+
+A) J1 Analytics:
+   cd apps/j1-app
+   vercel --prod
+   → Set custom domain: j1.smaartpro.com
+   ✅ Verify: https://j1.smaartpro.com
+
+B) TITAN Management:
+   cd apps/titan
+   vercel --prod
+   → Set custom domain: titan.smaartpro.com
+   ⚠️  Add environment variables in Vercel dashboard
+   ✅ Verify: https://titan.smaartpro.com
+
+C) Profep Max:
+   cd profep-max
+   vercel --prod
+   → Set custom domain: profepmax.com.br
+   ⚠️  Add environment variables in Vercel dashboard
+   ✅ Verify: https://profepmax.com.br
+
+════════════════════════════════════════════════════════════════
+
+STEP 3: FINAL CHECKS
+------------------------------------------
+
+✅ All Landing Pages Live:
+   □ https://smaartpro.com
+   □ https://smaartpro.com/var/
+   □ https://smaartpro.com/j1/
+   □ https://smaartpro.com/titan/
+   □ https://judolingo.com/lp/
+
+✅ All Apps Live:
+   □ https://smaartpro.com/varapp/ (already deployed)
+   □ https://j1.smaartpro.com
+   □ https://titan.smaartpro.com
+   □ https://judolingo.com (WordPress)
+   □ https://profepmax.com.br
+
+✅ Test Each Page:
+   □ Loads without errors
+   □ CSS styling works
+   □ Fonts load correctly
+   □ Buttons link to correct URLs
+   □ Mobile responsive
+
+════════════════════════════════════════════════════════════════
+
+🆘 TROUBLESHOOTING
+
+Problem: Landing page not showing
+→ Check file path in Hostinger File Manager
+→ Ensure index.html is in correct directory
+→ Clear browser cache (Cmd+Shift+R)
+
+Problem: Styles not loading
+→ Verify style.css is in same folder as index.html
+→ Check browser console for 404 errors
+
+Problem: Vercel build failed
+→ Check package.json has correct scripts
+→ Verify Node version compatibility
+→ Check build logs in Vercel dashboard
+
+Problem: Custom domain not working
+→ Verify DNS settings in Hostinger/Vercel
+→ Wait 24-48 hours for DNS propagation
+→ Check SSL certificate is active
+
+════════════════════════════════════════════════════════════════
+
+📞 SUPPORT
+
+Full Guide: DEPLOYMENT.md
+GitHub: https://github.com/luiz-pavani/smaart-ecosystem
+Hostinger: hpanel.hostinger.com
+Vercel: vercel.com/dashboard
+
+═══════════════════════════════════════════════════════════════
+
+🎉 READY TO DEPLOY!
+
+Run: ./deploy.sh  (or follow manual steps above)
