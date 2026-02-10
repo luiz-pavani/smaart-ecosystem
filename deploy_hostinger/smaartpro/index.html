@@ -3,118 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMAART PRO - Aplicações de Judo</title>
+    <title>SMAART PRO | Ecossistema Premium de Judo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,700;1,700;1,800&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="header">
-        <div class="container">
-            <div class="logo">
-                <h1>SMAART PRO</h1>
-                <p class="tagline">Ecossistema Integrado de Aplicações de Judo</p>
+    <header class="site-header">
+        <div class="container header-inner">
+            <div class="brand">
+                <span class="brand-mark">SMAART</span>
+                <span class="brand-pro">PRO</span>
+                <span class="brand-tag">JUDO PERFORMANCE STACK</span>
             </div>
             <nav class="nav">
-                <a href="#apps" class="nav-link">Aplicações</a>
-                <a href="#about" class="nav-link">Sobre</a>
+                <a href="#apps">Aplicacoes</a>
+                <a href="#performance">Performance</a>
+                <a href="#cta" class="btn btn-ghost">Agendar demo</a>
             </nav>
         </div>
     </header>
 
     <main>
-        <!-- Hero Section -->
         <section class="hero">
-            <div class="container">
-                <h2>Bem-vindo ao SMAART PRO</h2>
-                <p>Tecnologia aplicada ao judo. Análise, treinamento e inovação.</p>
-            </div>
-        </section>
-
-        <!-- Apps Grid -->
-        <section id="apps" class="apps-section">
-            <div class="container">
-                <h2 class="section-title">Nossas Aplicações</h2>
-                
-                <div class="apps-grid">
-                    <!-- VAR App -->
-                    <div class="app-card">
-                        <div class="app-icon var-icon">📹</div>
-                        <h3>VAR - Video Analysis & Review</h3>
-                        <p>Sistema avançado de análise de vídeo com detecção de eventos, replay em câmera lenta e relatórios detalhados.</p>
-                        <a href="https://smaartpro.com/varapp/index.html" class="btn btn-primary">Acessar VAR</a>
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <span class="eyebrow"><i data-lucide="zap"></i>SMAART PRO | PREMIUM OPS</span>
+                    <h1 class="headline">Alta performance para dados, treino e decisao no judo.</h1>
+                    <p class="subhead">Um ecossistema integrado que conecta VAR, analytics, ensino e operacao em ritmo de elite.</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="#apps"><i data-lucide="arrow-right"></i>Explorar ecossistema</a>
+                        <a class="btn btn-outline" href="#cta">Falar com o time</a>
                     </div>
-
-                    <!-- J1 Analytics App -->
-                    <div class="app-card">
-                        <div class="app-icon j1-icon">📊</div>
-                        <h3>J1 - Analytics</h3>
-                        <p>Análise avançada de dados de competições. Estatísticas, padrões de ataque, históricos e comparativos.</p>
-                        <a href="https://var.smaartpro.com/j1/index.html" class="btn btn-primary">Acessar J1</a>
+                </div>
+                <div class="hero-panel glass">
+                    <div class="stat-card" style="--delay: 0s;">
+                        <p>Eventos por temporada</p>
+                        <strong>+1.200</strong>
                     </div>
-
-                    <!-- Judolingo -->
-                    <div class="app-card">
-                        <div class="app-icon judolingo-icon">🎓</div>
-                        <h3>Judolingo</h3>
-                        <p>Plataforma de aprendizado progressivo. Técnicas, táticas e desenvolvimento de judocas.</p>
-                        <a href="https://judolingo.com/" class="btn btn-primary">Acessar Judolingo</a>
+                    <div class="stat-card" style="--delay: 0.08s;">
+                        <p>Decisoes auditadas</p>
+                        <strong>Tempo real</strong>
                     </div>
-
-                    <!-- TITAN -->
-                    <div class="app-card">
-                        <div class="app-icon titan-icon">🚀</div>
-                        <h3>TITAN - Gerenciamento</h3>
-                        <p>Sistema de gerenciamento integrado. Inscrições, calendário, resultados e documentação.</p>
-                        <a href="https://smaartpro.com/titan/index.html" class="btn btn-primary">Acessar TITAN</a>
-                    </div>
-
-                    <!-- Profep Max -->
-                    <div class="app-card">
-                        <div class="app-icon profep-icon">💪</div>
-                        <h3>Profep Max</h3>
-                        <p>Plataforma de treinamento e condicionamento. Programas personalizados e acompanhamento de desempenho.</p>
-                        <a href="https://profepmax.com.br/" class="btn btn-primary">Acessar Profep Max</a>
+                    <div class="stat-card" style="--delay: 0.16s;">
+                        <p>Times conectados</p>
+                        <strong>+80</strong>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- About Section -->
-        <section id="about" class="about-section">
+        <section id="apps" class="section">
             <div class="container">
-                <h2 class="section-title">Sobre SMAART PRO</h2>
-                <div class="about-content">
-                    <p>SMAART PRO é um ecossistema integrado de aplicações desenvolvidas para potencializar o treinamento, análise e gerenciamento de eventos de judo.</p>
-                    <div class="features">
-                        <div class="feature">
-                            <span class="feature-icon">✓</span>
-                            <span>Análise de vídeo em tempo real</span>
+                <div class="section-title">
+                    <span class="eyebrow"><i data-lucide="layers"></i>STACK COMPLETO</span>
+                    <h2 class="headline">Aplicacoes desenhadas para velocidade.</h2>
+                    <p>Cada produto do SMAART PRO entrega decisao rapida, visao profunda e controle total.</p>
+                </div>
+                <div class="card-grid">
+                    <article class="card glass" style="--delay: 0s;">
+                        <div class="card-icon">
+                            <i data-lucide="video"></i>
                         </div>
-                        <div class="feature">
-                            <span class="feature-icon">✓</span>
-                            <span>Inteligência de dados avançada</span>
+                        <h3>VAR | Video Analysis & Review</h3>
+                        <p>Replay inteligente com OCR, registro de eventos e auditoria imediata.</p>
+                        <a class="btn btn-primary" href="https://smaartpro.com/varapp/index.html"><i data-lucide="arrow-up-right"></i>Acessar VAR</a>
+                    </article>
+                    <article class="card glass" style="--delay: 0.08s;">
+                        <div class="card-icon">
+                            <i data-lucide="line-chart"></i>
                         </div>
-                        <div class="feature">
-                            <span class="feature-icon">✓</span>
-                            <span>Plataforma de aprendizado</span>
+                        <h3>J1 | Analytics</h3>
+                        <p>Dashboards taticos, comparativos e insights para preparar atletas.</p>
+                        <a class="btn btn-primary" href="https://var.smaartpro.com/j1/index.html"><i data-lucide="arrow-up-right"></i>Acessar J1</a>
+                    </article>
+                    <article class="card glass" style="--delay: 0.16s;">
+                        <div class="card-icon">
+                            <i data-lucide="book-open"></i>
                         </div>
-                        <div class="feature">
-                            <span class="feature-icon">✓</span>
-                            <span>Gerenciamento integrado</span>
+                        <h3>Judolingo</h3>
+                        <p>Trilhas progressivas, biblioteca viva e aprendizagem por metas.</p>
+                        <a class="btn btn-primary" href="https://judolingo.com/"><i data-lucide="arrow-up-right"></i>Acessar Judolingo</a>
+                    </article>
+                    <article class="card glass" style="--delay: 0.24s;">
+                        <div class="card-icon">
+                            <i data-lucide="layout-grid"></i>
                         </div>
+                        <h3>TITAN | Operacao</h3>
+                        <p>Inscricoes, calendario, documentos e resultados em um painel unico.</p>
+                        <a class="btn btn-primary" href="https://smaartpro.com/titan/index.html"><i data-lucide="arrow-up-right"></i>Acessar TITAN</a>
+                    </article>
+                    <article class="card glass" style="--delay: 0.32s;">
+                        <div class="card-icon">
+                            <i data-lucide="dumbbell"></i>
+                        </div>
+                        <h3>Profep Max</h3>
+                        <p>Programas de condicao fisica com acompanhamento e metas.</p>
+                        <a class="btn btn-primary" href="https://profepmax.com.br/"><i data-lucide="arrow-up-right"></i>Acessar Profep Max</a>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="performance" class="section section-split">
+            <div class="container split-grid">
+                <div class="split-copy">
+                    <span class="eyebrow"><i data-lucide="sparkles"></i>HIGH-END OPS</span>
+                    <h2 class="headline">Performance que conecta tatame e staff.</h2>
+                    <p>Fluxo operacional sem friccao: dados, video e ensino sincronizados para decisao rapida.</p>
+                    <ul class="feature-list">
+                        <li>Replay e analise imediata com visao tatico-tecnica.</li>
+                        <li>Relatorios em tempo real para comissao tecnica.</li>
+                        <li>Base unica de aprendizado para atletas e professores.</li>
+                    </ul>
+                </div>
+                <div class="split-cards">
+                    <div class="glass panel-card" style="--delay: 0s;">
+                        <h3>Operacao em modo elite</h3>
+                        <p>Menos tempo de setup, mais tempo para performance.</p>
                     </div>
+                    <div class="glass panel-card" style="--delay: 0.1s;">
+                        <h3>Governanca completa</h3>
+                        <p>Auditoria, historico e exportacao em um clique.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cta" class="section cta">
+            <div class="container cta-box glass">
+                <h2 class="headline">Pronto para operar no ritmo do alto rendimento?</h2>
+                <p>Agende uma apresentacao e veja como o SMAART PRO acelera sua equipe.</p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="#"><i data-lucide="calendar-check"></i>Agendar apresentacao</a>
+                    <a class="btn btn-outline" href="#apps">Ver todos os produtos</a>
                 </div>
             </div>
         </section>
     </main>
 
     <footer class="footer">
-        <div class="container">
-            <p>&copy; 2026 SMAART PRO. Todos os direitos reservados.</p>
-            <p class="version">Versão 1.0 - Ecossistema Unificado</p>
+        <div class="container footer-inner">
+            <span>SMAART PRO | Ecossistema premium de judo</span>
+            <span>2026</span>
         </div>
     </footer>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>

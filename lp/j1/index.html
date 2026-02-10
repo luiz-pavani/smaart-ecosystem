@@ -6,104 +6,137 @@
   <title>J1 Analytics | SMAART PRO</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,700;1,700;1,800&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="hero">
-    <nav class="nav">
-      <div class="brand">J1 Analytics</div>
-      <div class="nav-links">
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <span class="brand-mark">J1</span>
+        <span class="brand-pro">Analytics</span>
+        <span class="brand-tag">SMAART PRO | DATA CORE</span>
+      </div>
+      <nav class="nav">
         <a href="#features">Recursos</a>
         <a href="#insights">Insights</a>
         <a href="#cta" class="btn btn-ghost">Acessar</a>
-      </div>
-    </nav>
-    <div class="hero-content">
-      <p class="eyebrow">SMAART PRO</p>
-      <h1>Analise lutas com precisao de elite</h1>
-      <p class="subtitle">Dashboards rapidos, comparativos inteligentes e leitura de padroes para preparar atletas e equipes.</p>
-      <div class="hero-actions">
-        <a class="btn btn-primary" href="https://j1.smaartpro.com">Entrar no J1</a>
-        <a class="btn btn-outline" href="#features">Ver recursos</a>
-      </div>
-    </div>
-    <div class="hero-panel">
-      <div class="metric">
-        <span class="metric-label">Eventos por luta</span>
-        <span class="metric-value">+240</span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Comparativos</span>
-        <span class="metric-value">Tempo real</span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Relatorios</span>
-        <span class="metric-value">PDF + CSV</span>
-      </div>
+      </nav>
     </div>
   </header>
 
   <main>
-    <section id="features" class="section features">
-      <div class="section-title">
-        <h2>Recursos que mudam o jogo</h2>
-        <p>Do scouting a preparacao de luta, o J1 organiza tudo em segundos.</p>
-      </div>
-      <div class="grid">
-        <div class="card">
-          <h3>Mapa de acoes</h3>
-          <p>Visualize ataques, transicoes e pontuacoes em um painel unico.</p>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow"><i data-lucide="activity"></i>SMAART PRO | HIGH-END DATA</span>
+          <h1 class="headline">Analise lutas com precisao cirurgica.</h1>
+          <p class="subhead">Dashboards velozes, comparativos inteligentes e leitura de padroes para elevar a estrategia do seu time.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://j1.smaartpro.com"><i data-lucide="log-in"></i>Entrar no J1</a>
+            <a class="btn btn-outline" href="#features">Ver recursos</a>
+          </div>
         </div>
-        <div class="card">
-          <h3>Comparativos inteligentes</h3>
-          <p>Compare atletas, chaves e temporadas com filtros dinamicos.</p>
-        </div>
-        <div class="card">
-          <h3>Clips estrategicos</h3>
-          <p>Exporte trechos por evento para treinos e revisoes rapidas.</p>
+        <div class="hero-panel glass">
+          <div class="stat-card" style="--delay: 0s;">
+            <p>Eventos por luta</p>
+            <strong>+240</strong>
+          </div>
+          <div class="stat-card" style="--delay: 0.08s;">
+            <p>Comparativos</p>
+            <strong>Tempo real</strong>
+          </div>
+          <div class="stat-card" style="--delay: 0.16s;">
+            <p>Relatorios</p>
+            <strong>PDF + CSV</strong>
+          </div>
         </div>
       </div>
     </section>
 
-    <section id="insights" class="section insights">
-      <div class="insights-content">
-        <h2>Insights em tempo real</h2>
-        <p>Veja o impacto de cada mudanca com graficos atualizados no momento da analise.</p>
-        <ul>
-          <li>Filtros por atleta, categoria e tecnica</li>
-          <li>Comparacao entre treinos e competicoes</li>
-          <li>Exportacao facilitada para staff tecnico</li>
-        </ul>
+    <section id="features" class="section">
+      <div class="container">
+        <div class="section-title">
+          <span class="eyebrow"><i data-lucide="line-chart"></i>INSIGHTS DE ELITE</span>
+          <h2 class="headline">Recursos que mudam o jogo.</h2>
+          <p>Do scouting ao plano tatico, o J1 organiza tudo em segundos.</p>
+        </div>
+        <div class="card-grid">
+          <article class="card glass" style="--delay: 0s;">
+            <div class="card-icon">
+              <i data-lucide="line-chart"></i>
+            </div>
+            <h3>Mapa de acoes</h3>
+            <p>Visualize ataques, transicoes e pontuacoes em um painel unico.</p>
+          </article>
+          <article class="card glass" style="--delay: 0.08s;">
+            <div class="card-icon">
+              <i data-lucide="activity"></i>
+            </div>
+            <h3>Comparativos inteligentes</h3>
+            <p>Compare atletas, chaves e temporadas com filtros dinamicos.</p>
+          </article>
+          <article class="card glass" style="--delay: 0.16s;">
+            <div class="card-icon">
+              <i data-lucide="list"></i>
+            </div>
+            <h3>Clips estrategicos</h3>
+            <p>Exporte trechos por evento para treinos e revisoes rapidas.</p>
+          </article>
+        </div>
       </div>
-      <div class="insights-panel">
-        <div class="panel-row">
-          <span>Dominio de pegada</span>
-          <strong>68%</strong>
+    </section>
+
+    <section id="insights" class="section section-split">
+      <div class="container split-grid">
+        <div class="split-copy">
+          <span class="eyebrow"><i data-lucide="eye"></i>LIVE INSIGHTS</span>
+          <h2 class="headline">Decisao tatico-tecnica em tempo real.</h2>
+          <p>Veja o impacto de cada mudanca com graficos atualizados no momento da analise.</p>
+          <ul class="feature-list">
+            <li>Filtros por atleta, categoria e tecnica.</li>
+            <li>Comparacao entre treinos e competicoes.</li>
+            <li>Exportacao direta para staff tecnico.</li>
+          </ul>
         </div>
-        <div class="panel-row">
-          <span>Transicao para ne-waza</span>
-          <strong>41%</strong>
-        </div>
-        <div class="panel-row">
-          <span>Tempo medio de ataque</span>
-          <strong>09s</strong>
+        <div class="insights-panel glass">
+          <div class="panel-row">
+            <span>Dominio de pegada</span>
+            <strong>68%</strong>
+          </div>
+          <div class="panel-row">
+            <span>Transicao para ne-waza</span>
+            <strong>41%</strong>
+          </div>
+          <div class="panel-row">
+            <span>Tempo medio de ataque</span>
+            <strong>09s</strong>
+          </div>
         </div>
       </div>
     </section>
 
     <section id="cta" class="section cta">
-      <div class="cta-box">
-        <h2>Pronto para acelerar sua equipe?</h2>
+      <div class="container cta-box glass">
+        <h2 class="headline">Pronto para acelerar sua equipe?</h2>
         <p>Use o J1 Analytics para transformar dados em decisao tatico-tecnica.</p>
-        <a class="btn btn-primary" href="https://j1.smaartpro.com">Acessar J1</a>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://j1.smaartpro.com"><i data-lucide="log-in"></i>Acessar J1</a>
+          <a class="btn btn-outline" href="#features">Ver recursos</a>
+        </div>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <span>SMAART PRO J1 Analytics</span>
-    <span>2026</span>
+    <div class="container footer-inner">
+      <span>SMAART PRO | J1 Analytics</span>
+      <span>2026</span>
+    </div>
   </footer>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>

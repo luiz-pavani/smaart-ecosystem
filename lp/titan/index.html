@@ -6,109 +6,146 @@
     <title>TITAN | SMAART PRO</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,700;1,700;1,800&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="top">
-        <div class="brand">TITAN</div>
-        <nav class="nav">
-            <a href="#modules">Modulos</a>
-            <a href="#flow">Fluxo</a>
-            <a href="#cta" class="btn btn-ghost">Entrar</a>
-        </nav>
+    <header class="site-header">
+        <div class="container header-inner">
+            <div class="brand">
+                <span class="brand-mark">TITAN</span>
+                <span class="brand-pro">Ops</span>
+                <span class="brand-tag">SMAART PRO | OPERACAO</span>
+            </div>
+            <nav class="nav">
+                <a href="#modules">Modulos</a>
+                <a href="#flow">Fluxo</a>
+                <a href="#cta" class="btn btn-ghost">Entrar</a>
+            </nav>
+        </div>
     </header>
 
-    <section class="hero">
-        <div class="hero-left">
-            <p class="eyebrow">SMAART PRO | OPERACAO</p>
-            <h1>Gerenciamento total de eventos e equipes</h1>
-            <p class="subtitle">Controle inscricoes, pagamentos, calendario e resultados com um painel unico e seguro.</p>
-            <div class="actions">
-                <a class="btn btn-primary" href="https://smaartpro.com/titan/index.html">Acessar TITAN</a>
-                <a class="btn btn-outline" href="#modules">Ver modulos</a>
-            </div>
-        </div>
-        <div class="hero-right">
-            <div class="card">
-                <span>Eventos ativos</span>
-                <strong>12</strong>
-            </div>
-            <div class="card">
-                <span>Inscricoes abertas</span>
-                <strong>1.240</strong>
-            </div>
-            <div class="card">
-                <span>Documentos gerados</span>
-                <strong>98%</strong>
-            </div>
-        </div>
-    </section>
-
-    <section id="modules" class="section modules">
-        <h2>Modulos principais</h2>
-        <div class="module-grid">
-            <div class="module">
-                <h3>Inscricoes inteligentes</h3>
-                <p>Formularios dinamicos, validacao automatica e pagamentos seguros.</p>
-            </div>
-            <div class="module">
-                <h3>Calendario central</h3>
-                <p>Visualize temporadas, categorias e sedes em um unico painel.</p>
-            </div>
-            <div class="module">
-                <h3>Resultados e ranking</h3>
-                <p>Atualizacao em tempo real com exportacao para relatorios.</p>
-            </div>
-        </div>
-    </section>
-
-    <section id="flow" class="section flow">
-        <div class="flow-text">
-            <h2>Fluxo operacional completo</h2>
-            <p>Do credenciamento ao fechamento, o TITAN acompanha cada etapa sem friccao.</p>
-            <ul>
-                <li>Check-in e credenciamento rapido</li>
-                <li>Relatorios de delegacoes e staff</li>
-                <li>Integracao com pagamentos e documentos</li>
-            </ul>
-        </div>
-        <div class="flow-panel">
-            <div class="step">
-                <span>1</span>
-                <div>
-                    <strong>Planejamento</strong>
-                    <p>Defina regras, categorias e quotas.</p>
+    <main>
+        <section class="hero">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <span class="eyebrow"><i data-lucide="shield"></i>OPERACAO DE ALTO RENDIMENTO</span>
+                    <h1 class="headline">Gerenciamento total de eventos e equipes.</h1>
+                    <p class="subhead">Controle inscricoes, pagamentos, calendario e resultados com um painel unico, seguro e rapido.</p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="https://smaartpro.com/titan/index.html"><i data-lucide="log-in"></i>Acessar TITAN</a>
+                        <a class="btn btn-outline" href="#modules">Ver modulos</a>
+                    </div>
+                </div>
+                <div class="hero-panel glass">
+                    <div class="stat-card" style="--delay: 0s;">
+                        <p>Eventos ativos</p>
+                        <strong>12</strong>
+                    </div>
+                    <div class="stat-card" style="--delay: 0.08s;">
+                        <p>Inscricoes abertas</p>
+                        <strong>1.240</strong>
+                    </div>
+                    <div class="stat-card" style="--delay: 0.16s;">
+                        <p>Documentos gerados</p>
+                        <strong>98%</strong>
+                    </div>
                 </div>
             </div>
-            <div class="step">
-                <span>2</span>
-                <div>
-                    <strong>Operacao</strong>
-                    <p>Monitore inscricoes e pagamentos.</p>
-                </div>
-            </div>
-            <div class="step">
-                <span>3</span>
-                <div>
-                    <strong>Entrega</strong>
-                    <p>Resultados, documentos e pos-evento.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+        </section>
 
-    <section id="cta" class="section cta">
-        <div class="cta-box">
-            <h2>Pronto para escalar sua operacao?</h2>
-            <p>Centralize tudo com o TITAN e reduza tempo operacional em dias.</p>
-            <a class="btn btn-primary" href="https://smaartpro.com/titan/index.html">Acessar TITAN</a>
-        </div>
-    </section>
+        <section id="modules" class="section">
+            <div class="container">
+                <div class="section-title">
+                    <span class="eyebrow"><i data-lucide="layout-grid"></i>STACK OPERACIONAL</span>
+                    <h2 class="headline">Modulos principais.</h2>
+                    <p>Do cadastro ao ranking, tudo em um fluxo linear e automatizado.</p>
+                </div>
+                <div class="card-grid">
+                    <article class="card glass" style="--delay: 0s;">
+                        <div class="card-icon">
+                            <i data-lucide="clipboard-list"></i>
+                        </div>
+                        <h3>Inscricoes inteligentes</h3>
+                        <p>Formularios dinamicos, validacao automatica e pagamentos seguros.</p>
+                    </article>
+                    <article class="card glass" style="--delay: 0.08s;">
+                        <div class="card-icon">
+                            <i data-lucide="calendar"></i>
+                        </div>
+                        <h3>Calendario central</h3>
+                        <p>Visualize temporadas, categorias e sedes em um unico painel.</p>
+                    </article>
+                    <article class="card glass" style="--delay: 0.16s;">
+                        <div class="card-icon">
+                            <i data-lucide="trophy"></i>
+                        </div>
+                        <h3>Resultados e ranking</h3>
+                        <p>Atualizacao em tempo real com exportacao para relatorios.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="flow" class="section section-split">
+            <div class="container split-grid">
+                <div class="split-copy">
+                    <span class="eyebrow"><i data-lucide="shuffle"></i>FLUXO SEM FRICCAO</span>
+                    <h2 class="headline">Operacao completa, do credenciamento ao fechamento.</h2>
+                    <p>O TITAN acompanha cada etapa com controle, visibilidade e entregas em tempo real.</p>
+                    <ul class="feature-list">
+                        <li>Check-in e credenciamento rapido.</li>
+                        <li>Relatorios para delegacoes e staff.</li>
+                        <li>Integracao com pagamentos e documentos.</li>
+                    </ul>
+                </div>
+                <div class="flow-panel glass">
+                    <div class="flow-step">
+                        <span>1</span>
+                        <div>
+                            <strong>Planejamento</strong>
+                            <p>Defina regras, categorias e quotas.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <span>2</span>
+                        <div>
+                            <strong>Operacao</strong>
+                            <p>Monitore inscricoes e pagamentos.</p>
+                        </div>
+                    </div>
+                    <div class="flow-step">
+                        <span>3</span>
+                        <div>
+                            <strong>Entrega</strong>
+                            <p>Resultados, documentos e pos-evento.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cta" class="section cta">
+            <div class="container cta-box glass">
+                <h2 class="headline">Pronto para escalar sua operacao?</h2>
+                <p>Centralize tudo com o TITAN e reduza tempo operacional em dias.</p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="https://smaartpro.com/titan/index.html"><i data-lucide="log-in"></i>Acessar TITAN</a>
+                    <a class="btn btn-outline" href="#modules">Ver modulos</a>
+                </div>
+            </div>
+        </section>
+    </main>
 
     <footer class="footer">
-        <span>TITAN | SMAART PRO</span>
-        <span>2026</span>
+        <div class="container footer-inner">
+            <span>TITAN | SMAART PRO</span>
+            <span>2026</span>
+        </div>
     </footer>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>
