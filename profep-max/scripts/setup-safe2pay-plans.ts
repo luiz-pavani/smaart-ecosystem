@@ -120,7 +120,8 @@ async function main() {
   console.log('🚀 Safe2Pay - Setup de Planos de Recorrência');
   console.log('============================================\n');
   console.log(`🌐 Webhook URL: ${WEBHOOK_URL}`);
-  console.log(`🔑 Token: ${SAFE2PAY_TOKEN.substring(0, 20)}...`);
+  const tokenPreview = SAFE2PAY_TOKEN ? `${SAFE2PAY_TOKEN.substring(0, 20)}...` : 'N/A';
+  console.log(`🔑 Token: ${tokenPreview}`);
 
   const results: { [key: string]: string | null } = {};
 

@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendFederationPaymentConfirmation, sendProfepPaymentConfirmation } from "../../../actions/email";
+import {
+  sendSubscriptionCreatedEmail,
+  sendSubscriptionRenewalEmail,
+  sendSubscriptionFailureEmail,
+  sendSubscriptionCanceledEmail,
+  sendSubscriptionExpiredEmail,
+} from "../../../../lib/email-subscriptions";
 
 // Usamos o supabaseAdmin (Service Role) para ignorar as travas de segurança (RLS)
 const supabaseAdmin = createClient(
@@ -312,13 +319,23 @@ async function handleSubscriptionCreated(payload: Safe2PayPayload, subscriptionI
   // @ts-ignore
   await registrarVenda(email, amount, descricaoVenda, (payload.PaymentMethod ?? 0) as any, payload.IdTransaction, subscriptionId, 1, 'SubscriptionCreated');
 
-  // 3. Enviar email de confirmação
+  // 3. Enviar emails de confirmação
   if (profile?.full_name) {
+    // Email genérico de pagamento
     await sendProfepPaymentConfirmation(
       email,
       profile.full_name,
       planoInterno,
       amount
+    );
+
+    // Email específico de assinatura recorrente
+    await sendSubscriptionCreatedEmail(
+      email,
+      profile.full_name,
+      planoInterno,
+      amount,
+      subscriptionId
     );
   }
 
@@ -383,10 +400,10 @@ async function handleSubscriptionRenewed(payload: Safe2PayPayload, subscriptionI
   // @ts-ignore
   await registrarVenda(email, amount, `Renovação - Ciclo ${cycleNumber}`, (payload.PaymentMethod ?? 0) as any, payload.IdTransaction, subscriptionId, cycleNumber, 'SubscriptionRenewed');
 
-  // 5. Enviar email de renovação (opcional)
+  // 5. Enviar email de renovação
   if (profile.full_name) {
+    await sendSubscriptionRenewalEmail(email, profile.full_name, profile.plan, amount);
     console.log("[SubscriptionRenewed] 📧 Email de renovação enviado para", email);
-    // await sendSubscriptionRenewalEmail(email, profile.full_name, profile.plan, amount);
   }
 
   console.log(`[SubscriptionRenewed] ✅ Renovação processada: Ciclo ${cycleNumber}`);
@@ -421,10 +438,10 @@ async function handleSubscriptionFailed(payload: Safe2PayPayload, subscriptionId
     .eq('id_subscription', subscriptionId)
     .single();
 
-  // 3. Enviar email de falha (opcional)
+  // 3. Enviar email de falha
   if (profile?.full_name) {
+    await sendSubscriptionFailureEmail(email, profile.full_name, failureReason);
     console.log("[SubscriptionFailed] 📧 Email de falha enviado para", email);
-    // await sendSubscriptionFailureEmail(email, profile.full_name, failureReason);
   }
 
   console.log(`[SubscriptionFailed] ⚠️ Falha na cobrança: ${failureReason}`);
@@ -455,11 +472,12 @@ async function handleSubscriptionCanceled(payload: Safe2PayPayload, subscription
   // 2. Enviar email de cancelamento
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('full_name')
+    .select('full_name, plan')
     .eq('id_subscription', subscriptionId)
     .single();
 
   if (profile?.full_name) {
+    await sendSubscriptionCanceledEmail(email, profile.full_name, profile.plan || 'Assinatura');
     console.log("[SubscriptionCanceled] 📧 Email de cancelamento enviado para", email);
   }
 
@@ -485,6 +503,18 @@ async function handleSubscriptionExpired(payload: Safe2PayPayload, subscriptionI
     console.error("[SubscriptionExpired] Erro ao expirar subscription:", updateError.message);
   } else {
     console.log("[SubscriptionExpired] ✅ Assinatura expirou");
+  }
+
+  // 2. Enviar email de expiração
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('full_name, plan')
+    .eq('id_subscription', subscriptionId)
+    .single();
+
+  if (profile?.full_name) {
+    await sendSubscriptionExpiredEmail(email, profile.full_name, profile.plan || 'Assinatura');
+    console.log("[SubscriptionExpired] 📧 Email de expiração enviado para", email);
   }
 
   console.log(`[SubscriptionExpired] ✅ Assinatura ${subscriptionId} expirou (limite de ciclos atingido)`);
