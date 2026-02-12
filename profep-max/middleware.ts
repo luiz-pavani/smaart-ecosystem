@@ -55,8 +55,8 @@ export async function middleware(request: NextRequest) {
   // Extrai o subdomínio (ex: de 'lrsj.localhost:3000' extrai 'lrsj')
   const subdomain = hostname.replace(`.${rootDomain}`, '')
 
-  // Se o hostname for igual ao domínio raiz, é o acesso principal (Profep MAX), não faz nada.
-  if (hostname === rootDomain || subdomain === hostname) {
+  // Se for domínio raiz, www, ou hostname sem subdomínio válido, não reescreve.
+  if (hostname === rootDomain || subdomain === hostname || subdomain === 'www') {
     return response
   }
 
