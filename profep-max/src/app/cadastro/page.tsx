@@ -34,19 +34,23 @@ function CadastroContent() {
       setLoading(false);
       return;
     }
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name } }
+    const response = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, fullName: name }),
     });
-    if (signUpError) {
-      setError(signUpError.message);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(data.error || "Erro ao cadastrar.");
       setLoading(false);
+      return;
+    }
+    if (data.session) {
+      router.replace("/ava/dashboard");
       return;
     }
     setSuccess(true);
     setLoading(false);
-    router.replace("/ava/dashboard");
   };
 
   return (

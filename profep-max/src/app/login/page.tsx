@@ -45,25 +45,35 @@ export default function LoginPage() {
     
     try {
       if (isRegistering) {
-        // MODO CADASTRO
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName }
-          }
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, fullName }),
         });
-        if (error) throw error;
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Erro ao cadastrar.");
+        }
+        if (data.session) {
+          window.location.assign("/dashboard");
+          return;
+        }
         alert("Cadastro realizado! Verifique seu e-mail ou faça login.");
         setIsRegistering(false);
       } else {
-        // MODO LOGIN
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Erro ao entrar.");
+        }
         window.location.assign("/dashboard");
       }
     } catch (error: any) {
-      alert(error.message);
+      alert(error.message || "Erro ao autenticar.");
     } finally {
       setLoadingEmail(false);
     }
