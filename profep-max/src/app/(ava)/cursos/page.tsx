@@ -50,9 +50,15 @@ export default function ListaDeCursosPage() {
 
         const cursosFiltrados = listaCursos.filter((curso: any) => {
           const scope = String(curso.federation_scope || 'ALL').trim().toUpperCase();
-          if (scope === 'ALL') return true;
-          if (!tag) return false;
-          return scope === tag;
+          
+          // Cursos sem scope ou ALL: visíveis para todos
+          if (!scope || scope === '' || scope === 'ALL') return true;
+          
+          // Cursos com scope específico: apenas para membros dessa federação
+          if (tag && scope === tag) return true;
+          
+          // Caso contrário, não mostrar
+          return false;
         });
 
         const cursosVisiveis = freeOnly
