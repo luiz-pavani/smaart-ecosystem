@@ -70,11 +70,13 @@
     function toggleTheme(theme) {
       const root = document.documentElement;
       if (theme === 'lrsj') {
-        root.style.setProperty('--md-sys-color-primary', '#1E3A8A'); // Blue LRSJ
-        root.style.setProperty('--md-sys-color-secondary', '#DC2626');
+        root.style.setProperty('--md-sys-color-primary', '#16A34A'); // Verde LRSJ
+        root.style.setProperty('--md-sys-color-secondary', '#DC2626'); // Vermelho LRSJ
+        root.style.setProperty('--md-sys-color-surface', '#FFFFFF'); // Branco
       } else if (theme === 'neutral') {
         root.style.setProperty('--md-sys-color-primary', '#6750A4');
         root.style.setProperty('--md-sys-color-secondary', '#625B71');
+        root.style.setProperty('--md-sys-color-surface', '#FFFBFE');
       }
     }
     
