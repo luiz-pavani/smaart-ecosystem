@@ -8,7 +8,7 @@ Para adicionar os campos **logo** e **sigla** às academias, execute o SQL abaix
 
 ### 1. Acesse o SQL Editor do Supabase
 ```
-https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi/sql
+https://supabase.com/dashboard/project/<project-ref>/sql
 ```
 
 ### 2. Clique em "New Query"

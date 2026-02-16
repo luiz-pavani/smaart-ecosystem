@@ -132,8 +132,8 @@ RETURNING *;
 Invoque a função:
 ```bash
 curl -X POST \
-  'https://sxmrqiohfrktwlkwmfyr.supabase.co/functions/v1/send-launch-campaign' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bXJxaW9oZnJrdHdsa3dtZnlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MTQzNzgsImV4cCI6MjA4MzM5MDM3OH0.LAMsBdZTpfXIuICluFb7MBii2DTbH-LCgq269l6RF6Q' \
+  'https://<project-ref>.supabase.co/functions/v1/send-launch-campaign' \
+  -H 'Authorization: Bearer <anon-key>' \
   -H 'Content-Type: application/json' \
   -d '{}'
 ```
@@ -178,14 +178,14 @@ Deve mostrar:
 
 ```bash
 curl -X POST \
-  'https://sxmrqiohfrktwlkwmfyr.supabase.co/functions/v1/send-launch-campaign' \
-  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4bXJxaW9oZnJrdHdsa3dtZnlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MTQzNzgsImV4cCI6MjA4MzM5MDM3OH0.LAMsBdZTpfXIuICluFb7MBii2DTbH-LCgq269l6RF6Q' \
+  'https://<project-ref>.supabase.co/functions/v1/send-launch-campaign' \
+  -H 'Authorization: Bearer <anon-key>' \
   -H 'Content-Type: application/json' \
   -d '{}'
 ```
 
 **Ou via Dashboard:**
-1. Acesse: https://supabase.com/dashboard/project/sxmrqiohfrktwlkwmfyr/functions/send-launch-campaign
+1. Acesse: https://supabase.com/dashboard/project/<project-ref>/functions/send-launch-campaign
 2. Clique em **"Invoke Function"**
 3. Clique em **"Send Request"**
 

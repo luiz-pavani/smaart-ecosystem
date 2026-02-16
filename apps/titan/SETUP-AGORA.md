@@ -34,41 +34,38 @@ Quando o projeto estiver pronto:
 1. No Supabase, vá em **Settings** → **API**
 2. Você verá 3 valores:
    - **Project URL:** `https://xxxxx.supabase.co`
-   - **anon public key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
-   - **service_role key:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+   - **anon public key:** `<anon-key>`
+   - **service_role key:** `<service-role-key>`
 
 3. Abra o arquivo: `apps/titan/.env.local` (já criei para você)
 4. Cole os 3 valores:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 ```
 
 5. Salve o arquivo (Cmd+S)
 
 ---
 
-## ✅ Passo 4: Criar Primeiro Usuário (1 min)
+## ✅ Passo 4: Criar Usuario Admin (1 min)
 
-1. No Supabase, vá em **Authentication** → **Users**
-2. Clique em **Add User** → **Create new user**
-3. Preencha:
-   - **Email:** `admin@lrsj.com.br` (ou seu email)
-   - **Password:** (escolha uma senha e ANOTE)
-   - ✅ Marque **Auto Confirm User**
-4. Clique **Create user**
+1. Edite `apps/titan/.env.local` e adicione:
 
-### Agora configure a federação e role:
+```env
+ADMIN_EMAIL=admin@lrsj.com.br
+ADMIN_PASSWORD=coloque_uma_senha_forte
+```
 
-1. Volte ao **SQL Editor**
-2. Abra o arquivo: `apps/titan/setup-first-user.sql` (já criei)
-3. Execute **linha por linha** seguindo os comentários:
-   - Primeiro: busca o UUID do usuário
-   - Segundo: cria a federação LRSJ (copia o UUID retornado)
-   - Terceiro: cola os UUIDs e dá role de admin
-   - Quarto: verifica se funcionou
+2. Rode o script:
+
+```bash
+node apps/titan/setup-admin.js
+```
+
+O script cria o usuario, a federacao e atribui a role `federacao_admin`.
 
 ---
 
@@ -116,8 +113,8 @@ Aguarde aparecer:
 - Reinicie o servidor: `Ctrl+C` e `npm run dev` novamente
 
 ### "User not found" no login
-- Você esqueceu de executar o `setup-first-user.sql`
-- Volte ao SQL Editor e execute os passos
+- Você esqueceu de executar o `setup-admin.js`
+- Rode o script e tente novamente
 
 ### "Cannot connect to Supabase"
 - Verifique se o projeto Supabase está ativo (não pausado)

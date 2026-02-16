@@ -16,9 +16,14 @@ import {
 } from 'lucide-react';
 
 // --- CONFIGURAÇÃO SUPABASE ---
-const supabaseUrl = 'https://swvkleuxdqvyygelnxgc.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3dmtsZXV4ZHF2eXlnZWxueGdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNjQ5NjUsImV4cCI6MjA4Mjk0MDk2NX0.GlroeJMkACCt-qqpux1-gzlv9WVl8iD1ELcy_CfBaQg';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+if (!supabaseUrl || !supabaseKey) {
+   console.error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
+}
+
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 // --- DESIGN SYSTEM (v28.23) ---
 const THEME = {

@@ -1,0 +1,16 @@
+# Vercel deployment configuration for Next.js
+# https://vercel.com/docs/concepts/projects/project-configuration
+
+# Build command (Vercel auto-detects Next.js, but explicit for clarity)
+buildCommand: npm run build
+
+# Output directory (Next.js default)
+outputDirectory: .next
+
+# Install command (default)
+installCommand: npm install
+
+# Environment variables (set these in Vercel dashboard for production)
+env:
+  NEXT_PUBLIC_SUPABASE_URL: https://project-url.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-key-exemplo

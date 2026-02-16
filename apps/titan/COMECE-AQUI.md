@@ -14,9 +14,9 @@
 **👉 CLIQUE AQUI: https://supabase.com/dashboard**
 
 - New Project
-- Name: `Titan Federacoes`
+- Name: `Titan`
 - Region: **South America (São Paulo)**
-- Password: wvlZXvAOpUOz7B1l
+- Password: (escolha uma senha forte e anote)
 - ⏳ Aguarde 2 min
 
 ---
@@ -52,21 +52,22 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 ---
 
-### 4️⃣ CRIAR USUÁRIO (2 min)
+### 4️⃣ CRIAR USUARIO ADMIN (2 min)
 
-No Supabase:
-1. **Authentication** → **Users** → **Add User**
-2. Email: `admin@lrsj.com.br`
-3. Password: (anote!)
-4. ✅ **Auto Confirm User**
-5. **Create user**
+1. Edite `apps/titan/.env.local` e inclua:
 
-#### Agora dê permissões:
+```env
+ADMIN_EMAIL=admin@lrsj.com.br
+ADMIN_PASSWORD=coloque_uma_senha_forte
+```
 
-1. **SQL Editor** → **New Query**
-2. Abra: `apps/titan/setup-first-user.sql`
-3. Execute **cada bloco** e copie os UUIDs
-4. Verifique no final se aparece seu email
+2. Rode o script:
+
+```bash
+node apps/titan/setup-admin.js
+```
+
+O script cria o usuario, a federacao e atribui a role `federacao_admin`.
 
 ---
 

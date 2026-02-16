@@ -112,7 +112,7 @@ Cada usuário recebe:
 ### 🔐 Variáveis de Ambiente Necessárias
 
 Certifique-se de que a Edge Function tem acesso a:
-- `RESEND_API_KEY`: re_ERdPpjc2_anfDKScSJUXCgqZiHar2N9UB
+- `RESEND_API_KEY`: re_your_api_key_here
 - `SUPABASE_URL`: https://sxmrqiohfrktwlkwmfyr.supabase.co
 - `SUPABASE_SERVICE_ROLE_KEY`: (configurado automaticamente)
 

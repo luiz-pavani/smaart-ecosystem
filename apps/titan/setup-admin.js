@@ -20,8 +20,13 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   }
 });
 
-const ADMIN_EMAIL = 'secretaria@lrsj.com.br';
-const ADMIN_PASSWORD = 'Gold8892#';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.error('❌ Missing ADMIN_EMAIL or ADMIN_PASSWORD in .env.local');
+  process.exit(1);
+}
 
 async function setupAdmin() {
   console.log('🚀 Starting admin setup...\n');
@@ -140,7 +145,6 @@ async function setupAdmin() {
     console.log('\n✅ SETUP COMPLETE!\n');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`📧 Email:      ${ADMIN_EMAIL}`);
-    console.log(`🔑 Password:   ${ADMIN_PASSWORD}`);
     console.log(`👤 User ID:    ${userId}`);
     console.log(`🏢 Federation: ${verification.federacoes.nome} (${verification.federacoes.sigla})`);
     console.log(`🎯 Role:       ${verification.role}`);

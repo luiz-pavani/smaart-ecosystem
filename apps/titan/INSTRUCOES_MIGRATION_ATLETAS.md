@@ -4,7 +4,7 @@
 
 ### 1️⃣ **Abra o SQL Editor do Supabase**
 Clique neste link:
-👉 https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi/sql/new
+👉 https://supabase.com/dashboard/project/<project-ref>/sql/new
 
 ### 2️⃣ **Abra o arquivo SQL no VS Code**
 - Abra o arquivo: `APLICAR_NO_SUPABASE.sql` (está na raiz do projeto titan)
@@ -21,7 +21,7 @@ Clique neste link:
 - Você verá "Success. No rows returned" (isso é normal!)
 
 ### 5️⃣ **Crie o bucket de Storage**
-- Vá em: https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi/storage/buckets
+- Vá em: https://supabase.com/dashboard/project/<project-ref>/storage/buckets
 - Clique em **"New bucket"**
 - Nome: `atletas`
 - Marque como **"Public bucket"** ✅

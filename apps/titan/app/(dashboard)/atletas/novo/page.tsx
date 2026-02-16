@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import NovoAtletaFormSimple from '@/src/components/forms/NovoAtletaFormSimple'
+import NovoAtletaFormSimple from '@/components/forms/NovoAtletaFormSimple'
 
 export default async function NovoAtletaPage() {
   const supabase = await createClient()

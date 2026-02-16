@@ -167,11 +167,11 @@ User Requests Payment → QR Code Generated → User Scans & Pays
 
 ### Environment Variables (Already Set)
 ```bash
-SAFE2PAY_API_TOKEN=A3C941582BEB4846B4AB11226E5755B3      # ✅ Set
-SAFE2PAY_TOKEN=A3E863949E7F42...                         # ✅ Set
-RESEND_API_KEY=re_ERdPpjc2_anfDK...                      # ✅ Set
+SAFE2PAY_API_TOKEN=your_safe2pay_api_token_here          # ✅ Set
+SAFE2PAY_TOKEN=your_safe2pay_token_here                  # ✅ Set
+RESEND_API_KEY=re_your_api_key_here                      # ✅ Set
 NEXT_PUBLIC_SUPABASE_URL=https://sxmrqiohfrktwlkwmfyr... # ✅ Set
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...                     # ✅ Set
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here     # ✅ Set
 ```
 
 ### Not Yet Set (Will Update)

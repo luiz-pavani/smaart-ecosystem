@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { EditarAtletaForm } from '@/components/forms/EditarAtletaForm'
+import EditarAtletaForm from '@/components/forms/EditarAtletaForm'
 
 interface PageProps {
   params: Promise<{ id: string }>

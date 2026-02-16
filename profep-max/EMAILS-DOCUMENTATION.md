@@ -152,7 +152,7 @@ WHERE plano IN ('MENSAL', 'ANUAL')
 ### Variáveis de Ambiente
 
 ```bash
-RESEND_API_KEY=re_ERdPpjc2_anfDKScSJUXCgqZiHar2N9UB
+RESEND_API_KEY=re_your_api_key_here
 ```
 
 ### Email Sender

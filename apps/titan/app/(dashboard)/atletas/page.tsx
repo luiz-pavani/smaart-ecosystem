@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Shield, Eye, Edit, Trash2 } from 'lucide-react'
 
 interface Atleta {
@@ -13,6 +14,7 @@ interface Atleta {
   graduacao: string
   dan_nivel: string | null
   nivel_arbitragem: string | null
+  foto_perfil_url: string | null
   numero_registro: string
   lote: string | null
   status: string
@@ -20,7 +22,6 @@ interface Atleta {
   academia: {
     id: string
     nome: string
-    sigla: string
   }
 }
 
@@ -134,9 +135,31 @@ export default function AtletasPage() {
     return 'bg-gray-200 text-gray-700'
   }
 
+  const getStatusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      ativo: 'bg-green-100 text-green-800',
+      inativo: 'bg-gray-100 text-gray-800',
+      suspenso: 'bg-red-100 text-red-800',
+      transferido: 'bg-blue-100 text-blue-800',
+    }
+    return colors[status] || 'bg-gray-100 text-gray-800'
+  }
 
-
-
+  const getPaymentBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      em_dia: 'bg-green-100 text-green-800',
+      pendente: 'bg-yellow-100 text-yellow-800',
+      atrasado: 'bg-red-100 text-red-800',
+      isento: 'bg-blue-100 text-blue-800',
+    }
+    const labels: Record<string, string> = {
+      em_dia: 'Em dia',
+      pendente: 'Pendente',
+      atrasado: 'Atrasado',
+      isento: 'Isento',
+    }
+    return { color: colors[status] || 'bg-gray-100 text-gray-800', label: labels[status] || status }
+  }
 
   return (
     <div className="flex-1 space-y-6 p-8">
@@ -232,24 +255,37 @@ export default function AtletasPage() {
                     <th className="text-left p-4 font-medium text-muted-foreground">Graduação</th>
                     <th className="text-left p-4 font-medium text-muted-foreground">Academia</th>
                     <th className="text-left p-4 font-medium text-muted-foreground">Lote</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Pagamento</th>
                     <th className="text-right p-4 font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {atletas.map((atleta) => {
-                    const statusIcon = atleta.status === 'ativo' ? '✓' : atleta.status === 'inativo' ? '✕' : '⚠'
-                    const statusColor = atleta.status === 'ativo' ? 'text-green-600' : atleta.status === 'inativo' ? 'text-gray-400' : 'text-orange-600'
-                    const paymentIcon = atleta.status_pagamento === 'em_dia' ? '✓' : atleta.status_pagamento === 'pendente' ? '⏱' : atleta.status_pagamento === 'atrasado' ? '✕' : '−'
-                    const paymentColor = atleta.status_pagamento === 'em_dia' ? 'text-green-600' : atleta.status_pagamento === 'pendente' ? 'text-orange-600' : atleta.status_pagamento === 'atrasado' ? 'text-red-600' : 'text-gray-400'
+                    const payment = getPaymentBadge(atleta.status_pagamento)
                     return (
                       <tr key={atleta.id} className="border-b border-border hover:bg-muted">
                         <td className="p-4">
-                          <div>
-                            <div className="font-medium text-foreground">{atleta.nome_completo}</div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-2">
-                              {atleta.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
-                              <span className={`font-bold text-sm ${statusColor}`} title={atleta.status}>{statusIcon}</span>
-                              <span className={`font-bold text-sm ${paymentColor}`} title={atleta.status_pagamento}>{paymentIcon}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-10 w-10 rounded-full overflow-hidden bg-gray-200">
+                              {atleta.foto_perfil_url ? (
+                                <Image
+                                  src={atleta.foto_perfil_url}
+                                  alt={atleta.nome_completo}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-gray-500">
+                                  <span>👤</span>
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium text-foreground">{atleta.nome_completo}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {atleta.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -261,15 +297,25 @@ export default function AtletasPage() {
                         <td className="p-4">
                           <div className="flex flex-col gap-1">
                             <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBeltColor(atleta.graduacao)}`}>
-                              {atleta.graduacao.split('|')[0].replace('FAIXA ', '')}
+                              {atleta.graduacao.split('|')[0]}
                             </span>
                             {atleta.dan_nivel && (
                               <span className="text-xs text-muted-foreground">{atleta.dan_nivel}</span>
                             )}
                           </div>
                         </td>
-                        <td className="p-4 text-sm text-foreground">{atleta.academia?.sigla || '-'}</td>
+                        <td className="p-4 text-sm text-foreground">{atleta.academia?.nome || '-'}</td>
                         <td className="p-4 text-sm text-foreground">{atleta.lote || '-'}</td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(atleta.status)}`}>
+                            {atleta.status.charAt(0).toUpperCase() + atleta.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${payment.color}`}>
+                            {payment.label}
+                          </span>
+                        </td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-2">
                             <Link

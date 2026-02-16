@@ -3,9 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { uploadAcademiaLogo } from '@/lib/supabase/storage'
-import { CepInput } from '@/components/forms/CepInput'
-import { ImageUpload } from '@/components/forms/ImageUpload'
 import { ArrowLeft, Building2, User, CreditCard, Check } from 'lucide-react'
 
 const STEPS = [
@@ -14,40 +11,9 @@ const STEPS = [
   { id: 3, name: 'Pagamento', icon: CreditCard },
 ]
 
-const ESTADOS_BRASILEIROS = [
-  { sigla: 'AC', nome: 'Acre' },
-  { sigla: 'AL', nome: 'Alagoas' },
-  { sigla: 'AP', nome: 'Amapá' },
-  { sigla: 'AM', nome: 'Amazonas' },
-  { sigla: 'BA', nome: 'Bahia' },
-  { sigla: 'CE', nome: 'Ceará' },
-  { sigla: 'DF', nome: 'Distrito Federal' },
-  { sigla: 'ES', nome: 'Espírito Santo' },
-  { sigla: 'GO', nome: 'Goiás' },
-  { sigla: 'MA', nome: 'Maranhão' },
-  { sigla: 'MT', nome: 'Mato Grosso' },
-  { sigla: 'MS', nome: 'Mato Grosso do Sul' },
-  { sigla: 'MG', nome: 'Minas Gerais' },
-  { sigla: 'PA', nome: 'Pará' },
-  { sigla: 'PB', nome: 'Paraíba' },
-  { sigla: 'PR', nome: 'Paraná' },
-  { sigla: 'PE', nome: 'Pernambuco' },
-  { sigla: 'PI', nome: 'Piauí' },
-  { sigla: 'RJ', nome: 'Rio de Janeiro' },
-  { sigla: 'RN', nome: 'Rio Grande do Norte' },
-  { sigla: 'RS', nome: 'Rio Grande do Sul' },
-  { sigla: 'RO', nome: 'Rondônia' },
-  { sigla: 'RR', nome: 'Roraima' },
-  { sigla: 'SC', nome: 'Santa Catarina' },
-  { sigla: 'SP', nome: 'São Paulo' },
-  { sigla: 'SE', nome: 'Sergipe' },
-  { sigla: 'TO', nome: 'Tocantins' },
-]
-
 export default function NovaAcademiaPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(false)
-  const [logoFile, setLogoFile] = useState<File | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -56,8 +22,6 @@ export default function NovaAcademiaPage() {
     // Dados da Entidade
     nome: '',
     nome_fantasia: '',
-    sigla: '',
-    logo_url: '',
     cnpj: '',
     inscricao_estadual: '',
     inscricao_municipal: '',
@@ -96,54 +60,28 @@ export default function NovaAcademiaPage() {
     setLoading(true)
 
     try {
-      // Get authenticated user
+      // TODO: Get user's federacao_id from user_roles
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
         throw new Error('Usuário não autenticado')
       }
 
-      // Get user's federacao_id from user_roles
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('federacao_id')
-        .eq('user_id', user.id)
-        .single()
+      // TODO: Insert academia
+      // const { error } = await supabase
+      //   .from('academias')
+      //   .insert([{
+      //     federacao_id: 'TODO',
+      //     ...formData
+      //   }])
 
-      if (roleError || !roleData) {
-        throw new Error('Não foi possível identificar sua federação. Entre em contato com o administrador.')
-      }
+      // if (error) throw error
 
-      let logoUrl = formData.logo_url
-
-      // Upload da logo se houver arquivo selecionado
-      if (logoFile) {
-        try {
-          logoUrl = await uploadAcademiaLogo(logoFile)
-        } catch (uploadError: any) {
-          throw new Error(`Erro ao fazer upload da logo: ${uploadError.message}`)
-        }
-      }
-
-      // Insert academia with federacao_id
-      const { error: insertError } = await supabase
-        .from('academias')
-        .insert([{
-          federacao_id: roleData.federacao_id,
-          ...formData,
-          logo_url: logoUrl
-        }])
-
-      if (insertError) {
-        console.error('Insert error:', insertError)
-        throw new Error(insertError.message || 'Erro ao cadastrar academia')
-      }
-
-      alert('✅ Academia cadastrada com sucesso!')
+      alert('Academia cadastrada com sucesso! (TODO: Implementar inserção no banco)')
       router.push('/academias')
     } catch (err: any) {
       console.error('Error:', err)
-      alert(`❌ ${err.message || 'Erro ao cadastrar academia'}`)
+      alert(err.message || 'Erro ao cadastrar academia')
     } finally {
       setLoading(false)
     }
@@ -151,16 +89,6 @@ export default function NovaAcademiaPage() {
 
   const updateFormData = (field: string, value: any) => {
     setFormData({ ...formData, [field]: value })
-  }
-
-  const handleAddressFound = (address: { rua: string; bairro: string; cidade: string; estado: string }) => {
-    setFormData({
-      ...formData,
-      endereco_rua: address.rua,
-      endereco_bairro: address.bairro,
-      endereco_cidade: address.cidade,
-      endereco_estado: address.estado,
-    })
   }
 
   return (
@@ -262,32 +190,6 @@ export default function NovaAcademiaPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Sigla (3 letras)
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={3}
-                    value={formData.sigla}
-                    onChange={(e) => updateFormData('sigla', e.target.value.toUpperCase())}
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all uppercase"
-                    placeholder="Ex: AJP"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Logo da Academia
-                  </label>
-                  <ImageUpload
-                    value={formData.logo_url}
-                    onChange={(url) => updateFormData('logo_url', url)}
-                    onFileSelected={(file) => setLogoFile(file)}
-                    maxSizeMB={2}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
                     CNPJ
                   </label>
                   <input
@@ -299,12 +201,19 @@ export default function NovaAcademiaPage() {
                   />
                 </div>
 
-                <CepInput
-                  value={formData.endereco_cep}
-                  onChange={(value) => updateFormData('endereco_cep', value)}
-                  onAddressFound={handleAddressFound}
-                  required
-                />
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    CEP *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.endereco_cep}
+                    onChange={(e) => updateFormData('endereco_cep', e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                    placeholder="00000-000"
+                  />
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -382,11 +291,10 @@ export default function NovaAcademiaPage() {
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                   >
                     <option value="">Selecione...</option>
-                    {ESTADOS_BRASILEIROS.map((estado) => (
-                      <option key={estado.sigla} value={estado.sigla}>
-                        {estado.nome}
-                      </option>
-                    ))}
+                    <option value="SP">São Paulo</option>
+                    <option value="RJ">Rio de Janeiro</option>
+                    <option value="MG">Minas Gerais</option>
+                    {/* TODO: Add all states */}
                   </select>
                 </div>
               </div>

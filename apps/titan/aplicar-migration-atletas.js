@@ -1,11 +1,11 @@
 // Script to apply migration 006_atletas.sql
-// Run this SQL directly in Supabase SQL Editor: https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi/sql
+// Run this SQL directly in Supabase SQL Editor: https://supabase.com/dashboard/project/<project-ref>/sql
 
 const fs = require('fs')
 const path = require('path')
 
 console.log('📋 INSTRUÇÕES PARA APLICAR A MIGRATION:\n')
-console.log('1. Acesse: https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi/sql')
+console.log('1. Acesse: https://supabase.com/dashboard/project/<project-ref>/sql')
 console.log('2. Copie o conteúdo da migration abaixo')
 console.log('3. Cole no SQL Editor do Supabase')
 console.log('4. Clique em "Run" para executar\n')

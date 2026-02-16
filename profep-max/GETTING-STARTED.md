@@ -67,9 +67,9 @@ SAFE2PAY_PLAN_ID_ANUAL=12346
 SAFE2PAY_PLAN_ID_VITALICIO=12347
 
 # Verify these are set (they should already be)
-SAFE2PAY_API_TOKEN=A3C941582BEB4846B4AB11226E5755B3
+SAFE2PAY_API_TOKEN=your_safe2pay_api_token_here
 SAFE2PAY_WEBHOOK_URL=https://www.profepmax.com.br/api/webhooks/safe2pay
-RESEND_API_KEY=re_ERdPpjc2_anfDKScSJUXCgqZiHar2N9UB
+RESEND_API_KEY=re_your_api_key_here
 ```
 
 ### 4. Register Webhook URL

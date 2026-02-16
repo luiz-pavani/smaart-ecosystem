@@ -188,7 +188,7 @@ apps/titan/
 As logos são salvas com URLs públicas:
 
 ```
-https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/academias-logos/logos/1234567890_abc123.png
+https://<project-ref>.supabase.co/storage/v1/object/public/academias-logos/logos/1234567890_abc123.png
 ```
 
 Essas URLs podem ser usadas diretamente em:

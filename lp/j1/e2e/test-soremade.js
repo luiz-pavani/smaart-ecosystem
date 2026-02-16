@@ -2,8 +2,14 @@ const { chromium } = require('playwright');
 const { createClient } = require('@supabase/supabase-js');
 
 (async () => {
-  const supabaseUrl = 'https://swvkleuxdqvyygelnxgc.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3dmtsZXV4ZHF2eXlnZWxueGdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjczNjQ5NjUsImV4cCI6MjA4Mjk0MDk2NX0.GlroeJMkACCt-qqpux1-gzlv9WVl8iD1ELcy_CfBaQg';
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+    process.exit(1);
+  }
+
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   const browser = await chromium.launch();

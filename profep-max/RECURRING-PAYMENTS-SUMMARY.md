@@ -106,7 +106,7 @@ CREATE TABLE subscription_events (
 ### Step 1: Configure Environment
 ```bash
 # Edit .env.local with production credentials
-SAFE2PAY_API_TOKEN=A3C941582BEB4846B4AB11226E5755B3
+SAFE2PAY_API_TOKEN=your_safe2pay_api_token_here
 SAFE2PAY_PLAN_ID_MENSAL=12345
 SAFE2PAY_PLAN_ID_ANUAL=12346
 SAFE2PAY_PLAN_ID_VITALICIO=12347
