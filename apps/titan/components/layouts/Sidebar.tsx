@@ -1,6 +1,6 @@
 'use client'
 
-import { Building2, Users, Calendar, GraduationCap, Store, Settings, LogOut, LayoutDashboard } from 'lucide-react'
+import { Building2, Users, Calendar, GraduationCap, Store, Settings, LogOut, LayoutDashboard, Shield } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -16,6 +16,7 @@ const navigation = [
   { name: 'Eventos', href: '/eventos', icon: Calendar },
   { name: 'Cursos', href: '/cursos', icon: GraduationCap },
   { name: 'Produtos', href: '/produtos', icon: Store },
+  { name: 'Permissões', href: '/permissoes', icon: Shield },
   { name: 'Configurações', href: '/configuracoes', icon: Settings },
 ]
 
@@ -38,7 +39,10 @@ export default function Sidebar({ user }: SidebarProps) {
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-foreground">Titan</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-foreground">Titan</h1>
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">Beta 10</span>
+            </div>
             <p className="text-xs text-muted-foreground">Federações</p>
           </div>
         </div>
