@@ -1,90 +1,87 @@
 # 🚀 Guia de Deploy - Titan
 
-## Configuração Atual
+## 🎯 Deploy Automático (Recomendado)
 
-- **Repositório**: `https://github.com/luiz-pavani/smaart-ecosystem.git`
-- **Branch principal**: `main`
-- **Projeto Vercel**: `titan-app`
-- **URL de Produção**: `https://titan.smaartpro.com`
-- **Estrutura**: Monorepo (pasta `apps/titan`)
+Use o fluxo Git normal. O Vercel detecta e faz deploy automático:
 
-## Scripts de Deploy
-
-### 1. Deploy Completo (Recomendado)
 ```bash
-./deploy.sh "sua mensagem de commit"
-```
-- ✅ Build local antes de comitar
-- ✅ Valida que o código compila
-- ✅ Commit e push automático
-- ✅ Deploy em produção
-
-### 2. Deploy Rápido
-```bash
-./deploy-quick.sh "sua mensagem de commit"
-```
-- ⚡ Sem build local
-- ⚡ Commit e push direto
-- ⚡ Deploy em produção
-- ⚠️  Útil para mudanças pequenas
-
-### 3. Deploy Manual
-```bash
-# Apenas fazer deploy sem commit
 cd /path/to/apps/titan
-vercel --prod
+
+# 1. Fazer suas alterações
+# 2. Adicionar e comitar
+git add -A
+git commit -m "feat: sua feature aqui"
+
+# 3. Push (deploy automático)
+git push
 ```
 
-## Processo Automático
+✅ O Vercel dispara o deploy automaticamente após o push
+⏱️ Aguarde 1-2 minutos para conclusão
+🔗 Acesse: https://titan.smaartpro.com
 
-O projeto está configurado para:
-- ✅ Auto-deploy em push para branch `main`
-- ✅ Detecta mudanças apenas em `apps/titan/`
-- ✅ Usa Next.js com Turbopack
-- ✅ Deploy automático via Vercel
+## 📊 Monitorar Deploy
 
-## Comandos Úteis
+- Dashboard: https://vercel.com/luiz-pavanis-projects/titan-app
+- Ver logs: `vercel logs https://titan.smaartpro.com`
+- Listar deploys: `vercel ls`
 
-### Build Local
+## 🔧 Testar Antes (Opcional)
+
 ```bash
+# Build local para validar
 npm run build
-```
 
-### Dev Server
-```bash
+# Dev server
 npm run dev
 ```
 
-### Verificar Status do Vercel
+## 📌 Configuração Atual
+
+- **URL Produção**: https://titan.smaartpro.com
+- **Branch**: main (auto-deploy habilitado)
+- **Root Directory**: apps/titan
+- **Framework**: Next.js 16 + Turbopack
+
+## ⚡ Alternativas Rápidas
+
+### Deploy Manual (sem commit)
 ```bash
-vercel ls
+vercel --prod
 ```
 
-### Ver Logs do Deploy
+### Scripts Auxiliares
+
+**Deploy Completo** (build + commit + push + deploy):
 ```bash
-vercel logs https://titan.smaartpro.com
+./deploy.sh "mensagem"
 ```
 
-## Solução de Problemas
+**Deploy Rápido** (commit + push + deploy):
+```bash
+./deploy-quick.sh "mensagem"
+```
 
-### Deploy não está aparecendo
-1. Limpe o cache do navegador (Cmd+Shift+R)
-2. Aguarde 1-2 minutos para propagação
-3. Verifique em: https://vercel.com/luiz-pavanis-projects/titan-app
+## ❓ Solução de Problemas
+
+### Deploy não aconteceu após push
+1. Verifique em: https://vercel.com/luiz-pavanis-projects/titan-app
+2. Confirme que está no branch `main`
+3. Force um deploy: `vercel --prod`
+
+### Cache no navegador
+- Cmd+Shift+R (Mac) ou Ctrl+Shift+R (Windows/Linux)
+- Ou modo anônimo
 
 ### Build falhou
 1. Rode `npm run build` localmente
-2. Corrija os erros
-3. Tente novamente
+2. Corrija erros
+3. Comite e push novamente
 
-### Permissões negadas nos scripts
-```bash
-chmod +x deploy.sh deploy-quick.sh
-```
+## 📝 Boas Práticas
 
-## URLs Importantes
+- ✅ Sempre teste com `npm run build` antes de comitar
+- ✅ Use mensagens de commit descritivas
+- ✅ Verifique o deploy no dashboard após push
+- ✅ Aguarde conclusão antes de testar em produção
 
-- 🌐 Produção: https://titan.smaartpro.com
-- 📊 Dashboard Vercel: https://vercel.com/luiz-pavanis-projects/titan-app
-- 📝 GitHub: https://github.com/luiz-pavani/smaart-ecosystem
-- 📚 Docs Vercel: https://vercel.com/docs
