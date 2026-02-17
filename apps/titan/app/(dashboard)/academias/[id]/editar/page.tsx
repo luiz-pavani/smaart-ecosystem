@@ -30,15 +30,20 @@ export default function EditarAcademiaPage() {
     endereco_cidade: '',
     endereco_estado: '',
     
-    // Contato
-    telefone: '',
-    email: '',
-    
     // Responsável
     responsavel_nome: '',
     responsavel_cpf: '',
+    responsavel_rg: '',
     responsavel_telefone: '',
     responsavel_email: '',
+    responsavel_faixa: '',
+    
+    // Responsável Técnico
+    tecnico_nome: '',
+    tecnico_cpf: '',
+    tecnico_registro_profissional: '',
+    tecnico_telefone: '',
+    tecnico_email: '',
     
     // Status
     status: 'ativo',
@@ -72,13 +77,18 @@ export default function EditarAcademiaPage() {
           endereco_bairro: data.endereco_bairro || '',
           endereco_cidade: data.endereco_cidade || '',
           endereco_estado: data.endereco_estado || '',
-          telefone: data.telefone || '',
-          email: data.email || '',
           responsavel_nome: data.responsavel_nome || '',
           responsavel_cpf: data.responsavel_cpf || '',
+          responsavel_rg: data.responsavel_rg || '',
           responsavel_telefone: data.responsavel_telefone || '',
           responsavel_email: data.responsavel_email || '',
-          status: data.status || 'ativo',
+          responsavel_faixa: data.responsavel_faixa || '',
+          tecnico_nome: data.tecnico_nome || '',
+          tecnico_cpf: data.tecnico_cpf || '',
+          tecnico_registro_profissional: data.tecnico_registro_profissional || '',
+          tecnico_telefone: data.tecnico_telefone || '',
+          tecnico_email: data.tecnico_email || '',
+          status: data.ativo ? 'ativo' : 'inativo',
         })
       }
     } catch (err: any) {
@@ -123,9 +133,17 @@ export default function EditarAcademiaPage() {
     setSaving(true)
 
     try {
+      const submitData = {
+        ...formData,
+        ativo: formData.status === 'ativo',
+      }
+      
+      // Remove status field as the database uses 'ativo' instead
+      const { status, ...dataToSubmit } = submitData
+
       const { error } = await supabase
         .from('academias')
-        .update(formData)
+        .update(dataToSubmit)
         .eq('id', academiaId)
 
       if (error) throw error
@@ -379,19 +397,72 @@ export default function EditarAcademiaPage() {
             </div>
           </div>
 
-          {/* Contato */}
+          {/* Responsável Principal */}
           <div className="bg-card rounded-2xl p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-6">Contato</h2>
+            <h2 className="text-xl font-bold text-foreground mb-6">Responsável Principal</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  Telefone
+                  Nome *
                 </label>
                 <input
                   type="text"
-                  value={formData.telefone}
-                  onChange={(e) => updateField('telefone', e.target.value)}
+                  required
+                  value={formData.responsavel_nome}
+                  onChange={(e) => updateField('responsavel_nome', e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  CPF *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.responsavel_cpf}
+                  onChange={(e) => updateField('responsavel_cpf', e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="000.000.000-00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  RG
+                </label>
+                <input
+                  type="text"
+                  value={formData.responsavel_rg}
+                  onChange={(e) => updateField('responsavel_rg', e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Faixa/Graduação
+                </label>
+                <input
+                  type="text"
+                  value={formData.responsavel_faixa}
+                  onChange={(e) => updateField('responsavel_faixa', e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="Ex: Preta 3º Grau"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Telefone *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.responsavel_telefone}
+                  onChange={(e) => updateField('responsavel_telefone', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="(00) 00000-0000"
                 />
@@ -399,31 +470,32 @@ export default function EditarAcademiaPage() {
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  E-mail
+                  E-mail *
                 </label>
                 <input
                   type="email"
-                  value={formData.email}
-                  onChange={(e) => updateField('email', e.target.value)}
+                  required
+                  value={formData.responsavel_email}
+                  onChange={(e) => updateField('responsavel_email', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
           </div>
 
-          {/* Responsável */}
+          {/* Responsável Técnico (Opcional) */}
           <div className="bg-card rounded-2xl p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-6">Responsável</h2>
+            <h2 className="text-xl font-bold text-foreground mb-6">Responsável Técnico (Opcional)</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-foreground mb-2">
                   Nome
                 </label>
                 <input
                   type="text"
-                  value={formData.responsavel_nome}
-                  onChange={(e) => updateField('responsavel_nome', e.target.value)}
+                  value={formData.tecnico_nome}
+                  onChange={(e) => updateField('tecnico_nome', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -434,10 +506,22 @@ export default function EditarAcademiaPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.responsavel_cpf}
-                  onChange={(e) => updateField('responsavel_cpf', e.target.value)}
+                  value={formData.tecnico_cpf}
+                  onChange={(e) => updateField('tecnico_cpf', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="000.000.000-00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Registro Profissional (CREF, etc)
+                </label>
+                <input
+                  type="text"
+                  value={formData.tecnico_registro_profissional}
+                  onChange={(e) => updateField('tecnico_registro_profissional', e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
@@ -447,8 +531,8 @@ export default function EditarAcademiaPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.responsavel_telefone}
-                  onChange={(e) => updateField('responsavel_telefone', e.target.value)}
+                  value={formData.tecnico_telefone}
+                  onChange={(e) => updateField('tecnico_telefone', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder="(00) 00000-0000"
                 />
@@ -460,8 +544,8 @@ export default function EditarAcademiaPage() {
                 </label>
                 <input
                   type="email"
-                  value={formData.responsavel_email}
-                  onChange={(e) => updateField('responsavel_email', e.target.value)}
+                  value={formData.tecnico_email}
+                  onChange={(e) => updateField('tecnico_email', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
