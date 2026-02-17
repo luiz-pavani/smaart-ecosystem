@@ -86,15 +86,15 @@ export const DAN_NIVEIS = [
 
 // 9 níveis de arbitragem (Referee Levels)
 export const NIVEIS_ARBITRAGEM = [
-  'Nível 1 - Iniciante',
-  'Nível 2 - Regional',
-  'Nível 3 - Regional Superior',
-  'Nível 4 - Estadual',
-  'Nível 5 - Estadual Superior',
-  'Nível 6 - Estadual/Nacional',
-  'Nível 7 - Nacional',
-  'Nível 8 - Nacional Superior',
-  'Nível 9 - Internacional/Master',
+  'Estadual C',
+  'Estadual B',
+  'Estadual A',
+  'Nacional C',
+  'Nacional B',
+  'Nacional A',
+  'Internacional C',
+  'Internacional B',
+  'Internacional A',
 ]
 
 /**
