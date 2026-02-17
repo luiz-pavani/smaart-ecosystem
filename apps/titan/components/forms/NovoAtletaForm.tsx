@@ -163,11 +163,23 @@ export default function NovoAtletaForm({
 
   const handleCSVImport = async (rows: Array<Record<string, string>>) => {
     try {
-      const { error } = await supabase
-        .from('atletas')
-        .insert(rows.map(row => ({
+      // Processar rows para buscar academia_id pela sigla se necessário
+      const processedRows = rows.map(row => {
+        let academiaIdParaUsar = academiaId
+        
+        // Se não tiver academia fixa e tiver academia_sigla no CSV, buscar o ID
+        if (!academiaId && row.academia_sigla) {
+          const academiaEncontrada = academiasDisponiveis.find(
+            a => a.sigla.toLowerCase() === row.academia_sigla.toLowerCase()
+          )
+          if (academiaEncontrada) {
+            academiaIdParaUsar = academiaEncontrada.id
+          }
+        }
+
+        return {
           federacao_id: federacaoId,
-          academia_id: row.academia_id || academiaId,
+          academia_id: academiaIdParaUsar || row.academia_id,
           nome_completo: row.nome_completo,
           cpf: row.cpf?.replace(/\D/g, '') || '',
           rg: row.rg || '',
@@ -189,7 +201,12 @@ export default function NovoAtletaForm({
           nivel_arbitragem: row.nivel_arbitragem || '',
           observacoes: row.observacoes || '',
           status: 'ativo',
-        })))
+        }
+      })
+
+      const { error } = await supabase
+        .from('atletas')
+        .insert(processedRows)
 
       if (error) throw error
 
@@ -210,6 +227,9 @@ export default function NovoAtletaForm({
       { value: 'Masculino', label: 'Masculino' },
       { value: 'Feminino', label: 'Feminino' },
     ]},
+    ...(role === 'federacao_admin' || role === 'federacao_staff' ? [
+      { name: 'academia_sigla', label: 'Sigla da Academia', required: true, type: 'text' } as CSVImportField,
+    ] : []),
     { name: 'email', label: 'E-mail', required: false, type: 'email' },
     { name: 'celular', label: 'Celular', required: false, type: 'phone' },
     { name: 'graduacao', label: 'Graduação', required: true, type: 'select', options: GRADUACOES_DB.map(g => ({ value: g, label: g })) },
@@ -349,13 +369,16 @@ export default function NovoAtletaForm({
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Academia *
+                    Academia * {academiaId && <span className="text-xs text-muted-foreground">(pré-selecionada)</span>}
                   </label>
                   <select
                     required
                     value={formData.academia_id}
                     onChange={(e) => setFormData({ ...formData, academia_id: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    disabled={!!academiaId}
+                    className={`w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${
+                      academiaId ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
                   >
                     <option value="">Selecione...</option>
                     {academiasDisponiveis.map(academia => (
@@ -364,6 +387,11 @@ export default function NovoAtletaForm({
                       </option>
                     ))}
                   </select>
+                  {academiaId && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Atletas serão vinculados automaticamente à sua academia
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

@@ -14,6 +14,7 @@
 ### Campos Opcionais
 | Campo | Descrição | Formato/Exemplo |
 |-------|-----------|-----------------|
+| `academia_sigla` | Sigla da academia (obrigatório para federação) | BUSHIDO, IPPON, KODOKAN |
 | `rg` | Número do RG | 12.345.678-9 |
 | `email` | E-mail do atleta | atleta@email.com |
 | `telefone` | Telefone fixo | 1133334444 ou (11) 3333-4444 |
@@ -31,6 +32,9 @@
 | `observacoes` | Observações gerais | Texto livre |
 
 ### 📝 Notas Importantes - Atletas
+- **Academia**: 
+  - Para **Federação**: Campo `academia_sigla` é **OBRIGATÓRIO** no CSV
+  - Para **Academia**: Campo não é necessário, atletas são vinculados automaticamente
 - **CPF**: Aceita com ou sem pontuação (123.456.789-00 ou 12345678900)
 - **Datas**: Aceita formato brasileiro (DD/MM/YYYY) ou ISO (YYYY-MM-DD)
 - **Gênero**: Valores válidos: "Masculino" ou "Feminino"
