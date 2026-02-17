@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Building2, Save, Loader2, Tabs as TabIcon, Plus } from 'lucide-react'
+import { ArrowLeft, Building2, Save, Loader2, LayoutGrid, Plus } from 'lucide-react'
 import CSVImport, { CSVImportField } from '@/components/ui/CSVImport'
 
 type FormMode = 'form' | 'csv'
@@ -188,7 +188,7 @@ export default function NovaAcademiaForm() {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            <TabIcon className="w-5 h-5" />
+            <LayoutGrid className="w-5 h-5" />
             Importar CSV
           </button>
         </div>

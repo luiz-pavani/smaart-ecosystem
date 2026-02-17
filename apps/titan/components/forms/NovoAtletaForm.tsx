@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Camera, Save, Loader2, Users, Plus, Tabs as TabIcon } from 'lucide-react'
+import { ArrowLeft, Camera, Save, Loader2, Users, Plus, LayoutGrid } from 'lucide-react'
 import FileUpload from '@/components/ui/FileUpload'
 import CSVImport, { CSVImportField } from '@/components/ui/CSVImport'
 import { GRADUACOES_DB, DAN_NIVEIS } from '@/lib/utils/graduacao'
@@ -261,7 +261,7 @@ export default function NovoAtletaForm({
                   : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
-              <TabIcon className="w-5 h-5" />
+              <LayoutGrid className="w-5 h-5" />
               Importar CSV
             </button>
           )}
