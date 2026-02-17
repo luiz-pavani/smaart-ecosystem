@@ -1,6 +1,9 @@
 nome_completo,cpf,rg,data_nascimento,genero,email,celular,instagram,cidade,estado,academia_sigla,graduacao,dan_nivel,data_graduacao,nivel_arbitragem,observacoes
 João Silva Santos,123.456.789-00,12.345.678-9,15/03/1995,Masculino,joao.silva@email.com,11987654321,@joaosilva,São Paulo,SP,BUSHIDO,FAIXA PRETA|YUDANSHA,1º DAN,10/01/2020,ARBITRO ESTADUAL,Atleta competitivo com experiência internacional
-Maria Oliveira Costa,987.654.321-00,98.765.432-1,28/07/1998,Feminino,maria.oliveira@email.com,11987654322,@mariaoliveira,São Paulo,SP,IPPON,ROXA|NIKYŪ,,,ARBITRO MUNICIPAL,Participou de 5 campeonatos estaduais
-Pedro Souza Lima,456.789.123-00,45.678.912-3,10/11/2000,Masculino,pedro.souza@email.com,11987654323,@pedrosouza,São Paulo,SP,KODOKAN,MARROM|IKKYŪ,,15/06/2022,,Atleta juvenil em desenvolvimento
-Ana Paula Ferreira,321.654.987-00,32.165.498-7,05/02/1992,Feminino,ana.ferreira@email.com,11987654324,@anaferreira,São Paulo,SP,SAMURAI,VERDE|SANKYŪ,,20/03/2023,,Dedicada e disciplinada
-Carlos Eduardo Dias,789.123.456-00,78.912.345-6,20/09/2001,Masculino,carlos.dias@email.com,11987654325,@carlosdias,São Paulo,SP,FUJIYAMA,LARANJA|YONKYŪ,,05/11/2023,,Treina 4 vezes por semana
+Maria Oliveira Costa,987.654.321-00,98.765.432-1,28/07/1998,Feminino,maria.oliveira@email.com,21987654322,@mariaoliveira,Rio de Janeiro,RJ,IPPON,ROXA|NIKYŪ,,,ARBITRO MUNICIPAL,Participou de 5 campeonatos estaduais
+Pedro Souza Lima,456.789.123-00,45.678.912-3,10/11/2000,Masculino,pedro.souza@email.com,31987654323,@pedrosouza,Belo Horizonte,MG,KODOKAN,MARROM|IKKYŪ,,15/06/2022,,Atleta juvenil em desenvolvimento
+Ana Paula Ferreira,321.654.987-00,32.165.498-7,05/02/1992,Feminino,ana.ferreira@email.com,41987654324,@anaferreira,Curitiba,PR,SAMURAI,VERDE|SANKYŪ,,20/03/2023,,Dedicada e disciplinada
+Carlos Eduardo Dias,789.123.456-00,78.912.345-6,20/09/2001,Masculino,carlos.dias@email.com,51987654325,@carlosdias,Porto Alegre,RS,FUJIYAMA,LARANJA|YONKYŪ,,05/11/2023,,Treina 4 vezes por semana
+Beatriz Santos Almeida,147.258.369-00,14.725.836-9,12/08/1996,Feminino,beatriz.santos@email.com,85987654326,@beasantos,Fortaleza,CE,BUSHIDO,FAIXA PRETA|YUDANSHA,2º DAN,18/05/2019,ARBITRO NACIONAL,Campeã brasileira juvenil 2019
+Rafael Costa Mendes,258.369.147-00,25.836.914-7,03/04/2003,Masculino,rafael.mendes@email.com,71987654327,@rafamendes,Salvador,BA,IPPON,AZUL|ROKKYŪ,,,Iniciante dedicado com grande potencial
+Juliana Ferreira Lima,369.147.258-00,36.914.725-8,22/11/1994,Feminino,juliana.lima@email.com,48987654328,@juferreira,Florianópolis,SC,KODOKAN,FAIXA PRETA|YUDANSHA,3º DAN,25/09/2018,ARBITRO ESTADUAL,Técnica com 10 anos de experiência
