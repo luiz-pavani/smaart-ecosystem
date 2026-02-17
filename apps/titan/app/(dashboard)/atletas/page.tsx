@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Eye, Edit, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react'
+import { Eye, Edit, Trash2, CheckCircle, Clock, DollarSign, Settings2 } from 'lucide-react'
 import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip, getDualOvalBadges } from '@/lib/utils/graduacao'
+import { useColumnOrder } from '@/hooks/useColumnOrder'
+import ColumnOrderDialog from '@/components/ColumnOrderDialog'
 
 interface Atleta {
   id: string
@@ -30,7 +32,9 @@ export default function AtletasPage() {
   const [atletas, setAtletas] = useState<Atleta[]>([])
   const [loading, setLoading] = useState(true)
   const [perfil, setPerfil] = useState<any>(null)
+  const [columnDialogOpen, setColumnDialogOpen] = useState(false)
   const supabase = createClient()
+  const { columns, isLoaded, moveColumn, resetToDefault } = useColumnOrder()
 
   useEffect(() => {
     loadAtletas()
@@ -158,11 +162,21 @@ export default function AtletasPage() {
             Gerencie o cadastro completo dos atletas
           </p>
         </div>
-        <Link href="/atletas/novo">
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-            + Novo Atleta
+        <div className="flex gap-2">
+          <button
+            onClick={() => setColumnDialogOpen(true)}
+            className="bg-muted text-muted-foreground hover:bg-muted/80 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            title="Reordenar colunas"
+          >
+            <Settings2 className="w-4 h-4" />
+            Colunas
           </button>
-        </Link>
+          <Link href="/atletas/novo">
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              + Novo Atleta
+            </button>
+          </Link>
+        </div>
       </div>
 
       {/* Statistics Cards */}
@@ -342,6 +356,14 @@ export default function AtletasPage() {
             </div>
           )}
         </div>
+
+        <ColumnOrderDialog
+          columns={columns}
+          isOpen={columnDialogOpen}
+          onClose={() => setColumnDialogOpen(false)}
+          onReorder={moveColumn}
+          onReset={resetToDefault}
+        />
       </div>
     </div>
   )
