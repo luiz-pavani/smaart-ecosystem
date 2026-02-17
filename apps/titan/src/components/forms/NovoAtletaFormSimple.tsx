@@ -3,20 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-
-const GRADUACOES = [
-  'BRANCA|MÚKYŪ',
-  'CINZA|NANA-KYU',
-  'AZUL|ROKKYŪ',
-  'AMARELA|GOKYŪ',
-  'LARANJA|YONKYŪ',
-  'VERDE|SANKYŪ',
-  'ROXA|NIKYŪ',
-  'MARROM|IKKYŪ',
-  'FAIXA PRETA|YUDANSHA',
-]
-
-const DAN_NIVEIS = ['SHODAN', 'NIDAN', 'SANDAN', 'YONDAN', 'GODAN', 'ROKUDAN', 'NANADAN', 'HACHIDAN']
+import { DAN_NIVEIS, GRADUACOES_DB } from '@/lib/utils/graduacao'
 
 interface NovoAtletaFormSimpleProps {
   academiasDisponiveis: Array<{ id: string; nome: string }>
@@ -81,7 +68,7 @@ export default function NovoAtletaFormSimple({
     }
   }
 
-  const isFaixaPreta = formData.graduacao.includes('FAIXA PRETA')
+  const isFaixaPreta = formData.graduacao.includes('FAIXA PRETA') || formData.graduacao.includes('VERMELHA')
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -165,7 +152,7 @@ export default function NovoAtletaFormSimple({
             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Selecione a faixa...</option>
-            {GRADUACOES.map((grad) => (
+            {GRADUACOES_DB.map((grad) => (
               <option key={grad} value={grad}>
                 {grad}
               </option>

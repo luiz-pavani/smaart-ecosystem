@@ -30,7 +30,7 @@ const GRADUATION_COLORS: Record<string, { bg: string; text: string; rgb: string 
   VERMELHA: { bg: 'bg-red-600', text: 'text-white', rgb: 'rgb(220, 38, 38)' },
 }
 
-// Graduation list in order
+// Graduation list in order (display labels)
 const GRADUATIONS = [
   'BRANCA',
   'BRANCA/CINZA',
@@ -47,6 +47,38 @@ const GRADUATIONS = [
   'PRETA',
   'VERMELHA/BRANCA',
   'VERMELHA',
+]
+
+// Graduation list in database format (for forms)
+export const GRADUACOES_DB = [
+  'BRANCA|MÚKYŪ',
+  'BRANCA/CINZA|MÚKYŪ',
+  'CINZA|NANA-KYU',
+  'CINZA/AZUL|NANA-KYU',
+  'AZUL|ROKKYŪ',
+  'AZUL/AMARELA|ROKKYŪ',
+  'AMARELA|GOKYŪ',
+  'AMARELA/LARANJA|GOKYŪ',
+  'LARANJA|YONKYŪ',
+  'VERDE|SANKYŪ',
+  'ROXA|NIKYŪ',
+  'MARROM|IKKYŪ',
+  'FAIXA PRETA|YUDANSHA',
+  'VERMELHA/BRANCA|ROKUDAN',
+  'VERMELHA|JUDAN',
+]
+
+export const DAN_NIVEIS = [
+  'SHODAN',
+  'NIDAN',
+  'SANDAN',
+  'YONDAN',
+  'GODAN',
+  'ROKUDAN',
+  'NANADAN',
+  'HACHIDAN',
+  'KYUDAN',
+  'JUDAN',
 ]
 
 /**
