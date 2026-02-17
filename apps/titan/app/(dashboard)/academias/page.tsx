@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { Plus } from 'lucide-react'
+import { Plus, Pencil } from 'lucide-react'
 
 export default async function AcademiasPage() {
   const supabase = await createClient()
@@ -67,6 +67,7 @@ export default async function AcademiasPage() {
                   <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Cidade</th>
                   <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">UF</th>
                   <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Status</th>
+                  <th className="text-right py-4 px-6 text-sm font-semibold text-foreground">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -97,6 +98,17 @@ export default async function AcademiasPage() {
                       }`}>
                         {academia.status === 'ativo' ? 'Ativa' : 'Inativa'}
                       </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href={`/academias/${academia.id}/editar`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                          Editar
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))}
