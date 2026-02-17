@@ -1,9 +1,10 @@
 'use client'
 
-import { Building2, Users, Calendar, GraduationCap, Store, Settings, LogOut, LayoutDashboard, Shield } from 'lucide-react'
+import { Building2, Users, Calendar, GraduationCap, Store, Settings, LogOut, LayoutDashboard, Shield, Landmark } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { APP_VERSION_NAME } from '@/lib/version'
 
 interface SidebarProps {
   user: any
@@ -11,6 +12,7 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Federações', href: '/federacoes', icon: Landmark },
   { name: 'Academias', href: '/academias', icon: Building2 },
   { name: 'Atletas', href: '/atletas', icon: Users },
   { name: 'Eventos', href: '/eventos', icon: Calendar },
@@ -41,7 +43,7 @@ export default function Sidebar({ user }: SidebarProps) {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-foreground">Titan</h1>
-              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">Beta 11</span>
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">{APP_VERSION_NAME}</span>
             </div>
             <p className="text-xs text-muted-foreground">Federações</p>
           </div>
