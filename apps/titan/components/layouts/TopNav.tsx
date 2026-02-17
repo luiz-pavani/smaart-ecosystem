@@ -1,7 +1,8 @@
 'use client'
 
-import { Bell, Search, Menu } from 'lucide-react'
+import { Bell, Search, Menu, Info } from 'lucide-react'
 import { useState } from 'react'
+import { getVersionString } from '@/lib/version'
 
 interface TopNavProps {
   user: any
@@ -12,8 +13,9 @@ export default function TopNav({ user, mobile = false }: TopNavProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <header className="bg-card border-b border-border sticky top-0 z-10">
-      <div className="flex items-center justify-between px-6 py-4">
+    <>
+      <header className="bg-card border-b border-border sticky top-0 z-10">
+        <div className="flex items-center justify-between px-6 py-4">
         {/* Mobile: Logo + Menu */}
         {mobile && (
           <div className="flex items-center gap-3">
@@ -72,7 +74,18 @@ export default function TopNav({ user, mobile = false }: TopNavProps) {
             </div>
           )}
         </div>
+
+      {/* Version Banner */}
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 border-b border-primary/20 px-6 py-2 text-center">
+        <div className="flex items-center justify-center gap-2">
+          <Info className="w-4 h-4 text-primary" />
+          <span className="text-xs font-semibold text-primary">
+            {getVersionString()}
+          </span>
+        </div>
       </div>
+    </header>
+    </
     </header>
   )
 }
