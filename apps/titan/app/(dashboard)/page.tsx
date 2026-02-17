@@ -17,16 +17,27 @@ export default async function DashboardPage() {
     .from('atletas')
     .select('*', { count: 'exact', head: true })
   
-  const { count: atletasAtivos } = await supabase
+  const { data: atletasAtivosData, count: atletasAtivos } = await supabase
+    .from('atletas')
+    .select('*', { count: 'exact' })
+    .eq('status', 'ativo')
+  
+  // Get pending approvals
+  const { count: atletasEmAnalise } = await supabase
     .from('atletas')
     .select('*', { count: 'exact', head: true })
-    .eq('status', 'ativo')
+    .eq('status', 'pendente')
+  
+  const { count: academiasEmAnalise } = await supabase
+    .from('academias')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pendente')
   
   const stats = [
     {
       title: 'Academias',
       value: academiasCount?.toString() || '0',
-      subtitle: '0 em análise',
+      subtitle: `${academiasEmAnalise || 0} em análise`,
       icon: Building2,
       color: 'bg-primary',
     },
@@ -38,17 +49,19 @@ export default async function DashboardPage() {
       color: 'bg-secondary',
     },
     {
-      title: 'Receita Mensal',
-      value: 'R$ 0,00',
-      subtitle: 'MRR',
-      icon: DollarSign,
+      title: 'Análises Pendentes',
+      value: ((atletasEmAnalise || 0) + (academiasEmAnalise || 0)).toString(),
+      subtitle: 'Aguardando revisão',
+      icon: BarChart3,
       color: 'bg-accent',
     },
     {
-      title: 'Taxa de Renovação',
-      value: '0%',
-      subtitle: 'Últimos 30 dias',
-      icon: BarChart3,
+      title: 'Taxa de Atividade',
+      value: atletasCount && atletasCount > 0 
+        ? `${Math.round(((atletasAtivos || 0) / atletasCount) * 100)}%`
+        : '0%',
+      subtitle: 'Atletas ativos',
+      icon: DollarSign,
       color: 'bg-muted',
     },
   ]

@@ -14,8 +14,8 @@ export default async function EventosPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
+    <div className="h-full flex flex-col">
+      <div className="p-8 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Eventos</h1>
@@ -35,13 +35,24 @@ export default async function EventosPage() {
         </div>
       </div>
 
-      <div className="bg-background rounded-lg border border-border overflow-hidden" style={{ height: 'calc(100vh - 240px)' }}>
-        <iframe
-          src="https://sul.smoothcomp.com/pt_BR/federation/130/events/upcoming"
-          className="w-full h-full"
-          title="Eventos SmoothComp"
-          allow="fullscreen"
-        />
+      <div className="flex-1 overflow-hidden bg-background relative">
+        <div className="absolute inset-0 overflow-hidden">
+          <iframe
+            src="https://sul.smoothcomp.com/pt_BR/federation/130/events/upcoming"
+            className="w-full h-full absolute inset-0"
+            title="Eventos SmoothComp"
+            allow="fullscreen"
+            style={{
+              border: 'none',
+            }}
+          />
+          {/* CSS para esconder elementos do SmoothComp */}
+          <style dangerouslySetInnerHTML={{__html: `
+            iframe {
+              display: block !important;
+            }
+          `}} />
+        </div>
       </div>
     </div>
   )
