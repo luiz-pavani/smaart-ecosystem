@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Award, Shield, FileText, User, Building2 } from 'lucide-react'
 import ApprovalSection from '@/components/ApprovalSection'
-import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip } from '@/lib/utils/graduacao'
+import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip, getOvalBadgeStyle } from '@/lib/utils/graduacao'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -258,11 +258,24 @@ export default async function AtletaDetalhesPage(props: PageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-muted-foreground">Graduação Atual</label>
-                <div className="mt-1">
-                  <span
-                    className={`inline-flex items-center px-3 py-1.5 rounded text-sm font-medium ${getBeltColorClasses(atleta.graduacao)}`}
-                    title={getGraduationTooltip(atleta.graduacao, atleta.dan_nivel)}
-                  >
+                <div className="mt-1 flex items-center gap-3">
+                  {(() => {
+                    const badge = getOvalBadgeStyle(atleta.graduacao, atleta.dan_nivel)
+                    return (
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-base border-2"
+                        style={{
+                          backgroundColor: badge.bgColor,
+                          color: badge.textColor,
+                          borderColor: badge.bgColor,
+                        }}
+                        title={`${getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}`}
+                      >
+                        {badge.content}
+                      </div>
+                    )
+                  })()}
+                  <span className="text-sm font-medium">
                     {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
                   </span>
                 </div>

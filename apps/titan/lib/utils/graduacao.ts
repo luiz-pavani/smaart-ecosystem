@@ -16,6 +16,20 @@ const DAN_MAPPING: Record<string, number> = {
   JUDAN: 10,
 }
 
+// Graduation colors mapping (RGB values for oval badges)
+const GRADUATION_COLORS: Record<string, { bg: string; text: string; rgb: string }> = {
+  BRANCA: { bg: 'bg-white', text: 'text-black', rgb: 'rgb(255, 255, 255)' },
+  CINZA: { bg: 'bg-gray-400', text: 'text-white', rgb: 'rgb(156, 163, 175)' },
+  AZUL: { bg: 'bg-blue-500', text: 'text-white', rgb: 'rgb(59, 130, 246)' },
+  AMARELA: { bg: 'bg-yellow-400', text: 'text-black', rgb: 'rgb(250, 204, 21)' },
+  LARANJA: { bg: 'bg-orange-500', text: 'text-white', rgb: 'rgb(249, 115, 22)' },
+  VERDE: { bg: 'bg-green-500', text: 'text-white', rgb: 'rgb(34, 197, 94)' },
+  ROXA: { bg: 'bg-purple-500', text: 'text-white', rgb: 'rgb(168, 85, 247)' },
+  MARROM: { bg: 'bg-amber-700', text: 'text-white', rgb: 'rgb(180, 83, 9)' },
+  PRETA: { bg: 'bg-black', text: 'text-white', rgb: 'rgb(0, 0, 0)' },
+  VERMELHA: { bg: 'bg-red-600', text: 'text-white', rgb: 'rgb(220, 38, 38)' },
+}
+
 // Graduation list in order
 const GRADUATIONS = [
   'BRANCA',
@@ -36,24 +50,27 @@ const GRADUATIONS = [
 ]
 
 /**
- * Get color classes for a graduation/belt
+ * Get color info for a graduation/belt
+ */
+export function getGraduationColor(graduacao: string): { bg: string; text: string; rgb: string } {
+  const grad = extractGraduationName(graduacao).toUpperCase()
+
+  for (const [key, value] of Object.entries(GRADUATION_COLORS)) {
+    if (grad.includes(key)) {
+      return value
+    }
+  }
+
+  return { bg: 'bg-gray-200', text: 'text-gray-700', rgb: 'rgb(229, 231, 235)' }
+}
+
+/**
+ * Get color classes for a graduation/belt (legacy support)
  * Returns tailwind classes for background and text color
  */
 export function getBeltColorClasses(graduacao: string): string {
-  const grad = extractGraduationName(graduacao).toUpperCase()
-
-  if (grad.includes('BRANCA')) return 'bg-white text-black border border-gray-300'
-  if (grad.includes('CINZA')) return 'bg-gray-400 text-white'
-  if (grad.includes('AZUL')) return 'bg-blue-500 text-white'
-  if (grad.includes('AMARELA')) return 'bg-yellow-400 text-black'
-  if (grad.includes('LARANJA')) return 'bg-orange-500 text-white'
-  if (grad.includes('VERDE')) return 'bg-green-500 text-white'
-  if (grad.includes('ROXA')) return 'bg-purple-500 text-white'
-  if (grad.includes('MARROM')) return 'bg-amber-700 text-white'
-  if (grad.includes('PRETA') || grad.includes('YUDANSHA')) return 'bg-black text-white'
-  if (grad.includes('VERMELHA')) return 'bg-red-600 text-white'
-
-  return 'bg-gray-200 text-gray-700'
+  const color = getGraduationColor(graduacao)
+  return `${color.bg} ${color.text}`
 }
 
 /**
@@ -70,6 +87,24 @@ export function extractGraduationName(graduacao: string): string {
   // Extract the color name (last word)
   const words = beltPart.split(' ')
   return words[words.length - 1]
+}
+
+/**
+ * Get oval badge HTML with graduation color and optional dan number
+ * Returns an object with oval styling
+ */
+export function getOvalBadgeStyle(
+  graduacao: string,
+  danNivel?: string | null
+): { bgColor: string; textColor: string; content: string } {
+  const color = getGraduationColor(graduacao)
+  const danNumber = danNivel ? DAN_MAPPING[danNivel.toUpperCase()] : null
+  
+  return {
+    bgColor: color.rgb,
+    textColor: danNumber ? 'white' : color.text === 'text-white' ? 'white' : 'black',
+    content: danNumber ? String(danNumber) : '●',
+  }
 }
 
 /**

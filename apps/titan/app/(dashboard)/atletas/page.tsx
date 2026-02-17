@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Eye, Edit, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react'
-import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip } from '@/lib/utils/graduacao'
+import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip, getOvalBadgeStyle } from '@/lib/utils/graduacao'
 
 interface Atleta {
   id: string
@@ -266,12 +266,27 @@ export default function AtletasPage() {
                           </code>
                         </td>
                         <td className="p-4">
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBeltColorClasses(atleta.graduacao)}`}
-                            title={getGraduationTooltip(atleta.graduacao, atleta.dan_nivel)}
-                          >
-                            {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const badge = getOvalBadgeStyle(atleta.graduacao, atleta.dan_nivel)
+                              return (
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2"
+                                  style={{
+                                    backgroundColor: badge.bgColor,
+                                    color: badge.textColor,
+                                    borderColor: badge.bgColor,
+                                  }}
+                                  title={`${getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}`}
+                                >
+                                  {badge.content}
+                                </div>
+                              )
+                            })()}
+                            <span className="text-xs font-medium">
+                              {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
+                            </span>
+                          </div>
                         </td>
                         <td className="p-4 text-sm text-foreground">{atleta.academia?.nome || '-'}</td>
                         <td className="p-4 text-sm text-foreground text-center">{atleta.lote || '-'}</td>
