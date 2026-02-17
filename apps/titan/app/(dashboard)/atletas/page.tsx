@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Eye, Edit, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react'
-import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip, getOvalBadgeStyle } from '@/lib/utils/graduacao'
+import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip, getDualOvalBadges } from '@/lib/utils/graduacao'
 
 interface Atleta {
   id: string
@@ -268,24 +268,34 @@ export default function AtletasPage() {
                         <td className="p-4">
                           <div className="flex items-center gap-2">
                             {(() => {
-                              const badge = getOvalBadgeStyle(atleta.graduacao, atleta.dan_nivel)
+                              const badges = getDualOvalBadges(atleta.graduacao, atleta.dan_nivel)
                               return (
-                                <div
-                                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2"
-                                  style={{
-                                    backgroundColor: badge.bgColor,
-                                    color: badge.textColor,
-                                    borderColor: badge.bgColor,
-                                  }}
-                                  title={`${getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}`}
-                                >
-                                  {badge.content}
-                                </div>
+                                <>
+                                  <div
+                                    className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[9px] border border-gray-300"
+                                    style={{
+                                      backgroundColor: badges.left.rgb,
+                                      color: badges.left.text === 'text-white' ? 'white' : 'black',
+                                    }}
+                                  >
+                                    {badges.danNumber ? String(badges.danNumber) : ''}
+                                  </div>
+                                  <div
+                                    className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[9px] border border-gray-300"
+                                    style={{
+                                      backgroundColor: badges.right.rgb,
+                                      color: badges.right.text === 'text-white' ? 'white' : 'black',
+                                    }}
+                                  />
+                                  <span
+                                    className="text-xs font-medium ml-1"
+                                    title={`${getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}`}
+                                  >
+                                    {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
+                                  </span>
+                                </>
                               )
                             })()}
-                            <span className="text-xs font-medium">
-                              {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
-                            </span>
                           </div>
                         </td>
                         <td className="p-4 text-sm text-foreground">{atleta.academia?.nome || '-'}</td>

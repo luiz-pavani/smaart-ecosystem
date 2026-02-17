@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, Award, Shield, FileText, User, Building2 } from 'lucide-react'
 import ApprovalSection from '@/components/ApprovalSection'
-import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip, getOvalBadgeStyle } from '@/lib/utils/graduacao'
+import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip, getDualOvalBadges } from '@/lib/utils/graduacao'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -260,24 +260,34 @@ export default async function AtletaDetalhesPage(props: PageProps) {
                 <label className="text-sm text-muted-foreground">Graduação Atual</label>
                 <div className="mt-1 flex items-center gap-3">
                   {(() => {
-                    const badge = getOvalBadgeStyle(atleta.graduacao, atleta.dan_nivel)
+                    const badges = getDualOvalBadges(atleta.graduacao, atleta.dan_nivel)
                     return (
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-base border-2"
-                        style={{
-                          backgroundColor: badge.bgColor,
-                          color: badge.textColor,
-                          borderColor: badge.bgColor,
-                        }}
-                        title={`${getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}`}
-                      >
-                        {badge.content}
-                      </div>
+                      <>
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border border-gray-300"
+                          style={{
+                            backgroundColor: badges.left.rgb,
+                            color: badges.left.text === 'text-white' ? 'white' : 'black',
+                          }}
+                        >
+                          {badges.danNumber ? String(badges.danNumber) : ''}
+                        </div>
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border border-gray-300"
+                          style={{
+                            backgroundColor: badges.right.rgb,
+                            color: badges.right.text === 'text-white' ? 'white' : 'black',
+                          }}
+                        />
+                        <span
+                          className="text-sm font-medium"
+                          title={`${getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}`}
+                        >
+                          {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
+                        </span>
+                      </>
                     )
                   })()}
-                  <span className="text-sm font-medium">
-                    {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
-                  </span>
                 </div>
               </div>
               {atleta.dan_nivel && (

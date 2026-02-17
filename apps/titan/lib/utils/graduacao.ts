@@ -108,6 +108,71 @@ export function getOvalBadgeStyle(
 }
 
 /**
+ * Get dual oval badges with graduation colors
+ * Returns two colors representing the belt (front and back sides)
+ */
+export function getDualOvalBadges(
+  graduacao: string,
+  danNivel?: string | null
+): { left: { rgb: string; text: string }; right: { rgb: string; text: string }; danNumber?: number } {
+  const grad = extractGraduationName(graduacao).toUpperCase()
+  const danNumber = danNivel ? DAN_MAPPING[danNivel.toUpperCase()] : undefined
+
+  // Map each graduation to its two colors (left and right)
+  const dualColorMap: Record<string, [string, string]> = {
+    BRANCA: ['BRANCA', 'BRANCA'],
+    CINZA: ['CINZA', 'CINZA'],
+    AZUL: ['AZUL', 'AZUL'],
+    AMARELA: ['AMARELA', 'AMARELA'],
+    LARANJA: ['LARANJA', 'LARANJA'],
+    VERDE: ['VERDE', 'VERDE'],
+    ROXA: ['ROXA', 'ROXA'],
+    MARROM: ['MARROM', 'MARROM'],
+    PRETA: ['PRETA', 'PRETA'],
+    VERMELHA: ['VERMELHA', 'VERMELHA'],
+  }
+
+  // Check for dual-color belts (with slash or specific patterns)
+  let leftColor = 'BRANCA'
+  let rightColor = 'BRANCA'
+
+  if (grad.includes('BRANCA/CINZA')) {
+    leftColor = 'BRANCA'
+    rightColor = 'CINZA'
+  } else if (grad.includes('CINZA/AZUL')) {
+    leftColor = 'CINZA'
+    rightColor = 'AZUL'
+  } else if (grad.includes('AZUL/AMARELA')) {
+    leftColor = 'AZUL'
+    rightColor = 'AMARELA'
+  } else if (grad.includes('AMARELA/LARANJA')) {
+    leftColor = 'AMARELA'
+    rightColor = 'LARANJA'
+  } else if (grad.includes('VERMELHA/BRANCA')) {
+    leftColor = 'VERMELHA'
+    rightColor = 'BRANCA'
+  } else {
+    // Single color belts - use the two-color map or default
+    for (const [key, [l, r]] of Object.entries(dualColorMap)) {
+      if (grad.includes(key)) {
+        leftColor = l
+        rightColor = r
+        break
+      }
+    }
+  }
+
+  const leftColorObj = GRADUATION_COLORS[leftColor] || GRADUATION_COLORS.BRANCA
+  const rightColorObj = GRADUATION_COLORS[rightColor] || GRADUATION_COLORS.BRANCA
+
+  return {
+    left: { rgb: leftColorObj.rgb, text: leftColorObj.text },
+    right: { rgb: rightColorObj.rgb, text: rightColorObj.text },
+    danNumber,
+  }
+}
+
+/**
  * Get display text for graduation with dan number if applicable
  * Examples:
  * - "BRANCA|MÚKYŪ" -> "Branca"
