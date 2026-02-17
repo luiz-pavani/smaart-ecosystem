@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Camera, Save, Loader2, Users, Plus, LayoutGrid, Info } from 'lucide-react'
 import FileUpload from '@/components/ui/FileUpload'
 import CSVImport, { CSVImportField } from '@/components/ui/CSVImport'
-import { GRADUACOES_DB, DAN_NIVEIS } from '@/lib/utils/graduacao'
+import { GRADUACOES_DB, DAN_NIVEIS, NIVEIS_ARBITRAGEM } from '@/lib/utils/graduacao'
 
 interface NewAtletaFormProps {
   academiasDisponiveis?: Array<{ id: string; nome: string; sigla: string }>
@@ -589,13 +589,18 @@ export default function NovoAtletaForm({
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Nível de Arbitragem
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={formData.nivel_arbitragem}
                     onChange={(e) => setFormData({ ...formData, nivel_arbitragem: e.target.value })}
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Ex: Regional, Estadual, Nacional"
-                  />
+                  >
+                    <option value="">Selecione o nível de arbitragem</option>
+                    {NIVEIS_ARBITRAGEM.map((nivel) => (
+                      <option key={nivel} value={nivel}>
+                        {nivel}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
