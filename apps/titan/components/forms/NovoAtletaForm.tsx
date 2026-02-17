@@ -35,13 +35,8 @@ export default function NovoAtletaForm({
     data_nascimento: '',
     genero: '',
     email: '',
-    telefone: '',
     celular: '',
-    cep: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
+    instagram: '',
     cidade: '',
     estado: '',
     academia_id: academiaId || '',
@@ -54,29 +49,6 @@ export default function NovoAtletaForm({
 
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-
-  // Generate CEP address lookup
-  const searchCEP = async (cep: string) => {
-    const cleanCep = cep.replace(/\D/g, '')
-    if (cleanCep.length !== 8) return
-
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
-      const data = await response.json()
-
-      if (data.erro) return
-
-      setFormData(prev => ({
-        ...prev,
-        endereco: data.logradouro || '',
-        bairro: data.bairro || '',
-        cidade: data.localidade || '',
-        estado: data.uf || '',
-      }))
-    } catch (err) {
-      console.error('CEP lookup error:', err)
-    }
-  }
 
   const handleFileSelect = async (file: File) => {
     setPhotoLoading(true)
@@ -130,13 +102,8 @@ export default function NovoAtletaForm({
           data_nascimento: formData.data_nascimento,
           genero: formData.genero,
           email: formData.email,
-          telefone: formData.telefone,
           celular: formData.celular,
-          cep: formData.cep,
-          endereco: formData.endereco,
-          numero: formData.numero,
-          complemento: formData.complemento,
-          bairro: formData.bairro,
+          instagram: formData.instagram,
           cidade: formData.cidade,
           estado: formData.estado,
           graduacao: formData.graduacao,
@@ -186,13 +153,8 @@ export default function NovoAtletaForm({
           data_nascimento: row.data_nascimento,
           genero: row.genero,
           email: row.email,
-          telefone: row.telefone || '',
           celular: row.celular,
-          cep: row.cep || '',
-          endereco: row.endereco || '',
-          numero: row.numero || '',
-          complemento: row.complemento || '',
-          bairro: row.bairro || '',
+          instagram: row.instagram || '',
           cidade: row.cidade || '',
           estado: row.estado || '',
           graduacao: row.graduacao,
@@ -232,6 +194,9 @@ export default function NovoAtletaForm({
     ] : []),
     { name: 'email', label: 'E-mail', required: false, type: 'email' },
     { name: 'celular', label: 'Celular', required: false, type: 'phone' },
+    { name: 'instagram', label: 'Instagram', required: false, type: 'text' },
+    { name: 'cidade', label: 'Cidade', required: false, type: 'text' },
+    { name: 'estado', label: 'UF', required: false, type: 'text' },
     { name: 'graduacao', label: 'Graduação', required: true, type: 'select', options: GRADUACOES_DB.map(g => ({ value: g, label: g })) },
     { name: 'dan_nivel', label: 'Nível Dan', required: false, type: 'text' },
   ]
@@ -398,7 +363,7 @@ export default function NovoAtletaForm({
 
             {/* Contact Information */}
             <div className="bg-card rounded-2xl p-6 border border-border space-y-4">
-              <h2 className="text-lg font-bold text-foreground">Contato</h2>
+              <h2 className="text-lg font-bold text-foreground">Contato e Localização</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -426,108 +391,46 @@ export default function NovoAtletaForm({
                     placeholder="(00) 00000-0000"
                   />
                 </div>
-              </div>
-            </div>
-
-            {/* Address Information */}
-            <div className="bg-card rounded-2xl p-6 border border-border space-y-4">
-              <h2 className="text-lg font-bold text-foreground">Endereço</h2>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  CEP
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.cep}
-                    onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                    onBlur={(e) => searchCEP(e.target.value)}
-                    className="flex-1 px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="00000-000"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => searchCEP(formData.cep)}
-                    className="px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-all"
-                  >
-                    Buscar
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Endereço
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.endereco}
-                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Número
+                    Instagram
                   </label>
                   <input
                     type="text"
-                    value={formData.numero}
-                    onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
+                    value={formData.instagram}
+                    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="@usuario"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Bairro
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.bairro}
-                    onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
+                <div className="sm:col-span-2 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Cidade
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cidade}
+                      onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                      className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Cidade
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.cidade}
-                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    UF
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.estado}
-                    onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                    maxLength={2}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Complemento
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.complemento}
-                    onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      UF
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.estado}
+                      onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
+                      className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      maxLength={2}
+                      placeholder="SP"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

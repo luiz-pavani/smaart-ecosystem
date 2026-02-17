@@ -17,13 +17,8 @@
 | `academia_sigla` | Sigla da academia (obrigatório para federação) | BUSHIDO, IPPON, KODOKAN |
 | `rg` | Número do RG | 12.345.678-9 |
 | `email` | E-mail do atleta | atleta@email.com |
-| `telefone` | Telefone fixo | 1133334444 ou (11) 3333-4444 |
 | `celular` | Telefone celular | 11987654321 ou (11) 98765-4321 |
-| `cep` | CEP do endereço | 01310-100 ou 01310100 |
-| `endereco` | Logradouro (rua/avenida) | Avenida Paulista |
-| `numero` | Número do endereço | 1578 |
-| `complemento` | Complemento | Apto 501, Bloco B, Casa 2 |
-| `bairro` | Bairro | Bela Vista |
+| `instagram` | Instagram do atleta | @usuario |
 | `cidade` | Cidade | São Paulo |
 | `estado` | UF (sigla do estado) | SP, RJ, MG |
 | `dan_nivel` | Nível Dan (apenas para Faixa Preta) | 1º DAN, 2º DAN, 3º DAN |
@@ -40,7 +35,8 @@
 - **Gênero**: Valores válidos: "Masculino" ou "Feminino"
 - **Graduação**: Usar formato exato do banco (ex: FAIXA PRETA|YUDANSHA)
 - **Dan Nível**: Preencher APENAS se graduação for FAIXA PRETA
-- **Telefones**: Aceita com ou sem formatação
+- **Celular**: Aceita com ou sem formatação
+- **Instagram**: Pode incluir ou omitir o @ inicial
 - **Campos vazios**: Deixe campos opcionais em branco se não tiver a informação
 
 ---
