@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, MapPin } from 'lucide-react'
 
 export default function EditarAcademiaPage() {
   const router = useRouter()
@@ -13,6 +13,7 @@ export default function EditarAcademiaPage() {
   
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [cepLoading, setCepLoading] = useState(false)
   const [formData, setFormData] = useState({
     nome: '',
     sigla: '',
@@ -21,13 +22,13 @@ export default function EditarAcademiaPage() {
     inscricao_municipal: '',
     
     // Endereço
-    cep: '',
-    rua: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    uf: '',
+    endereco_cep: '',
+    endereco_rua: '',
+    endereco_numero: '',
+    endereco_complemento: '',
+    endereco_bairro: '',
+    endereco_cidade: '',
+    endereco_estado: '',
     
     // Contato
     telefone: '',
@@ -64,13 +65,13 @@ export default function EditarAcademiaPage() {
           cnpj: data.cnpj || '',
           inscricao_estadual: data.inscricao_estadual || '',
           inscricao_municipal: data.inscricao_municipal || '',
-          cep: data.cep || '',
-          rua: data.rua || '',
-          numero: data.numero || '',
-          complemento: data.complemento || '',
-          bairro: data.bairro || '',
-          cidade: data.cidade || '',
-          uf: data.uf || '',
+          endereco_cep: data.endereco_cep || '',
+          endereco_rua: data.endereco_rua || '',
+          endereco_numero: data.endereco_numero || '',
+          endereco_complemento: data.endereco_complemento || '',
+          endereco_bairro: data.endereco_bairro || '',
+          endereco_cidade: data.endereco_cidade || '',
+          endereco_estado: data.endereco_estado || '',
           telefone: data.telefone || '',
           email: data.email || '',
           responsavel_nome: data.responsavel_nome || '',
@@ -85,6 +86,35 @@ export default function EditarAcademiaPage() {
       alert('Erro ao carregar dados da academia')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const searchCEP = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '')
+    if (cleanCep.length !== 8) return
+
+    setCepLoading(true)
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+      const data = await response.json()
+
+      if (data.erro) {
+        alert('CEP não encontrado')
+        return
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        endereco_rua: data.logradouro || '',
+        endereco_bairro: data.bairro || '',
+        endereco_cidade: data.localidade || '',
+        endereco_estado: data.uf || '',
+      }))
+    } catch (err) {
+      console.error('Error fetching CEP:', err)
+      alert('Erro ao buscar CEP')
+    } finally {
+      setCepLoading(false)
     }
   }
 
@@ -217,20 +247,34 @@ export default function EditarAcademiaPage() {
 
           {/* Endereço */}
           <div className="bg-card rounded-2xl p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-6">Endereço</h2>
+            <h2 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
+              <MapPin className="w-5 h-5" />
+              Endereço
+            </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
                   CEP
                 </label>
-                <input
-                  type="text"
-                  value={formData.cep}
-                  onChange={(e) => updateField('cep', e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="00000-000"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.endereco_cep}
+                    onChange={(e) => updateField('endereco_cep', e.target.value)}
+                    onBlur={(e) => searchCEP(e.target.value)}
+                    className="flex-1 px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="00000-000"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => searchCEP(formData.endereco_cep)}
+                    disabled={cepLoading}
+                    className="px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-all disabled:opacity-50"
+                  >
+                    {cepLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Buscar'}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -239,8 +283,8 @@ export default function EditarAcademiaPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.numero}
-                  onChange={(e) => updateField('numero', e.target.value)}
+                  value={formData.endereco_numero}
+                  onChange={(e) => updateField('endereco_numero', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -251,8 +295,8 @@ export default function EditarAcademiaPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.rua}
-                  onChange={(e) => updateField('rua', e.target.value)}
+                  value={formData.endereco_rua}
+                  onChange={(e) => updateField('endereco_rua', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -263,8 +307,8 @@ export default function EditarAcademiaPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.bairro}
-                  onChange={(e) => updateField('bairro', e.target.value)}
+                  value={formData.endereco_bairro}
+                  onChange={(e) => updateField('endereco_bairro', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -275,8 +319,8 @@ export default function EditarAcademiaPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.complemento}
-                  onChange={(e) => updateField('complemento', e.target.value)}
+                  value={formData.endereco_complemento}
+                  onChange={(e) => updateField('endereco_complemento', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -287,23 +331,50 @@ export default function EditarAcademiaPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.cidade}
-                  onChange={(e) => updateField('cidade', e.target.value)}
+                  value={formData.endereco_cidade}
+                  onChange={(e) => updateField('endereco_cidade', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  UF
+                  Estado (UF)
                 </label>
-                <input
-                  type="text"
-                  value={formData.uf}
-                  onChange={(e) => updateField('uf', e.target.value.toUpperCase())}
+                <select
+                  value={formData.endereco_estado}
+                  onChange={(e) => updateField('endereco_estado', e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  maxLength={2}
-                />
+                >
+                  <option value="">Selecione...</option>
+                  <option value="AC">Acre</option>
+                  <option value="AL">Alagoas</option>
+                  <option value="AP">Amapá</option>
+                  <option value="AM">Amazonas</option>
+                  <option value="BA">Bahia</option>
+                  <option value="CE">Ceará</option>
+                  <option value="DF">Distrito Federal</option>
+                  <option value="ES">Espírito Santo</option>
+                  <option value="GO">Goiás</option>
+                  <option value="MA">Maranhão</option>
+                  <option value="MT">Mato Grosso</option>
+                  <option value="MS">Mato Grosso do Sul</option>
+                  <option value="MG">Minas Gerais</option>
+                  <option value="PA">Pará</option>
+                  <option value="PB">Paraíba</option>
+                  <option value="PR">Paraná</option>
+                  <option value="PE">Pernambuco</option>
+                  <option value="PI">Piauí</option>
+                  <option value="RJ">Rio de Janeiro</option>
+                  <option value="RN">Rio Grande do Norte</option>
+                  <option value="RS">Rio Grande do Sul</option>
+                  <option value="RO">Rondônia</option>
+                  <option value="RR">Roraima</option>
+                  <option value="SC">Santa Catarina</option>
+                  <option value="SP">São Paulo</option>
+                  <option value="SE">Sergipe</option>
+                  <option value="TO">Tocantins</option>
+                </select>
               </div>
             </div>
           </div>
