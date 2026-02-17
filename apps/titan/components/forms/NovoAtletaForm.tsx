@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Camera, Save, Loader2, Users, Plus, LayoutGrid } from 'lucide-react'
+import { ArrowLeft, Camera, Save, Loader2, Users, Plus, LayoutGrid, Info } from 'lucide-react'
 import FileUpload from '@/components/ui/FileUpload'
 import CSVImport, { CSVImportField } from '@/components/ui/CSVImport'
 import { GRADUACOES_DB, DAN_NIVEIS } from '@/lib/utils/graduacao'
@@ -16,6 +16,62 @@ interface NewAtletaFormProps {
 }
 
 type FormMode = 'form' | 'csv'
+type TabName = 'pessoal' | 'federacao' | 'academia' | 'eventos'
+
+interface AtletaFormData {
+  // Dados Pessoais
+  nome_completo: string
+  cpf: string
+  rg: string
+  data_nascimento: string
+  genero: string
+  email: string
+  celular: string
+  instagram: string
+  cidade: string
+  estado: string
+  academia_id: string
+  
+  // Federação
+  graduacao: string
+  dan_nivel: string
+  data_graduacao: string
+  nivel_arbitragem: string
+  certificado_arbitragem_url: string
+  numero_diploma_dan: string
+  ano_primeira_filiacao: string
+  filiacao_ativa: boolean
+  
+  // Academia
+  plano_mensalidade: string
+  valor_mensalidade: string
+  dia_vencimento: string
+  forma_pagamento: string
+  status_mensalidade: string
+  frequencia_semanal: string
+  horario_preferencial: string
+  responsavel_nome: string
+  responsavel_cpf: string
+  responsavel_telefone: string
+  responsavel_email: string
+  responsavel_parentesco: string
+  observacoes_academia: string
+  objetivo_treino: string
+  nivel_comprometimento: string
+  
+  // Eventos
+  peso_atual_kg: string
+  participa_kata: boolean
+  kata_modalidade: string
+  participa_shiai: boolean
+  tipo_licenca: string
+  numero_licenca: string
+  validade_licenca: string
+  restricoes_medicas: string
+  
+  // Observações gerais
+  observacoes: string
+}
 
 export default function NovoAtletaForm({
   academiasDisponiveis = [],
@@ -26,9 +82,12 @@ export default function NovoAtletaForm({
   const router = useRouter()
   const supabase = createClient()
   const [mode, setMode] = useState<FormMode>('form')
+  const [activeTab, setActiveTab] = useState<TabName>('pessoal')
   const [loading, setLoading] = useState(false)
   const [photoLoading, setPhotoLoading] = useState(false)
-  const [formData, setFormData] = useState({
+  
+  const [formData, setFormData] = useState<AtletaFormData>({
+    // Dados Pessoais
     nome_completo: '',
     cpf: '',
     rg: '',
@@ -40,10 +99,45 @@ export default function NovoAtletaForm({
     cidade: '',
     estado: '',
     academia_id: academiaId || '',
+    
+    // Federação
     graduacao: '',
     dan_nivel: '',
     data_graduacao: '',
     nivel_arbitragem: '',
+    certificado_arbitragem_url: '',
+    numero_diploma_dan: '',
+    ano_primeira_filiacao: '',
+    filiacao_ativa: true,
+    
+    // Academia
+    plano_mensalidade: 'MENSAL',
+    valor_mensalidade: '',
+    dia_vencimento: '',
+    forma_pagamento: 'BOLETO',
+    status_mensalidade: 'pendente',
+    frequencia_semanal: '',
+    horario_preferencial: 'VARIADO',
+    responsavel_nome: '',
+    responsavel_cpf: '',
+    responsavel_telefone: '',
+    responsavel_email: '',
+    responsavel_parentesco: '',
+    observacoes_academia: '',
+    objetivo_treino: '',
+    nivel_comprometimento: 'MEDIO',
+    
+    // Eventos
+    peso_atual_kg: '',
+    participa_kata: false,
+    kata_modalidade: '',
+    participa_shiai: true,
+    tipo_licenca: 'FEDERADO',
+    numero_licenca: '',
+    validade_licenca: '',
+    restricoes_medicas: '',
+    
+    // Observações
     observacoes: '',
   })
 
