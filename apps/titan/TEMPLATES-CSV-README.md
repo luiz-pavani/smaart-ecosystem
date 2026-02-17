@@ -70,6 +70,7 @@
 | `endereco_bairro` | Bairro | Bela Vista |
 | `endereco_cidade` | Cidade | São Paulo |
 | `endereco_estado` | UF | SP |
+| `endereco_pais` | País | Brasil |
 
 ### Campos Opcionais - Responsável Principal
 | Campo | Descrição | Formato/Exemplo |

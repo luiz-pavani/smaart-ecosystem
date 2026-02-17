@@ -26,6 +26,7 @@ export default function NovaAcademiaForm() {
     endereco_bairro: '',
     endereco_cidade: '',
     endereco_estado: '',
+    endereco_pais: 'Brasil',
     responsavel_nome: '',
     responsavel_cpf: '',
     responsavel_rg: '',
@@ -144,6 +145,7 @@ export default function NovaAcademiaForm() {
     { name: 'endereco_bairro', label: 'Bairro', required: false, type: 'text' },
     { name: 'endereco_cidade', label: 'Cidade', required: false, type: 'text' },
     { name: 'endereco_estado', label: 'UF', required: false, type: 'text' },
+    { name: 'endereco_pais', label: 'País', required: false, type: 'text' },
   ]
 
   return (
@@ -343,6 +345,19 @@ export default function NovaAcademiaForm() {
                     onChange={(e) => setFormData({ ...formData, endereco_estado: e.target.value.toUpperCase() })}
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     maxLength={2}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    País
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.endereco_pais}
+                    onChange={(e) => setFormData({ ...formData, endereco_pais: e.target.value })}
+                    className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    placeholder="Brasil"
                   />
                 </div>
               </div>
