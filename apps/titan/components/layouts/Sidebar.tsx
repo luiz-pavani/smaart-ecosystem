@@ -4,7 +4,6 @@ import { Building2, Users, Calendar, GraduationCap, Store, Settings, LogOut, Lay
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { APP_VERSION_NAME } from '@/lib/version'
 
 interface SidebarProps {
   user: any
@@ -41,10 +40,7 @@ export default function Sidebar({ user }: SidebarProps) {
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-foreground">Titan</h1>
-              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">{APP_VERSION_NAME}</span>
-            </div>
+            <h1 className="text-lg font-bold text-foreground">Titan</h1>
             <p className="text-xs text-muted-foreground">Federações</p>
           </div>
         </div>
