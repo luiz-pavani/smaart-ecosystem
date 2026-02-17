@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Eye, Edit, Trash2, CheckCircle, Clock, DollarSign } from 'lucide-react'
+import { getBeltColorClasses, getGraduationDisplayText, getGraduationTooltip } from '@/lib/utils/graduacao'
 
 interface Atleta {
   id: string
@@ -121,19 +122,6 @@ export default function AtletasPage() {
   const ativos = atletas.filter(a => a.status === 'ativo').length
   const faixasPreta = atletas.filter(a => a.graduacao.includes('FAIXA PRETA')).length
   const arbitros = atletas.filter(a => a.nivel_arbitragem).length
-
-  const getBeltColor = (graduacao: string) => {
-    if (graduacao.includes('BRANCA')) return 'bg-white text-black border border-gray-300'
-    if (graduacao.includes('CINZA')) return 'bg-gray-400 text-white'
-    if (graduacao.includes('AZUL')) return 'bg-blue-500 text-white'
-    if (graduacao.includes('AMARELA')) return 'bg-yellow-400 text-black'
-    if (graduacao.includes('LARANJA')) return 'bg-orange-500 text-white'
-    if (graduacao.includes('VERDE')) return 'bg-green-500 text-white'
-    if (graduacao.includes('ROXA')) return 'bg-purple-500 text-white'
-    if (graduacao.includes('MARROM')) return 'bg-amber-700 text-white'
-    if (graduacao.includes('FAIXA PRETA') || graduacao.includes('YUDANSHA')) return 'bg-black text-white'
-    return 'bg-gray-200 text-gray-700'
-  }
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -278,8 +266,11 @@ export default function AtletasPage() {
                           </code>
                         </td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBeltColor(atleta.graduacao)}`}>
-                            {atleta.graduacao.split('|')[0].split(' ').pop()}
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getBeltColorClasses(atleta.graduacao)}`}
+                            title={getGraduationTooltip(atleta.graduacao, atleta.dan_nivel)}
+                          >
+                            {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
                           </span>
                         </td>
                         <td className="p-4 text-sm text-foreground">{atleta.academia?.nome || '-'}</td>
