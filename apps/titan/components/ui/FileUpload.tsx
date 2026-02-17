@@ -57,12 +57,26 @@ export default function FileUpload({
     // Check file type
     const acceptTypes = accept.split(',').map(t => t.trim())
     const isAccepted = acceptTypes.some(type => {
+      // Handle wildcards like image/*
       if (type === 'image/*') {
         return file.type.startsWith('image/')
       }
+      
+      // Handle specific MIME types
       if (type === 'application/pdf') {
         return file.type === 'application/pdf'
       }
+      
+      if (type === 'text/csv' || type === 'application/csv') {
+        return file.type === 'text/csv' || file.type === 'application/csv' || file.name.endsWith('.csv')
+      }
+      
+      // Handle file extensions like .csv, .jpg, etc
+      if (type.startsWith('.')) {
+        return file.name.toLowerCase().endsWith(type.toLowerCase())
+      }
+      
+      // Default: check MIME type
       return file.type === type
     })
 
