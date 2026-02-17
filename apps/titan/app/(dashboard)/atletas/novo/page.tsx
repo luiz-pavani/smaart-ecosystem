@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import NovoAtletaFormSimple from '@/components/forms/NovoAtletaFormSimple'
+import NovoAtletaForm from '@/components/forms/NovoAtletaForm'
 
 export default async function NovoAtletaPage() {
   const supabase = await createClient()
@@ -25,20 +25,20 @@ export default async function NovoAtletaPage() {
   }
 
   // Get available academias based on role
-  let academiasDisponiveis: Array<{ id: string; nome: string }> = []
+  let academiasDisponiveis: Array<{ id: string; nome: string; sigla: string }> = []
 
   if (perfil.role === 'federacao_admin' || perfil.role === 'federacao_staff') {
     const { data: academias } = await supabase
       .from('academias')
-      .select('id, nome')
+      .select('id, nome, sigla')
       .eq('federacao_id', perfil.federacao_id)
       .order('nome')
 
     academiasDisponiveis = academias || []
-  } else if (perfil.role === 'academia_admin' || perfil.role === 'academia_staff') {
+  } else if (perfil.role === 'academia_admin' || perfil.role === 'academia_staff' || perfil.role === 'professor') {
     const { data: academia } = await supabase
       .from('academias')
-      .select('id, nome')
+      .select('id, nome, sigla')
       .eq('id', perfil.academia_id)
       .single()
 
@@ -48,13 +48,11 @@ export default async function NovoAtletaPage() {
   }
 
   return (
-    <div className="flex-1 p-8">
-      <NovoAtletaFormSimple
-        academiasDisponiveis={academiasDisponiveis}
-        federacaoId={perfil.federacao_id}
-        academiaId={perfil.academia_id}
-        role={perfil.role}
-      />
-    </div>
+    <NovoAtletaForm
+      academiasDisponiveis={academiasDisponiveis}
+      federacaoId={perfil.federacao_id}
+      academiaId={perfil.academia_id}
+      role={perfil.role}
+    />
   )
 }
