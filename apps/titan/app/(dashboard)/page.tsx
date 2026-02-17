@@ -8,19 +8,32 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // TODO: Fetch real stats from database
+  // Fetch real stats from database
+  const { count: academiasCount } = await supabase
+    .from('academias')
+    .select('*', { count: 'exact', head: true })
+  
+  const { count: atletasCount } = await supabase
+    .from('atletas')
+    .select('*', { count: 'exact', head: true })
+  
+  const { count: atletasAtivos } = await supabase
+    .from('atletas')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'ativo')
+  
   const stats = [
     {
       title: 'Academias',
-      value: '0',
+      value: academiasCount?.toString() || '0',
       subtitle: '0 em análise',
       icon: Building2,
       color: 'bg-primary',
     },
     {
       title: 'Atletas',
-      value: '0',
-      subtitle: '0 ativos',
+      value: atletasCount?.toString() || '0',
+      subtitle: `${atletasAtivos || 0} ativos`,
       icon: Users,
       color: 'bg-secondary',
     },
@@ -112,22 +125,24 @@ export default async function DashboardPage() {
       </div>
 
       {/* Empty State */}
-      <div className="mt-8 bg-card rounded-2xl p-12 text-center border border-border">
-        <Building2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-foreground mb-2">
-          Nenhuma academia cadastrada
-        </h3>
-        <p className="text-muted-foreground mb-6">
-          Comece cadastrando sua primeira academia filiada
-        </p>
-        <a
-          href="/academias/nova"
-          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-all active:scale-[0.98]"
-        >
-          <Building2 className="w-5 h-5" />
-          Cadastrar Academia
-        </a>
-      </div>
+      {(academiasCount || 0) === 0 && (
+        <div className="mt-8 bg-card rounded-2xl p-12 text-center border border-border">
+          <Building2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-foreground mb-2">
+            Nenhuma academia cadastrada
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            Comece cadastrando sua primeira academia filiada
+          </p>
+          <a
+            href="/academias/nova"
+            className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-all active:scale-[0.98]"
+          >
+            <Building2 className="w-5 h-5" />
+            Cadastrar Academia
+          </a>
+        </div>
+      )}
     </div>
   )
 }
