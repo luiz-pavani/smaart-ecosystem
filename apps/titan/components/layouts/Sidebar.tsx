@@ -41,7 +41,7 @@ export default function Sidebar({ user }: SidebarProps) {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-foreground">Titan</h1>
-              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">Beta 10</span>
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">Beta 11</span>
             </div>
             <p className="text-xs text-muted-foreground">Federações</p>
           </div>
