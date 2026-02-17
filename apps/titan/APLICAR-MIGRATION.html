@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Migration 008 - Cadastro Master de Atletas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .steps {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+        
+        .step {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+        
+        .step:last-child {
+            margin-bottom: 0;
+        }
+        
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 5px;
+        }
+        
+        .step-description {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .button-secondary {
+            background: #28a745;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .button-secondary:hover {
+            background: #218838;
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 25px;
+        }
+        
+        .alert {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .alert-title {
+            font-weight: 600;
+            color: #0c5460;
+            margin-bottom: 5px;
+        }
+        
+        .alert-text {
+            color: #0c5460;
+            font-size: 0.95rem;
+        }
+        
+        .code {
+            background: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #d63384;
+        }
+        
+        .features {
+            margin: 25px 0;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .feature-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .feature-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        
+        .feature-title {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 5px;
+        }
+        
+        .feature-desc {
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            🚀 Migration 008
+            <span class="badge">PRONTO</span>
+        </h1>
+        <p class="subtitle">Cadastro Master de Atletas - Expansão Completa</p>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <span class="stat-number">71</span>
+                <span class="stat-label">Novos Campos</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-number">117</span>
+                <span class="stat-label">Campos Totais</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-number">4</span>
+                <span class="stat-label">Funções SQL</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-number">3</span>
+                <span class="stat-label">Views</span>
+            </div>
+        </div>
+        
+        <div class="alert">
+            <div class="alert-title">✅ Migration Criada com Sucesso!</div>
+            <div class="alert-text">
+                O arquivo SQL está pronto e commitado no repositório. Agora você precisa aplicá-lo no banco de dados do Supabase.
+            </div>
+        </div>
+        
+        <div class="features">
+            <h3 style="margin-bottom: 15px; color: #1a1a1a;">📦 O Que Está Incluído:</h3>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <div class="feature-icon">🏆</div>
+                    <div class="feature-title">Eventos/Competições</div>
+                    <div class="feature-desc">29 campos para categorias, peso, KATA, SHIAI, licenças e rankings</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🥋</div>
+                    <div class="feature-title">Gestão de Academia</div>
+                    <div class="feature-desc">27 campos para mensalidades, frequência, horários e responsáveis</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🏅</div>
+                    <div class="feature-title">Filiação/Anuidades</div>
+                    <div class="feature-desc">15 campos para anuidades 2024-2026, carteirinhas e histórico</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-title">Auto-Cálculo</div>
+                    <div class="feature-desc">Trigger que calcula automaticamente categorias, peso e tempo de combate</div>
+                </div>
+            </div>
+        </div>
+        
+        <h2 style="margin: 30px 0 15px; color: #1a1a1a;">🎯 Como Aplicar no Supabase:</h2>
+        
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">Abrir SQL Editor</div>
+                    <div class="step-description">
+                        Clique no botão abaixo para abrir o editor SQL do seu projeto Supabase
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">Copiar o SQL</div>
+                    <div class="step-description">
+                        Abra o arquivo <span class="code">supabase/migrations/008_atletas_schema_master.sql</span> e copie todo o conteúdo
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">Colar e Executar</div>
+                    <div class="step-description">
+                        Cole o SQL no editor e clique em <strong>Run</strong> (ou pressione <span class="code">Ctrl+Enter</span>)
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">Validar</div>
+                    <div class="step-description">
+                        Aguarde a execução (pode levar 30-60 segundos) e verifique se não houve erros
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <a href="https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi/sql/new" 
+               target="_blank" 
+               class="button">
+                🔗 Abrir SQL Editor no Supabase
+            </a>
+            <button onclick="copySQL()" class="button button-secondary" style="border: none; cursor: pointer;">
+                📋 Copiar SQL para Área de Transferência
+            </button>
+        </div>
+        
+        <script>
+            async function copySQL() {
+                try {
+                    const response = await fetch('./supabase/migrations/008_atletas_schema_master.sql');
+                    const sql = await response.text();
+                    await navigator.clipboard.writeText(sql);
+                    
+                    // Visual feedback
+                    const btn = event.target;
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '✅ SQL Copiado!';
+                    btn.style.background = '#28a745';
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.style.background = '';
+                    }, 2000);
+                    
+                    alert('✅ SQL copiado! Agora:\n\n1. Vá para o SQL Editor (clique no botão acima)\n2. Cole o SQL (Ctrl+V ou Cmd+V)\n3. Clique em Run (Ctrl+Enter)');
+                } catch (error) {
+                    alert('⚠️ Erro ao copiar. Abra o arquivo manualmente:\napps/titan/supabase/migrations/008_atletas_schema_master.sql');
+                }
+            }
+        </script>
+        
+        <div class="alert" style="margin-top: 30px; background: #fff3cd; border-color: #ffc107;">
+            <div class="alert-title" style="color: #856404;">⚠️ Importante: Segurança</div>
+            <div class="alert-text" style="color: #856404;">
+                A migration usa <span class="code">IF NOT EXISTS</span> em todos os comandos, então é <strong>100% seguro</strong> executar múltiplas vezes. Se algum campo já existir, ele será ignorado sem erros.
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e9ecef; color: #666; font-size: 0.9rem;">
+            <strong>📚 Documentação Completa:</strong> Veja o arquivo <span class="code">008_README.md</span> para exemplos de uso, funções, views e validação pós-aplicação.
+        </div>
+    </div>
+    
+    <div style="margin-top: 20px; text-align: center; color: white; font-size: 0.85rem; opacity: 0.8;">
+        Migration 008 | Titan Sistema | © 2026
+    </div>
+</body>
+</html>
