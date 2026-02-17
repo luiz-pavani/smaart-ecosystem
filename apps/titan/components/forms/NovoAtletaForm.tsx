@@ -212,7 +212,7 @@ export default function NovoAtletaForm({
     ]},
     { name: 'email', label: 'E-mail', required: false, type: 'email' },
     { name: 'celular', label: 'Celular', required: false, type: 'phone' },
-    { name: 'graduacao', label: 'Graduação', required: true, type: 'select', options: GRADUACOES_DB.map(g => ({ value: g.name, label: g.display })) },
+    { name: 'graduacao', label: 'Graduação', required: true, type: 'select', options: GRADUACOES_DB.map(g => ({ value: g, label: g })) },
     { name: 'dan_nivel', label: 'Nível Dan', required: false, type: 'text' },
   ]
 
@@ -521,8 +521,8 @@ export default function NovoAtletaForm({
                   >
                     <option value="">Selecione...</option>
                     {GRADUACOES_DB.map(g => (
-                      <option key={g.name} value={g.name}>
-                        {g.display}
+                      <option key={g} value={g}>
+                        {g}
                       </option>
                     ))}
                   </select>
