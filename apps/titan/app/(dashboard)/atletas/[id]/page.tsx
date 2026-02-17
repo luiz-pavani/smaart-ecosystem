@@ -269,6 +269,7 @@ export default async function AtletaDetalhesPage(props: PageProps) {
                             backgroundColor: badges.left.rgb,
                             color: badges.left.text === 'text-white' ? 'white' : 'black',
                           }}
+                          title={`${getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}`}
                         >
                           {badges.danNumber ? String(badges.danNumber) : ''}
                         </div>
@@ -279,12 +280,6 @@ export default async function AtletaDetalhesPage(props: PageProps) {
                             color: badges.right.text === 'text-white' ? 'white' : 'black',
                           }}
                         />
-                        <span
-                          className="text-sm font-medium"
-                          title={`${getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}`}
-                        >
-                          {getGraduationDisplayText(atleta.graduacao, atleta.dan_nivel)}
-                        </span>
                       </>
                     )
                   })()}
