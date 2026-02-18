@@ -1,7 +1,7 @@
 {
   "name": "titan",
-  "version": "0.15.0",
-  "description": "Titan - Liga Riograndense de Judô | Beta 16",
+  "version": "0.20.0",
+  "description": "Titan - Liga Riograndense de Judô | Beta 20",
   "private": true,
   "scripts": {
     "dev": "next dev",
