@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { CreatePlanForm } from '@/app/components/plans/CreatePlanForm';
 import { Edit2, Trash2, Zap, AlertCircle } from 'lucide-react';
 
@@ -26,7 +26,7 @@ const frequencyLabels: Record<number, string> = {
 };
 
 export default function FederationPlansPage({ params }: { params: { slug: string } }) {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [federation, setFederation] = useState<any>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
