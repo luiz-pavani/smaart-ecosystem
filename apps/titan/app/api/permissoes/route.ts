@@ -1,6 +1,26 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+const ROLE_HIERARCHY: Record<string, number> = {
+  master_access: 1,
+  federacao_admin: 2,
+  federacao_gestor: 3,
+  federacao_secretario: 3,
+  federacao_financeiro: 3,
+  federacao_staff: 3,
+  academia_admin: 4,
+  academia_gestor: 5,
+  academia_secretario: 5,
+  academia_staff: 5,
+  professor: 6,
+  atleta: 7,
+}
+
+const getNivelHierarquico = (role: string | null | undefined) => {
+  if (!role) return null
+  return ROLE_HIERARCHY[role] ?? null
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -16,13 +36,21 @@ export async function GET(request: NextRequest) {
     // Get user's role information
     const { data: perfil, error: perfilError } = await supabase
       .from('user_roles')
-      .select('role, nivel_hierarquico, federacao_id, academia_id')
+      .select('role, federacao_id, academia_id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (perfilError || !perfil) {
       return NextResponse.json(
         { error: 'Perfil não encontrado' },
+        { status: 403 }
+      )
+    }
+
+    const perfilNivel = getNivelHierarquico(perfil.role)
+    if (!perfilNivel) {
+      return NextResponse.json(
+        { error: 'Perfil sem nível de acesso válido' },
         { status: 403 }
       )
     }
@@ -126,10 +154,18 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const usuariosComNivel = (usuarios || []).map((usuario) => ({
+      ...usuario,
+      nivel_hierarquico: getNivelHierarquico(usuario.role) ?? 999,
+    }))
+
     return NextResponse.json({
-      usuarios: usuarios || [],
+      usuarios: usuariosComNivel,
       rolesInfo,
-      perfilAtual: perfil,
+      perfilAtual: {
+        ...perfil,
+        nivel_hierarquico: perfilNivel,
+      },
     })
   } catch (error) {
     console.error('Error in GET /api/permissoes:', error)
@@ -155,13 +191,21 @@ export async function POST(request: NextRequest) {
     // Get user's role
     const { data: perfil } = await supabase
       .from('user_roles')
-      .select('role, nivel_hierarquico')
+      .select('role')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!perfil) {
       return NextResponse.json(
         { error: 'Perfil não encontrado' },
+        { status: 403 }
+      )
+    }
+
+    const perfilNivel = getNivelHierarquico(perfil.role)
+    if (!perfilNivel) {
+      return NextResponse.json(
+        { error: 'Perfil sem nível de acesso válido' },
         { status: 403 }
       )
     }
@@ -171,11 +215,12 @@ export async function POST(request: NextRequest) {
     // Verify user can assign this role
     const { data: targetUser } = await supabase
       .from('user_roles')
-      .select('nivel_hierarquico')
+      .select('role')
       .eq('user_id', user_id)
-      .single()
+      .maybeSingle()
 
-    if (!targetUser || targetUser.nivel_hierarquico <= perfil.nivel_hierarquico) {
+    const targetNivel = getNivelHierarquico(targetUser?.role)
+    if (!targetNivel || targetNivel <= perfilNivel) {
       return NextResponse.json(
         { error: 'Sem permissão para atribuir esse role' },
         { status: 403 }

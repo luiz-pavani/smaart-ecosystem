@@ -1,6 +1,6 @@
 'use client'
 
-import { Building2, Users, Calendar, GraduationCap, Store, Settings, LogOut, LayoutDashboard, Shield, Landmark } from 'lucide-react'
+import { Building2, Users, Calendar, GraduationCap, Store, Settings, LogOut, LayoutDashboard, Shield, Landmark, Share2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -14,6 +14,7 @@ const navigation = [
   { name: 'Federações', href: '/federacoes', icon: Landmark },
   { name: 'Academias', href: '/academias', icon: Building2 },
   { name: 'Atletas', href: '/atletas', icon: Users },
+  { name: 'Compartilhar Registro', href: '/compartilhar-registro', icon: Share2 },
   { name: 'Eventos', href: '/eventos', icon: Calendar },
   { name: 'Cursos', href: '/cursos', icon: GraduationCap },
   { name: 'Produtos', href: '/produtos', icon: Store },
