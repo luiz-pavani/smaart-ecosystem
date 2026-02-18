@@ -74,7 +74,7 @@ export default function BeltProgressionPage() {
           .eq('academy_id', userRole.academia_id)
           .order('promotion_requested_date', { ascending: true });
 
-        setPendingPromotions(promotions || []);
+        setPendingPromotions(promotions as any || []);
 
         // Get belt statistics by modality
         const { data: stats } = await supabase

@@ -61,7 +61,7 @@ export default function AttendanceCheckInPage() {
           .limit(10);
 
         // Format classes data
-        const formattedClasses = classesData?.map(cls => ({
+        const formattedClasses = classesData?.map((cls: any) => ({
           id: cls.id,
           name: cls.name,
           modality_name: cls.modality?.name || 'Unknown',
@@ -111,24 +111,20 @@ export default function AttendanceCheckInPage() {
   }, [showCamera]);
 
   const handleQRScan = async () => {
-    if (!canvasRef.current || !videoRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    ctx.drawImage(videoRef.current, 0, 0);
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-    if (code) {
-      // Assume QR contains athlete ID
-      await performCheckIn(code.data);
-      setShowCamera(false);
-    }
+    // QR scanning disabled - requires jsqr package
+    // if (!canvasRef.current || !videoRef.current) return;
+    // const canvas = canvasRef.current;
+    // const ctx = canvas.getContext('2d');
+    // if (!ctx) return;
+    // canvas.width = videoRef.current.videoWidth;
+    // canvas.height = videoRef.current.videoHeight;
+    // ctx.drawImage(videoRef.current, 0, 0);
+    // const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    // const code = jsQR(imageData.data, imageData.width, imageData.height);
+    // if (code) {
+    //   await performCheckIn(code.data);
+    //   setShowCamera(false);
+    // }
   };
 
   const performCheckIn = async (athleteId: string) => {

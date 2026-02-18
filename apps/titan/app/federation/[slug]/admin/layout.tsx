@@ -1,12 +1,13 @@
 'use client';
 
+import { use } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Users, Shield, Settings, ChevronRight } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 const adminNavItems = [
@@ -18,6 +19,7 @@ const adminNavItems = [
 ];
 
 export default function AdminLayout({ children, params }: AdminLayoutProps) {
+  const { slug } = use(params);
   const pathname = usePathname();
 
   return (
@@ -26,7 +28,7 @@ export default function AdminLayout({ children, params }: AdminLayoutProps) {
       <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
         <div className="p-6 border-b border-gray-700">
           <h1 className="text-xl font-bold text-white">Admin</h1>
-          <p className="text-sm text-gray-400">{params.slug}</p>
+          <p className="text-sm text-gray-400">{slug}</p>
         </div>
 
         <nav className="flex-1 px-4 py-6 space-y-2">
@@ -35,7 +37,7 @@ export default function AdminLayout({ children, params }: AdminLayoutProps) {
             return (
               <Link
                 key={item.href}
-                href={`/federation/${params.slug}${item.href}`}
+                href={`/federation/${slug}${item.href}`}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                   isActive
                     ? 'bg-blue-600 text-white'

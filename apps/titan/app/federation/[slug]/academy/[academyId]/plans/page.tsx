@@ -48,7 +48,7 @@ export default function PlansPage({
   useEffect(() => {
     async function loadPlans() {
       try {
-        const { data: user } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
         // Get academies for user

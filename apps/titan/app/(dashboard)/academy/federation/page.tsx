@@ -21,6 +21,8 @@ interface FederationData {
   athleteCount: number;
   upcomingEvents: any[];
   totalEvents: number;
+  events?: any[];
+  athletes?: any[];
 }
 
 export default function FederationIntegration() {

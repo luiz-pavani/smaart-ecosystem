@@ -100,9 +100,9 @@ export async function GET(request: NextRequest) {
       const academyAthleteIds = athletes?.map((a) => a.id) || [];
 
       // Mark registered events
-      const enrichedEvents = events?.map((event) => ({
+      const enrichedEvents = events?.map((event: any) => ({
         ...event,
-        academyAthletes: event.event_registrations?.filter((reg) =>
+        academyAthletes: event.event_registrations?.filter((reg: any) =>
           academyAthleteIds.includes(reg.atleta_id)
         ).length || 0,
         totalRegistered: event.event_registrations?.length || 0,
