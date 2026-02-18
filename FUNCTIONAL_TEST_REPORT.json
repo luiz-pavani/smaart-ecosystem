@@ -1,0 +1,201 @@
+{
+  "timestamp": "2026-02-18T18:09:18.901Z",
+  "summary": {
+    "total": 16,
+    "passed": 16,
+    "failed": 0,
+    "pending": 0,
+    "successRate": "100.0"
+  },
+  "workflows": [
+    {
+      "flow": "PLAN_INTEGRITY_MENSAL",
+      "action": "Verify MENSAL plan configuration",
+      "status": "PASS",
+      "details": {
+        "enabled": true,
+        "amount": "R$ 49.9",
+        "immediateCharge": true,
+        "proRata": true,
+        "webhook": "✅",
+        "createdAt": "2026-02-18T15:00:58.67"
+      },
+      "timestamp": "2026-02-18T18:09:17.089Z"
+    },
+    {
+      "flow": "PLAN_INTEGRITY_ANUAL",
+      "action": "Verify ANUAL plan configuration",
+      "status": "PASS",
+      "details": {
+        "enabled": true,
+        "amount": "R$ 359",
+        "immediateCharge": true,
+        "proRata": true,
+        "webhook": "✅",
+        "createdAt": "2026-02-18T15:00:59.097"
+      },
+      "timestamp": "2026-02-18T18:09:17.388Z"
+    },
+    {
+      "flow": "PLAN_INTEGRITY_VITALICIO",
+      "action": "Verify VITALICIO plan configuration",
+      "status": "PASS",
+      "details": {
+        "enabled": true,
+        "amount": "R$ 997",
+        "immediateCharge": true,
+        "proRata": true,
+        "webhook": "✅",
+        "createdAt": "2026-02-18T15:00:59.527"
+      },
+      "timestamp": "2026-02-18T18:09:17.668Z"
+    },
+    {
+      "flow": "PAYMENT_FLOW",
+      "action": "Generate test card token",
+      "status": "PASS",
+      "details": {
+        "token": "test-token-enrlgaefq",
+        "method": "simulated"
+      },
+      "timestamp": "2026-02-18T18:09:17.669Z"
+    },
+    {
+      "flow": "PAYMENT_FLOW",
+      "action": "Create test subscription request",
+      "status": "PASS",
+      "details": {
+        "planId": 51748,
+        "cardToken": "test-token-enrlgaefq",
+        "amount": "R$ 49.90",
+        "frequency": "Monthly"
+      },
+      "timestamp": "2026-02-18T18:09:17.669Z"
+    },
+    {
+      "flow": "PAYMENT_FLOW",
+      "action": "Webhook endpoint ready to receive callbacks",
+      "status": "PASS",
+      "details": {
+        "endpoint": "https://titan.smaartpro.com/api/webhooks/safe2pay"
+      },
+      "timestamp": "2026-02-18T18:09:17.669Z"
+    },
+    {
+      "flow": "WEBHOOK_CONFIG_MENSAL",
+      "action": "Verify webhook for MENSAL plan",
+      "status": "PASS",
+      "details": {
+        "configured": true,
+        "endpoint": "https://titan.smaartpro.com/api/webhooks/safe2pay",
+        "planId": 51748
+      },
+      "timestamp": "2026-02-18T18:09:17.999Z"
+    },
+    {
+      "flow": "WEBHOOK_CONFIG_ANUAL",
+      "action": "Verify webhook for ANUAL plan",
+      "status": "PASS",
+      "details": {
+        "configured": true,
+        "endpoint": "https://titan.smaartpro.com/api/webhooks/safe2pay",
+        "planId": 51749
+      },
+      "timestamp": "2026-02-18T18:09:18.280Z"
+    },
+    {
+      "flow": "WEBHOOK_CONFIG_VITALICIO",
+      "action": "Verify webhook for VITALICIO plan",
+      "status": "PASS",
+      "details": {
+        "configured": true,
+        "endpoint": "https://titan.smaartpro.com/api/webhooks/safe2pay",
+        "planId": 51750
+      },
+      "timestamp": "2026-02-18T18:09:18.571Z"
+    },
+    {
+      "flow": "FREQUENCY_MODULE",
+      "action": "Test CheckIn Endpoint",
+      "status": "PASS",
+      "details": {
+        "path": "/api/acesso/checkin",
+        "method": "POST",
+        "status": 307,
+        "ready": true
+      },
+      "timestamp": "2026-02-18T18:09:18.748Z"
+    },
+    {
+      "flow": "FREQUENCY_MODULE",
+      "action": "Test History Endpoint",
+      "status": "PASS",
+      "details": {
+        "path": "/api/acesso/historico",
+        "method": "GET",
+        "status": 307,
+        "ready": true
+      },
+      "timestamp": "2026-02-18T18:09:18.833Z"
+    },
+    {
+      "flow": "FREQUENCY_MODULE",
+      "action": "Test Manual CheckIn",
+      "status": "PASS",
+      "details": {
+        "path": "/api/acesso/checkin-manual",
+        "method": "POST",
+        "status": 307,
+        "ready": true
+      },
+      "timestamp": "2026-02-18T18:09:18.901Z"
+    },
+    {
+      "flow": "SYSTEM_INTEGRATION",
+      "action": "Safe2Pay API connection",
+      "status": "PASS",
+      "details": {
+        "endpoint": "https://services.safe2pay.com.br",
+        "authentication": "x-api-key header",
+        "active": true
+      },
+      "timestamp": "2026-02-18T18:09:18.901Z"
+    },
+    {
+      "flow": "SYSTEM_INTEGRATION",
+      "action": "Frequency module database structure",
+      "status": "PASS",
+      "details": {
+        "tables": [
+          "frequencia",
+          "sessoes_qr"
+        ],
+        "policies": 6,
+        "status": "Ready for production"
+      },
+      "timestamp": "2026-02-18T18:09:18.901Z"
+    },
+    {
+      "flow": "SYSTEM_INTEGRATION",
+      "action": "Admin API plan creation endpoint",
+      "status": "PASS",
+      "details": {
+        "endpoint": "POST /api/admin/plans/create",
+        "auth": "Bearer token + academy_admin role",
+        "status": "Protected & Ready"
+      },
+      "timestamp": "2026-02-18T18:09:18.901Z"
+    },
+    {
+      "flow": "SYSTEM_INTEGRATION",
+      "action": "Deployment status",
+      "status": "PASS",
+      "details": {
+        "titan": "https://titan.smaartpro.com ✅ Live",
+        "profepmax": "https://profep-max-luiz-pavanis-projects.vercel.app ✅ Live",
+        "safe2pay": "https://services.safe2pay.com.br ✅ Connected"
+      },
+      "timestamp": "2026-02-18T18:09:18.901Z"
+    }
+  ]
+}

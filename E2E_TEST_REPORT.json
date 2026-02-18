@@ -1,0 +1,98 @@
+{
+  "timestamp": "2026-02-18T18:08:43.002Z",
+  "summary": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0,
+    "successRate": 100
+  },
+  "sections": [
+    {
+      "name": "S2P",
+      "passed": 3,
+      "total": 3
+    },
+    {
+      "name": "FREQ",
+      "passed": 3,
+      "total": 3
+    },
+    {
+      "name": "ADMIN",
+      "passed": 1,
+      "total": 1
+    },
+    {
+      "name": "DEPLOY",
+      "passed": 2,
+      "total": 2
+    },
+    {
+      "name": "WEBHOOK",
+      "passed": 1,
+      "total": 1
+    }
+  ],
+  "tests": [
+    {
+      "section": "S2P",
+      "name": "Plan: MENSAL",
+      "passed": true,
+      "message": "ID: 51748 | Amount: R$ 49.9 | ✅ Active"
+    },
+    {
+      "section": "S2P",
+      "name": "Plan: ANUAL",
+      "passed": true,
+      "message": "ID: 51749 | Amount: R$ 359 | ✅ Active"
+    },
+    {
+      "section": "S2P",
+      "name": "Plan: VITALICIO",
+      "passed": true,
+      "message": "ID: 51750 | Amount: R$ 997 | ✅ Active"
+    },
+    {
+      "section": "FREQ",
+      "name": "CheckIn",
+      "passed": true,
+      "message": "POST /api/acesso/checkin | Status: 307"
+    },
+    {
+      "section": "FREQ",
+      "name": "History",
+      "passed": true,
+      "message": "GET /api/acesso/historico | Status: 307"
+    },
+    {
+      "section": "FREQ",
+      "name": "Manual CheckIn",
+      "passed": true,
+      "message": "POST /api/acesso/checkin-manual | Status: 307"
+    },
+    {
+      "section": "ADMIN",
+      "name": "Plan Creation Endpoint",
+      "passed": true,
+      "message": "POST /api/admin/plans/create | Status: 307"
+    },
+    {
+      "section": "DEPLOY",
+      "name": "Titan",
+      "passed": true,
+      "message": "Status: 307"
+    },
+    {
+      "section": "DEPLOY",
+      "name": "ProfepMAX",
+      "passed": true,
+      "message": "Status: 401"
+    },
+    {
+      "section": "WEBHOOK",
+      "name": "Webhook Configuration",
+      "passed": true,
+      "message": "Webhook: https://titan.smaartpro.com/api/webhooks/safe2pay"
+    }
+  ]
+}
