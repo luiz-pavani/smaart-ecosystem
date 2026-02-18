@@ -32,7 +32,7 @@ interface PlanConfig {
   name: string;
   description: string;
   amount: number;
-  frequency: number; // 1=Mensal, 2=Anual
+  frequency: 1 | 2 | 3 | 4; // 1=Mensal, 2=Trimestral, 3=Semestral, 4=Anual
   chargeDay: number;
   billingCycle: number | null; // null=infinito
   isImmediateCharge: boolean;
@@ -52,7 +52,7 @@ const PLANS: PlanConfig[] = [
     name: 'Profep Max - Plano Anual',
     description: 'Assinatura anual com acesso completo à plataforma de preparação física',
     amount: 359.00,
-    frequency: 2, // Anual
+    frequency: 4, // Anual
     chargeDay: 1,
     billingCycle: null, // Infinito
     isImmediateCharge: true,
@@ -73,7 +73,8 @@ async function createPlanWithLibrary(planConfig: PlanConfig): Promise<string | n
   try {
     console.log(`\n🔄 Criando plano: ${planConfig.name}...`);
     console.log(`   Valor: R$ ${planConfig.amount.toFixed(2)}`);
-    console.log(`   Frequência: ${planConfig.frequency === 1 ? 'Mensal' : planConfig.frequency === 2 ? 'Anual' : 'Outro'}`);
+    const freqLabels: Record<1|2|3|4, string> = {1: 'Mensal', 2: 'Trimestral', 3: 'Semestral', 4: 'Anual'};
+    console.log(`   Frequência: ${freqLabels[planConfig.frequency]}`);
     console.log(`   Ciclos: ${planConfig.billingCycle || 'Infinito'}`);
     console.log(`   Webhook: ${WEBHOOK_URL}`);
 
