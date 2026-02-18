@@ -18,7 +18,7 @@ import { createPlan } from '../src/lib/safe2pay-recurrence';
 
 dotenv.config({ path: '.env.local' });
 
-const SAFE2PAY_TOKEN = process.env.SAFE2PAY_API_TOKEN || process.env.SAFE2PAY_TOKEN;
+let SAFE2PAY_TOKEN = process.env.SAFE2PAY_API_TOKEN || process.env.SAFE2PAY_TOKEN;
 const WEBHOOK_URL = process.env.NEXT_PUBLIC_SITE_URL 
   ? `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhooks/safe2pay`
   : 'https://profepmax.com.br/api/webhooks/safe2pay';
@@ -27,6 +27,9 @@ if (!SAFE2PAY_TOKEN) {
   console.error('❌ SAFE2PAY_TOKEN não encontrado no .env.local');
   process.exit(1);
 }
+
+// Ensure SAFE2PAY_TOKEN is definitely a string for TypeScript
+const apiToken: string = SAFE2PAY_TOKEN;
 
 interface PlanConfig {
   name: string;
@@ -87,7 +90,7 @@ async function createPlanWithLibrary(planConfig: PlanConfig): Promise<string | n
       isImmediateCharge: planConfig.isImmediateCharge,
       description: planConfig.description,
       webhookUrl: WEBHOOK_URL, // ✅ Now includes webhook URL
-      apiToken: SAFE2PAY_TOKEN,
+      apiToken: apiToken,
     });
 
     if (result.planId) {
