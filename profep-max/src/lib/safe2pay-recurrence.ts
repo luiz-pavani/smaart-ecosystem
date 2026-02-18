@@ -21,6 +21,9 @@ const PLAN_IDS: Record<string, string> = {
 /**
  * Criar um plano de recorrência (uso único/admin)
  * Endpoint: POST /recurrence/v1/plans/
+ * 
+ * ⚠️ IMPORTANTE: A URL do webhook DEVE ser registrada aqui durante a criação do plano.
+ * Não é possível adicionar/modificar callbacks depois (de acordo com Safe2Pay support).
  */
 export async function createPlan(params: {
   name: string;
@@ -30,6 +33,7 @@ export async function createPlan(params: {
   billingCycle?: number; // Número de ciclos (deixar vazio = infinito)
   isImmediateCharge?: boolean; // Cobrança imediata após assinatura
   description?: string;
+  webhookUrl?: string; // URL de callback para eventos (ex: https://seu-dominio.com.br/api/webhooks/safe2pay)
   apiToken: string;
 }): Promise<{
   planId?: string;
@@ -43,6 +47,7 @@ export async function createPlan(params: {
     billingCycle, // deixar vazio para infinito
     isImmediateCharge = true,
     description,
+    webhookUrl,
     apiToken,
   } = params;
 
@@ -60,6 +65,12 @@ export async function createPlan(params: {
 
   if (billingCycle) {
     payload.BillingCycle = billingCycle;
+  }
+
+  // ✅ Adicionar webhook URL se fornecido
+  if (webhookUrl) {
+    payload.CallbackUrl = webhookUrl;
+    console.log(`[CREATE_PLAN] 🔗 Webhook registrado: ${webhookUrl}`);
   }
 
   try {

@@ -13,8 +13,8 @@
  *   SAFE2PAY_PLAN_ID_VITALICIO=xxx
  */
 
-import axios from 'axios';
 import dotenv from 'dotenv';
+import { createPlan } from '../src/lib/safe2pay-recurrence';
 
 dotenv.config({ path: '.env.local' });
 
@@ -68,50 +68,38 @@ const PLANS: PlanConfig[] = [
   },
 ];
 
-async function createPlan(planConfig: PlanConfig): Promise<string | null> {
-  const payload = {
-    PlanOption: 1, // 1=Recorrente Fixo
-    PlanFrequence: planConfig.frequency,
-    Name: planConfig.name,
-    Amount: planConfig.amount,
-    ChargeDay: planConfig.chargeDay,
-    Description: planConfig.description,
-    IsImmediateCharge: planConfig.isImmediateCharge,
-    IsProRata: false,
-    BillingCycle: planConfig.billingCycle,
-    CallbackUrl: WEBHOOK_URL,
-    IsRetryCharge: true, // Permitir retentativa em caso de falha
-  };
-
+// ✅ Use library function instead of calling API directly
+async function createPlanWithLibrary(planConfig: PlanConfig): Promise<string | null> {
   try {
     console.log(`\n🔄 Criando plano: ${planConfig.name}...`);
     console.log(`   Valor: R$ ${planConfig.amount.toFixed(2)}`);
-    console.log(`   Frequência: ${planConfig.frequency === 1 ? 'Mensal' : 'Anual'}`);
+    console.log(`   Frequência: ${planConfig.frequency === 1 ? 'Mensal' : planConfig.frequency === 2 ? 'Anual' : 'Outro'}`);
     console.log(`   Ciclos: ${planConfig.billingCycle || 'Infinito'}`);
+    console.log(`   Webhook: ${WEBHOOK_URL}`);
 
-    const response = await axios.post(
-      'https://services.safe2pay.com.br/recurrence/v1/plans/',
-      payload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': SAFE2PAY_TOKEN,
-        },
-        timeout: 15000,
-      }
-    );
+    const result = await createPlan({
+      name: planConfig.name,
+      amount: planConfig.amount,
+      frequency: planConfig.frequency,
+      chargeDay: planConfig.chargeDay,
+      billingCycle: planConfig.billingCycle || undefined,
+      isImmediateCharge: planConfig.isImmediateCharge,
+      description: planConfig.description,
+      webhookUrl: WEBHOOK_URL, // ✅ Now includes webhook URL
+      apiToken: SAFE2PAY_TOKEN,
+    });
 
-    if (response.data && response.data.Id) {
-      const planId = response.data.Id;
+    if (result.planId) {
       console.log(`✅ Plano criado com sucesso!`);
-      console.log(`   Plan ID: ${planId}`);
-      return planId;
+      console.log(`   Plan ID: ${result.planId}`);
+      console.log(`   🔗 Webhook registrado!`);
+      return result.planId;
     } else {
-      console.error(`❌ Erro: Resposta inesperada`, response.data);
+      console.error(`❌ Erro:`, result.error);
       return null;
     }
   } catch (error: any) {
-    console.error(`❌ Erro ao criar plano:`, error.response?.data || error.message);
+    console.error(`❌ Erro ao criar plano:`, error.message);
     return null;
   }
 }
@@ -126,15 +114,15 @@ async function main() {
   const results: { [key: string]: string | null } = {};
 
   // Criar plano mensal
-  results.mensal = await createPlan(PLANS[0]);
+  results.mensal = await createPlanWithLibrary(PLANS[0]);
   await new Promise(resolve => setTimeout(resolve, 2000)); // Aguardar 2s entre requests
 
   // Criar plano anual
-  results.anual = await createPlan(PLANS[1]);
+  results.anual = await createPlanWithLibrary(PLANS[1]);
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   // Criar plano vitalício
-  results.vitalicio = await createPlan(PLANS[2]);
+  results.vitalicio = await createPlanWithLibrary(PLANS[2]);
 
   console.log('\n\n📋 RESUMO DOS PLANOS CRIADOS');
   console.log('============================\n');

@@ -144,7 +144,7 @@ export default function ModuloAcessoPage() {
           Apresente este código no acesso da academia
         </p>
         <Link
-          href="/dashboard/acesso/gerar-qr"
+          href="/acesso/gerar-qr"
           className="inline-block mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
         >
           Gerar Novo Código
@@ -156,7 +156,7 @@ export default function ModuloAcessoPage() {
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-slate-900">Histórico Recente</h3>
           <Link
-            href="/dashboard/modulo-acesso/frequencia"
+            href="/modulo-acesso/frequencia"
             className="text-blue-600 hover:text-blue-700 text-sm font-medium"
           >
             Ver Todos →

@@ -37,11 +37,13 @@ CREATE INDEX IF NOT EXISTS idx_frequencia_atleta_data ON frequencia(atleta_id, d
 ALTER TABLE frequencia ENABLE ROW LEVEL SECURITY;
 
 -- Atletas veem sua frequência
-CREATE POLICY IF NOT EXISTS "Atletas veem sua frequencia" ON frequencia
+DROP POLICY IF EXISTS "Atletas veem sua frequencia" ON frequencia;
+CREATE POLICY "Atletas veem sua frequencia" ON frequencia
   FOR SELECT USING (atleta_id = auth.uid());
 
 -- Gestores veem frequência da academia
-CREATE POLICY IF NOT EXISTS "Gestores veem frequencia da academia" ON frequencia
+DROP POLICY IF EXISTS "Gestores veem frequencia da academia" ON frequencia;
+CREATE POLICY "Gestores veem frequencia da academia" ON frequencia
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM user_roles
@@ -52,7 +54,8 @@ CREATE POLICY IF NOT EXISTS "Gestores veem frequencia da academia" ON frequencia
   );
 
 -- INSERT frequencia (gestores podem registrar manualmente)
-CREATE POLICY IF NOT EXISTS "Gestores inserem frequencia" ON frequencia
+DROP POLICY IF EXISTS "Gestores inserem frequencia" ON frequencia;
+CREATE POLICY "Gestores inserem frequencia" ON frequencia
   FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM user_roles
@@ -100,13 +103,16 @@ CREATE INDEX IF NOT EXISTS idx_sessoes_qr_ativo ON sessoes_qr(atleta_id, usado, 
 ALTER TABLE sessoes_qr ENABLE ROW LEVEL SECURITY;
 
 -- Atletas veem seus QR codes
-CREATE POLICY IF NOT EXISTS "Atletas veem seus QR codes" ON sessoes_qr
+DROP POLICY IF EXISTS "Atletas veem seus QR codes" ON sessoes_qr;
+CREATE POLICY "Atletas veem seus QR codes" ON sessoes_qr
   FOR SELECT USING (atleta_id = auth.uid());
 
 -- Sistema cria novos QR codes
-CREATE POLICY IF NOT EXISTS "Sistema cria QR codes" ON sessoes_qr
+DROP POLICY IF EXISTS "Sistema cria QR codes" ON sessoes_qr;
+CREATE POLICY "Sistema cria QR codes" ON sessoes_qr
   FOR INSERT WITH CHECK (atleta_id = auth.uid());
 
 -- Sistema atualiza uso de QR codes
-CREATE POLICY IF NOT EXISTS "Sistema atualiza QR codes" ON sessoes_qr
+DROP POLICY IF EXISTS "Sistema atualiza QR codes" ON sessoes_qr;
+CREATE POLICY "Sistema atualiza QR codes" ON sessoes_qr
   FOR UPDATE USING (atleta_id = auth.uid() OR NOT usado);
