@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Users, Zap, Clock, TrendingUp, Plus, Settings, BarChart3, Calendar, DollarSign } from 'lucide-react';
+import { Users, Zap, Clock, TrendingUp, Plus, Settings, BarChart3, Calendar, DollarSign, Building2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface DashboardData {
@@ -208,6 +208,13 @@ export default function AcademyDashboard() {
               >
                 <DollarSign className="h-4 w-4" />
                 Financial Center
+              </Link>
+              <Link
+                href="/academy/federation"
+                className="block w-full px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium transition flex items-center gap-2"
+              >
+                <Building2 className="h-4 w-4" />
+                Federation Integration
               </Link>
             </div>
           </div>
