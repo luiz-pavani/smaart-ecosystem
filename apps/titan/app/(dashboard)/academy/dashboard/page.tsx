@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Users, Zap, Clock, TrendingUp, Plus, Settings, BarChart3, Calendar } from 'lucide-react';
+import { Users, Zap, Clock, TrendingUp, Plus, Settings, BarChart3, Calendar, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 
 interface DashboardData {
@@ -183,27 +183,31 @@ export default function AcademyDashboard() {
             <div className="space-y-2">
               <Link
                 href="/academy/classes"
-                className="block w-full px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium transition"
+                className="block w-full px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-medium transition flex items-center gap-2"
               >
+                <Calendar className="h-4 w-4" />
                 Manage Classes
               </Link>
               <Link
                 href="/academy/instructors"
-                className="block w-full px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg font-medium transition"
+                className="block w-full px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg font-medium transition flex items-center gap-2"
               >
+                <Users className="h-4 w-4" />
                 Manage Instructors
               </Link>
               <Link
                 href="/academy/attendance"
-                className="block w-full px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-medium transition"
+                className="block w-full px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-medium transition flex items-center gap-2"
               >
+                <Clock className="h-4 w-4" />
                 Check Attendance
               </Link>
               <Link
                 href="/academy/financial"
-                className="block w-full px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-medium transition"
+                className="block w-full px-4 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-medium transition flex items-center gap-2"
               >
-                Financial Reports
+                <DollarSign className="h-4 w-4" />
+                Financial Center
               </Link>
             </div>
           </div>
