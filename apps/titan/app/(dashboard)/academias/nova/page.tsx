@@ -14,13 +14,14 @@ export default async function NovaAcademiaPage() {
   }
 
   // Get user profile
-  const { data: perfil } = await supabase
+  const { data: perfil, error: perfilError } = await supabase
     .from('user_roles')
     .select('role, federacao_id')
     .eq('user_id', user.id)
     .single()
 
-  if (!perfil) {
+  if (perfilError || !perfil) {
+    console.error('Erro ao buscar perfil:', perfilError)
     redirect('/login')
   }
 

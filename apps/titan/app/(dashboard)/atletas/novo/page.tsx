@@ -14,13 +14,14 @@ export default async function NovoAtletaPage() {
   }
 
   // Get user profile
-  const { data: perfil } = await supabase
+  const { data: perfil, error: perfilError } = await supabase
     .from('user_roles')
     .select('role, federacao_id, academia_id')
     .eq('user_id', user.id)
     .single()
 
-  if (!perfil) {
+  if (perfilError || !perfil) {
+    console.error('Erro ao buscar perfil:', perfilError)
     redirect('/login')
   }
 
@@ -36,13 +37,13 @@ export default async function NovoAtletaPage() {
 
     academiasDisponiveis = academias || []
   } else if (perfil.role === 'academia_admin' || perfil.role === 'academia_staff' || perfil.role === 'professor') {
-    const { data: academia } = await supabase
+    const { data: academia, error: acadError } = await supabase
       .from('academias')
       .select('id, nome, sigla')
       .eq('id', perfil.academia_id)
       .single()
 
-    if (academia) {
+    if (academia && !acadError) {
       academiasDisponiveis = [academia]
     }
   }
