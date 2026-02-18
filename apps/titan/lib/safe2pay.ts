@@ -4,9 +4,8 @@
  * Integração com API de Recorrência Safe2Pay
  * 
  * ⚠️ IMPORTANTE: Webhooks devem ser registrados na criação do plano
+ * Uses native fetch API (no axios dependency needed)
  */
-
-import axios from 'axios';
 
 const SAFE2PAY_RECURRENCE_URL = 'https://services.safe2pay.com.br/recurrence/v1';
 const SAFE2PAY_PAYMENT_URL = 'https://payment.safe2pay.com.br/v2';
@@ -15,7 +14,7 @@ const SAFE2PAY_PAYMENT_URL = 'https://payment.safe2pay.com.br/v2';
  * Criar um plano de recorrência
  * 
  * ✅ FIX: Agora inclui CallbackUrl (webhook) durante criação
- * De acordo com S2P support, el webhook só pode ser registrado no momento de criação do plano.
+ * De acordo com S2P support, o webhook só pode ser registrado no momento de criação do plano.
  */
 export async function createPlan(params: {
   name: string;
@@ -66,28 +65,28 @@ export async function createPlan(params: {
   }
 
   try {
-    const response = await axios.post(
-      `${SAFE2PAY_RECURRENCE_URL}/plans/`,
-      payload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiToken,
-        },
-        timeout: 15000,
-      }
-    );
+    const response = await fetch(`${SAFE2PAY_RECURRENCE_URL}/plans/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiToken,
+      },
+      body: JSON.stringify(payload),
+    });
 
-    if (response.data?.Id) {
-      const planId = String(response.data.Id);
+    const data = await response.json();
+
+    if (response.ok && data?.Id) {
+      const planId = String(data.Id);
       console.log(`[CREATE_PLAN] ✅ Plano criado: ${planId}`);
       return { planId };
     }
 
-    console.error('[CREATE_PLAN] Resposta inesperada:', response.data);
-    return { error: 'Resposta inesperada da API' };
+    const errorMsg = data?.Message || data?.Error || `HTTP ${response.status}`;
+    console.error('[CREATE_PLAN] Resposta inesperada:', data);
+    return { error: errorMsg };
   } catch (error: any) {
-    const errorMsg = error.response?.data?.Message || error.response?.data?.Error || error.message;
+    const errorMsg = error?.message || 'Network error';
     console.error('[CREATE_PLAN] ❌ Erro:', errorMsg);
     return { error: errorMsg };
   }
@@ -116,23 +115,25 @@ export async function tokenizeCard(params: {
   };
 
   try {
-    const response = await axios.post(`${SAFE2PAY_PAYMENT_URL}/card/token`, payload, {
+    const response = await fetch(`${SAFE2PAY_PAYMENT_URL}/card/token`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiToken,
       },
-      timeout: 15000,
+      body: JSON.stringify(payload),
     });
 
-    if (response.data?.TokenizedCard) {
-      return { token: response.data.TokenizedCard };
+    const data = await response.json();
+
+    if (response.ok && data?.TokenizedCard) {
+      return { token: data.TokenizedCard };
     }
 
-    return { error: 'Token não retornado' };
+    return { error: data?.Message || 'Token não retornado' };
   } catch (error: any) {
-    const errorMsg = error.response?.data?.Message || error.message;
-    console.error('[TOKENIZE] Erro:', errorMsg);
-    return { error: errorMsg };
+    console.error('[TOKENIZE] Erro:', error?.message);
+    return { error: error?.message || 'Network error' };
   }
 }
 
@@ -171,29 +172,30 @@ export async function createSubscription(params: {
   }
 
   try {
-    const response = await axios.post(
+    const response = await fetch(
       `${SAFE2PAY_RECURRENCE_URL}/plans/${planId}/subscriptions`,
-      payload,
       {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiToken,
         },
-        timeout: 15000,
+        body: JSON.stringify(payload),
       }
     );
 
-    if (response.data?.Subscription?.IdSubscription) {
-      const subId = String(response.data.Subscription.IdSubscription);
+    const data = await response.json();
+
+    if (response.ok && data?.Subscription?.IdSubscription) {
+      const subId = String(data.Subscription.IdSubscription);
       console.log(`[CREATE_SUB] ✅ Assinatura criada: ${subId}`);
       return { subscriptionId: subId };
     }
 
-    return { error: 'Assinatura não retornada' };
+    return { error: data?.Message || 'Assinatura não retornada' };
   } catch (error: any) {
-    const errorMsg = error.response?.data?.Message || error.message;
-    console.error('[CREATE_SUB] Erro:', errorMsg);
-    return { error: errorMsg };
+    console.error('[CREATE_SUB] Erro:', error?.message);
+    return { error: error?.message || 'Network error' };
   }
 }
 
@@ -210,21 +212,26 @@ export async function getSubscription(params: {
   const { subscriptionId, apiToken } = params;
 
   try {
-    const response = await axios.get(
+    const response = await fetch(
       `${SAFE2PAY_RECURRENCE_URL}/subscriptions/${subscriptionId}`,
       {
+        method: 'GET',
         headers: {
           'x-api-key': apiToken,
         },
-        timeout: 15000,
       }
     );
 
-    return { subscription: response.data };
+    const data = await response.json();
+
+    if (response.ok) {
+      return { subscription: data };
+    }
+
+    return { error: data?.Message || `HTTP ${response.status}` };
   } catch (error: any) {
-    const errorMsg = error.response?.data?.Message || error.message;
-    console.error('[GET_SUB] Erro:', errorMsg);
-    return { error: errorMsg };
+    console.error('[GET_SUB] Erro:', error?.message);
+    return { error: error?.message || 'Network error' };
   }
 }
 
@@ -241,22 +248,26 @@ export async function cancelSubscription(params: {
   const { subscriptionId, apiToken } = params;
 
   try {
-    await axios.post(
+    const response = await fetch(
       `${SAFE2PAY_RECURRENCE_URL}/subscriptions/${subscriptionId}/disable`,
-      {},
       {
+        method: 'POST',
         headers: {
           'x-api-key': apiToken,
         },
-        timeout: 15000,
+        body: JSON.stringify({}),
       }
     );
 
-    console.log(`[CANCEL_SUB] ✅ Assinatura ${subscriptionId} cancelada`);
-    return { success: true };
+    if (response.ok) {
+      console.log(`[CANCEL_SUB] ✅ Assinatura ${subscriptionId} cancelada`);
+      return { success: true };
+    }
+
+    const data = await response.json();
+    return { error: data?.Message || `HTTP ${response.status}` };
   } catch (error: any) {
-    const errorMsg = error.response?.data?.Message || error.message;
-    console.error('[CANCEL_SUB] Erro:', errorMsg);
-    return { error: errorMsg };
+    console.error('[CANCEL_SUB] Erro:', error?.message);
+    return { error: error?.message || 'Network error' };
   }
 }
