@@ -1,5 +1,4 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface CreatePlanRequest {
@@ -67,7 +66,7 @@ async function createSafe2PayPlan(planData: CreatePlanRequest) {
 }
 
 async function checkFederationAdmin(userId: string, federationId: string) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   
   const { data: federation } = await supabase
     .from('federacoes')
@@ -81,7 +80,7 @@ async function checkFederationAdmin(userId: string, federationId: string) {
 }
 
 async function checkAcademyAdmin(userId: string, academyId: string) {
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await createClient();
   
   const { data: academy } = await supabase
     .from('academias')
@@ -96,7 +95,7 @@ async function checkAcademyAdmin(userId: string, academyId: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -180,7 +179,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await createClient();
 
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();

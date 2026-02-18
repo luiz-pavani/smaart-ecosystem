@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { QrCode, Users, Clock, CheckCircle2, AlertCircle, Camera, X } from 'lucide-react';
-import jsQR from 'jsqr';
 
 interface ClassSession {
   id: string;
@@ -35,7 +34,7 @@ export default function AttendanceCheckInPage() {
   const [manualAthletId, setManualAthletId] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -292,7 +291,7 @@ export default function AttendanceCheckInPage() {
                         <canvas ref={canvasRef} className="hidden" />
 
                         {/* QR Scanning Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center'>
+                        <div className="absolute inset-0 flex items-center justify-center">
                           <div className="w-48 h-48 border-4 border-green-400 rounded-lg opacity-50"></div>
                         </div>
                       </div>

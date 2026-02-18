@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { Users, Plus, Edit2, Trash2, Mail, Phone, Award, AlertCircle } from 'lucide-react';
 
 interface Instructor {
@@ -36,7 +36,7 @@ export default function InstructorsManagementPage() {
     modality: 'JUDO',
     belt_certified_level: 'PRETA'
   });
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const fetchData = async () => {

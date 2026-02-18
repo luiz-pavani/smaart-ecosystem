@@ -1,6 +1,6 @@
 "use client";
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/client";
 import { CheckCircle2, X, Loader2, Trophy, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -28,7 +28,7 @@ interface Registration {
 }
 
 export default function EventRegistration() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [events, setEvents] = useState<Event[]>([]);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);

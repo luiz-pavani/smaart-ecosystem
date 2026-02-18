@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { CreatePlanForm } from '@/app/components/plans/CreatePlanForm';
 import { Edit2, Trash2, Zap, AlertCircle } from 'lucide-react';
 
@@ -30,7 +30,7 @@ export default function AcademyPlansPage({
 }: {
   params: { slug: string; academyId: string };
 }) {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [federation, setFederation] = useState<any>(null);
   const [academy, setAcademy] = useState<any>(null);
   const [plans, setPlans] = useState<Plan[]>([]);

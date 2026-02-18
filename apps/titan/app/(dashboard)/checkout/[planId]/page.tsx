@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { Check, Lock, AlertCircle, ChevronRight } from 'lucide-react';
 
 interface Plan {
@@ -24,7 +24,7 @@ const frequencyLabels: Record<number, string> = {
 };
 
 export default function CheckoutPage({ params }: { params: { planId: string } }) {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);

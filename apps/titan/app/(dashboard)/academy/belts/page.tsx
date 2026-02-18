@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { Award, CheckCircle2, AlertCircle, Clock, Plus } from 'lucide-react';
 
 interface PendingPromotion {
@@ -39,7 +39,7 @@ export default function BeltProgressionPage() {
   const [activeTab, setActiveTab] = useState<'pending' | 'stats'>('pending');
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -59,7 +59,7 @@ export default function BeltProgressionPage() {
         // Get pending promotions
         const { data: promotions } = await supabase
           .from('belt_progression')
-          .select(\`
+          .select(`
             id,
             athlete:athlete_id(id, nome, email),
             modality:modality_id(name),
@@ -69,7 +69,7 @@ export default function BeltProgressionPage() {
             months_in_current_belt,
             training_days_completed,
             promotion_pending
-          \`)
+          `)
           .eq('promotion_pending', true)
           .eq('academy_id', userRole.academia_id)
           .order('promotion_requested_date', { ascending: true });

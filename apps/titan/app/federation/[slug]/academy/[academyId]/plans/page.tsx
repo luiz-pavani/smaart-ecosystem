@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { Check, X, Zap, Lock, Calendar } from 'lucide-react';
 
 interface Plan {
@@ -38,7 +38,7 @@ export default function PlansPage({
 }: {
   params: { slug: string; academyId?: string };
 }) {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);

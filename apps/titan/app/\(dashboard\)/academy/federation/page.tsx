@@ -1,6 +1,6 @@
 "use client";
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/client";
 import {
   Building2,
   Users,
@@ -24,7 +24,7 @@ interface FederationData {
 }
 
 export default function FederationIntegration() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [data, setData] = useState<FederationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("overview");

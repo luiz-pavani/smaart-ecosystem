@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { Pause, Play, Download, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface Subscription {
@@ -26,7 +26,7 @@ const frequencyLabels: Record<number, string> = {
 };
 
 export default function SubscriptionManagementPage() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);

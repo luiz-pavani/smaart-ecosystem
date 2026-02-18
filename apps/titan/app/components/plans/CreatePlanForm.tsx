@@ -1,6 +1,6 @@
 'use client';
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import { useState } from 'react';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
@@ -17,7 +17,7 @@ export function CreatePlanForm({
   planScope = 'federation',
   onSuccess,
 }: CreatePlanFormProps) {
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
