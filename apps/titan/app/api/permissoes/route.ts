@@ -113,7 +113,6 @@ export async function GET(request: NextRequest) {
       `
       user_id,
       role,
-      nivel_hierarquico,
       federacao_id,
       academia_id,
       created_at,
@@ -128,9 +127,14 @@ export async function GET(request: NextRequest) {
       usuariosQuery = usuariosQuery.not('role', 'eq', 'master_access')
     } else if (perfil.role === 'federacao_admin') {
       // Federacao admin can see users in their federation
-      usuariosQuery = usuariosQuery
-        .eq('federacao_id', perfil.federacao_id)
-        .not('role', 'eq', 'federacao_admin')
+      if (perfil.federacao_id) {
+        usuariosQuery = usuariosQuery
+          .eq('federacao_id', perfil.federacao_id)
+          .not('role', 'eq', 'federacao_admin')
+      } else {
+        // Master-like federacao_admin (federacao_id NULL) can see all non-master users
+        usuariosQuery = usuariosQuery.not('role', 'eq', 'master_access')
+      }
     } else if (perfil.role === 'academia_admin') {
       // Academia admin can see users in their academia
       usuariosQuery = usuariosQuery
