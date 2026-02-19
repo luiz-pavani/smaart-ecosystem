@@ -54,11 +54,13 @@ export default function AtletasPage() {
       }
 
       // Get user profile to check role
-      const { data: perfilData } = await supabase
+      const { data: perfilArray } = await supabase
         .from('user_roles')
         .select('role, federacao_id, academia_id')
         .eq('user_id', user.id)
-        .single()
+        .limit(1)
+
+      const perfilData = perfilArray?.[0]
 
       if (!perfilData) {
         window.location.href = '/login'
