@@ -60,7 +60,7 @@ export async function GET() {
       },
       session: {
         expiresAt: session?.expires_at,
-        isExpired: session ? new Date(session.expires_at * 1000) < new Date() : null,
+        isExpired: session?.expires_at ? new Date(session.expires_at * 1000) < new Date() : null,
       },
       query: {
         error: perfilError ? {
