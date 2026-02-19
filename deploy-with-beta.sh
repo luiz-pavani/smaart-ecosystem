@@ -18,11 +18,11 @@ if [ -f "./increment-beta-version.sh" ]; then
     ./increment-beta-version.sh
     
     # Fazer commit da versão BETA
-    NEW_BETA_FILE=$(ls BETA-*.md 2>/dev/null | head -1)
-    BETA_VERSION=$(echo "$NEW_BETA_FILE" | grep -oP 'BETA-\K\d+')
+    NEW_BETA_FILE=$(ls -1 BETA-*.md 2>/dev/null | sort -V | tail -1)
+    BETA_VERSION=$(echo "$NEW_BETA_FILE" | sed -E 's/BETA-([0-9]+).*/\1/')
     
     git add "$NEW_BETA_FILE"
-    git commit -m "chore: increment beta version to $BETA_VERSION" || echo "⚠️  Nenhuma mudança na versão BETA"
+    git commit -m "chore: increment beta version to $BETA_VERSION" 2>/dev/null || echo "⚠️  Nenhuma mudança na versão BETA"
 else
     echo "⚠️  Script increment-beta-version.sh não encontrado. Pulando..."
 fi
@@ -33,15 +33,17 @@ echo ""
 echo "📝 Step 2: Fazendo deploy para Vercel..."
 cd apps/titan
 
-if command -v vercel &> /dev/null; then
-    vercel deploy --prod
-    DEPLOYMENT_URL=$?
-    echo "✅ Deploy completo!"
-else
+if ! command -v vercel &> /dev/null; then
     echo "❌ Vercel CLI não encontrado. Instale com: npm install -g vercel"
     exit 1
 fi
 
 echo ""
+echo "💻 Executando: vercel deploy --prod"
+vercel deploy --prod
+
+echo ""
 echo "✅ DEPLOY COMPLETO!"
 echo "🎉 BETA incrementada e código em produção"
+echo ""
+
