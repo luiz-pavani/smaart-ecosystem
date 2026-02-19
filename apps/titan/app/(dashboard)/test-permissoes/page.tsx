@@ -31,6 +31,17 @@ export default function TestPermissoes() {
           return
         }
 
+        // Step 1.5: Debug API
+        console.log('1.5️⃣ Debugging /api/debug/permissoes...')
+        const debugResponse = await fetch('/api/debug/permissoes')
+        const debugData = await debugResponse.json()
+        console.log('Debug response:', debugData)
+
+        setDebug(prev => ({
+          ...prev,
+          debug: debugData
+        }))
+
         // Step 2: Fetch from API
         console.log('2️⃣ Fetching /api/permissoes...')
         const response = await fetch('/api/permissoes')
