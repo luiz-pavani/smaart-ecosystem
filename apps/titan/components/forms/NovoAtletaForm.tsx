@@ -184,12 +184,40 @@ export default function NovoAtletaForm({
         photoUrl = publicUrl.publicUrl
       }
 
+      // Get academia_id: use form selection or pre-selected value
+      const usedAcademiaId = formData.academia_id || academiaId
+      
+      // Get federacao_id: use passed value, or fetch from selected academia if master_access
+      let usedFederacaoId = federacaoId
+      
+      if (!usedFederacaoId && usedAcademiaId && role === 'master_access') {
+        // Master access users need to get federacao_id from the selected academia
+        const { data: academia, error: academiaError } = await supabase
+          .from('academias')
+          .select('federacao_id')
+          .eq('id', usedAcademiaId)
+          .limit(1)
+        
+        if (academiaError) throw new Error('Erro ao buscar federação da academia')
+        if (academia && academia.length > 0) {
+          usedFederacaoId = academia[0].federacao_id
+        }
+      }
+
+      if (!usedFederacaoId) {
+        throw new Error('Federação não identificada. Por favor, contacte o administrador.')
+      }
+
+      if (!usedAcademiaId) {
+        throw new Error('Academia não selecionada')
+      }
+
       // Create athlete record
       const { error } = await supabase
         .from('atletas')
         .insert([{
-          federacao_id: federacaoId,
-          academia_id: formData.academia_id || academiaId,
+          federacao_id: usedFederacaoId,
+          academia_id: usedAcademiaId,
           nome_completo: formData.nome_completo,
           cpf: formData.cpf.replace(/\D/g, ''),
           rg: formData.rg,
