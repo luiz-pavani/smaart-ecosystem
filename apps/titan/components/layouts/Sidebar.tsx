@@ -10,7 +10,7 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Meus Portais', href: '/portais', icon: LayoutDashboard },
   { name: 'Federações', href: '/federacoes', icon: Landmark },
   { name: 'Academias', href: '/academias', icon: Building2 },
   { name: 'Atletas', href: '/atletas', icon: Users },
