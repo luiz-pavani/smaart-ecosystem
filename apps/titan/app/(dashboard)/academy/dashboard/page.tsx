@@ -1,11 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Zap, Clock, TrendingUp, Plus, Settings, BarChart3, Calendar, DollarSign, Building2 } from 'lucide-react';
+import { Users, Zap, Clock, TrendingUp, Plus, Settings, BarChart3, Calendar, DollarSign, Building2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 interface DashboardData {
+  success: boolean;
+  accessLevel: string;
+  requiresSelection?: boolean;
+  academias?: Array<{ id: string; nome: string; sigla: string }>;
   academy: { id: string; name: string; sigla: string };
   metrics: {
     total_athletes: number;
@@ -24,14 +29,56 @@ export default function AcademyDashboard() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isMasterAccess, setIsMasterAccess] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  const academyId = searchParams.get('academyId');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/academy');
-        if (!response.ok) throw new Error('Failed to load dashboard');
+        // Check user role
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setError("Não autenticado");
+          return;
+        }
+
+        const { data: userRoles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .limit(1);
+
+        const isMaster = userRoles?.some(r => r.role === "master_access");
+        setIsMasterAccess(!!isMaster);
+
+        // If master_access and no academy selected, redirect to selector
+        if (isMaster && !academyId) {
+          router.push('/academy/select');
+          return;
+        }
+
+        // Fetch dashboard data
+        let url = '/api/academy';
+        if (academyId) {
+          url += `?academyId=${academyId}`;
+        }
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to load dashboard');
+        }
         const result = await response.json();
+
+        // If academy requires selection and we got the list, redirect to selector
+        if (result.requiresSelection) {
+          router.push('/academy/select');
+          return;
+        }
+
         setData(result);
       } catch (err: any) {
         setError(err.message);
@@ -41,7 +88,7 @@ export default function AcademyDashboard() {
     };
 
     fetchData();
-  }, []);
+  }, [academyId]);
 
   if (loading) {
     return (
@@ -54,7 +101,7 @@ export default function AcademyDashboard() {
   if (error) {
     return (
       <div className="p-6 bg-red-50 text-red-700 rounded-lg">
-        Error loading dashboard: {error}
+        Erro ao carregar dashboard: {error}
       </div>
     );
   }
@@ -64,9 +111,23 @@ export default function AcademyDashboard() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-6">
         <div className="max-w-7xl mx-auto flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{data?.academy.name}</h1>
-            <p className="text-gray-600 mt-1">Academia Dashboard • {data?.academy.sigla}</p>
+          <div className="flex items-center gap-4 flex-1">
+            {isMasterAccess && (
+              <button
+                onClick={() => router.push('/academy/select')}
+                className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition"
+                title="Trocar de Academia"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{data?.academy.name}</h1>
+              <p className="text-gray-600 mt-1">
+                Academia Dashboard • {data?.academy.sigla}
+                {isMasterAccess && <span className="ml-3 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">Master Access</span>}
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Link
@@ -74,14 +135,14 @@ export default function AcademyDashboard() {
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
             >
               <Settings className="h-4 w-4" />
-              Settings
+              Configurações
             </Link>
             <Link
               href="/academy/classes/new"
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
             >
               <Plus className="h-4 w-4" />
-              New Class
+              Nova Turma
             </Link>
           </div>
         </div>

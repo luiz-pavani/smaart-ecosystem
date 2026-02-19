@@ -19,22 +19,75 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user's academy
-    const { data: userRole, error: roleError } = await supabase
+    // Get user's roles and access levels
+    const { data: userRoles, error: roleError } = await supabase
       .from("user_roles")
-      .select("academia_id")
+      .select("role, academia_id, federacao_id, nivel")
       .eq("user_id", user.id)
-      .eq("role", "academia_admin")
-      .single();
+      .limit(10);
 
-    if (roleError || !userRole) {
+    if (roleError || !userRoles || userRoles.length === 0) {
       return NextResponse.json(
-        { error: "No academy access" },
+        { error: "No roles found" },
         { status: 403 }
       );
     }
 
-    const academyId = userRole.academia_id;
+    // Determine which academy to access
+    let academyId: string | null = null;
+    let accessLevel = "none";
+    
+    // Check query params for academy selection (for master_access)
+    const { searchParams } = new URL(request.url);
+    const requestedAcademyId = searchParams.get("academyId");
+
+    // Check if user has master_access
+    const masterAccessRole = userRoles.find(r => r.role === "master_access");
+    if (masterAccessRole) {
+      // Master access can select any academy
+      if (requestedAcademyId) {
+        academyId = requestedAcademyId;
+      } else {
+        // Return list of all academies for selection if no academyId provided
+        const { data: academias } = await supabase
+          .from("academias")
+          .select("id, nome, sigla")
+          .order("nome");
+        
+        return NextResponse.json({
+          success: true,
+          requiresSelection: true,
+          academias: academias || []
+        });
+      }
+      accessLevel = "master_access";
+    } else {
+      // Check for regular academia access or nivel 4/5
+      const academiaAdminRole = userRoles.find(r => r.role === "academia_admin");
+      const nivelAccess = userRoles.find(r => r.nivel === 4 || r.nivel === 5);
+      
+      if (academiaAdminRole && academiaAdminRole.academia_id) {
+        academyId = academiaAdminRole.academia_id;
+        accessLevel = "academia_admin";
+      } else if (nivelAccess && nivelAccess.academia_id) {
+        // Validate that nivel 4/5 can only access their own academy
+        if (requestedAcademyId && requestedAcademyId !== nivelAccess.academia_id) {
+          return NextResponse.json(
+            { error: "Access denied to this academy" },
+            { status: 403 }
+          );
+        }
+        academyId = nivelAccess.academia_id;
+        accessLevel = `nivel_${nivelAccess.nivel}`;
+      }
+    }
+
+    if (!academyId) {
+      return NextResponse.json(
+        { error: "No academy access configured" },
+        { status: 403 }
+      );
+    }
 
     // Fetch dashboard data in parallel
     const [
@@ -105,6 +158,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      accessLevel: accessLevel,
       academy: {
         id: academy?.id,
         name: academy?.nome,
