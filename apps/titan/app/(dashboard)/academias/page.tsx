@@ -157,11 +157,11 @@ export default async function AcademiasPage() {
                       </td>
                       <td className="py-4 px-6">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                          academia.status === 'ativo' 
+                          academia.ativo
                             ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
                             : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
                         }`}>
-                          {academia.status === 'ativo' ? 'Ativa' : 'Inativa'}
+                          {academia.ativo ? 'Ativa' : 'Inativa'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
