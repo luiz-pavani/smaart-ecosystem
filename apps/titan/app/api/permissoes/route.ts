@@ -39,17 +39,18 @@ export async function GET(request: NextRequest) {
 
     // Get user's role information
     console.log('[PERMISSOES] Fetching user role for:', user.id)
-    const { data: perfilData, error: perfilError } = await supabase
+    const { data: perfilArray, error: perfilError } = await supabase
       .from('user_roles')
       .select('role, federacao_id, academia_id')
       .eq('user_id', user.id)
-      .maybeSingle()
+      .limit(1)
 
     console.log('[PERMISSOES] Role query result:', {
-      hasData: !!perfilData,
+      hasData: !!perfilArray,
       hasError: !!perfilError,
       error: perfilError?.message,
-      data: perfilData,
+      dataLength: perfilArray?.length,
+      data: perfilArray?.[0],
     })
 
     if (perfilError) {
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If no role found, user has no permissions
-    if (!perfilData) {
+    if (!perfilArray || perfilArray.length === 0) {
       console.log('[PERMISSOES] User has no role', { userId: user.id })
       return NextResponse.json(
         { error: 'Perfil não encontrado', userId: user.id },
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const perfil = perfilData
+    const perfil = perfilArray[0]
     const perfilNivel = getNivelHierarquico(perfil.role)
     if (!perfilNivel) {
       return NextResponse.json(

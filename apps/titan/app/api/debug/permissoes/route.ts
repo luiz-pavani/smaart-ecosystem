@@ -46,11 +46,13 @@ export async function GET() {
     }
 
     // Step 5: Try to get role
-    const { data: perfilData, error: perfilError } = await supabase
+    const { data: perfilArray, error: perfilError } = await supabase
       .from('user_roles')
       .select('role, federacao_id, academia_id')
       .eq('user_id', user.id)
-      .maybeSingle()
+      .limit(1)
+
+    const perfilData = perfilArray?.[0] || null
 
     return NextResponse.json({
       step: 'success',
@@ -70,6 +72,7 @@ export async function GET() {
           hint: perfilError.hint,
         } : null,
         data: perfilData,
+        arrayLength: perfilArray?.length,
       },
       status: perfilError ? 'ERROR' : (perfilData ? 'FOUND' : 'NOT_FOUND'),
       cookies: {
