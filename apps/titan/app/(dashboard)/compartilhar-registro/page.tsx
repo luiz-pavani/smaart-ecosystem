@@ -27,15 +27,23 @@ export default function CompartilharRegistroPage() {
   const carregarAcademia = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        setLoading(false)
+        return
+      }
 
-      const { data: perfil } = await supabase
+      const { data: perfilArray } = await supabase
         .from('user_roles')
         .select('academia_id')
         .eq('user_id', user.id)
-        .single()
+        .limit(1)
 
-      if (!perfil?.academia_id) return
+      const perfil = perfilArray?.[0]
+
+      if (!perfil?.academia_id) {
+        setLoading(false)
+        return
+      }
 
       const { data: academiaData } = await supabase
         .from('academias')
