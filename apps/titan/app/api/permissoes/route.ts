@@ -23,36 +23,48 @@ const getNivelHierarquico = (role: string | null | undefined) => {
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('[PERMISSOES] Starting GET request')
     const supabase = await createClient()
+    console.log('[PERMISSOES] Supabase client created')
 
     const {
       data: { user },
     } = await supabase.auth.getUser()
+    console.log('[PERMISSOES] User check:', user ? user.email : 'NO USER')
 
     if (!user) {
+      console.log('[PERMISSOES] Returning 401 - no user')
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
     // Get user's role information
+    console.log('[PERMISSOES] Fetching user role for:', user.id)
     const { data: perfilData, error: perfilError } = await supabase
       .from('user_roles')
       .select('role, federacao_id, academia_id')
       .eq('user_id', user.id)
       .maybeSingle()
 
+    console.log('[PERMISSOES] Role query result:', {
+      hasData: !!perfilData,
+      hasError: !!perfilError,
+      error: perfilError?.message,
+      data: perfilData,
+    })
+
     if (perfilError) {
-      console.error('Error fetching user role:', perfilError)
+      console.error('[PERMISSOES] Error fetching user role:', perfilError)
       return NextResponse.json(
-        { error: 'Perfil não encontrado' },
+        { error: 'Perfil não encontrado', details: perfilError.message },
         { status: 403 }
       )
     }
 
     // If no role found, user has no permissions
     if (!perfilData) {
-      console.log('User has no role', { userId: user.id })
+      console.log('[PERMISSOES] User has no role', { userId: user.id })
       return NextResponse.json(
-        { error: 'Perfil não encontrado' },
+        { error: 'Perfil não encontrado', userId: user.id },
         { status: 403 }
       )
     }
