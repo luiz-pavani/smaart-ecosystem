@@ -34,19 +34,30 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's role information
-    const { data: perfil, error: perfilError } = await supabase
+    const { data: perfilData, error: perfilError } = await supabase
       .from('user_roles')
       .select('role, federacao_id, academia_id')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (perfilError || !perfil) {
+    if (perfilError) {
+      console.error('Error fetching user role:', perfilError)
       return NextResponse.json(
         { error: 'Perfil não encontrado' },
         { status: 403 }
       )
     }
 
+    // If no role found, user has no permissions
+    if (!perfilData) {
+      console.log('User has no role', { userId: user.id })
+      return NextResponse.json(
+        { error: 'Perfil não encontrado' },
+        { status: 403 }
+      )
+    }
+
+    const perfil = perfilData
     const perfilNivel = getNivelHierarquico(perfil.role)
     if (!perfilNivel) {
       return NextResponse.json(
