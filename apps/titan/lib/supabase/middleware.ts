@@ -47,14 +47,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirect to dashboard if already logged in and accessing auth pages
+  // Redirect to portal selector if already logged in and accessing auth pages
   if (
     user &&
     (request.nextUrl.pathname.startsWith('/login') ||
       request.nextUrl.pathname.startsWith('/signup'))
   ) {
     const url = request.nextUrl.clone()
-    url.pathname = '/'
+    url.pathname = '/portais'
     return NextResponse.redirect(url)
   }
 

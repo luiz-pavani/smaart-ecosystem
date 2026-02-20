@@ -78,8 +78,16 @@ export default function PortaisPage() {
       badge: 'PESSOAL'
     })
 
-    // Portal Academia - academia_admin ou academia_staff
-    if (roles.includes('academia_admin') || roles.includes('academia_staff')) {
+    const canSeeAcademiaPortal =
+      roles.includes('academia_admin') ||
+      roles.includes('academia_staff') ||
+      roles.includes('federacao_admin') ||
+      roles.includes('federacao_staff') ||
+      roles.includes('master_access') ||
+      hasAcademia
+
+    // Portal Academia - academia_admin/staff, federacao roles, ou master_access
+    if (canSeeAcademiaPortal) {
       portals.push({
         id: 'academia',
         title: 'Portal da Academia',
@@ -151,7 +159,7 @@ export default function PortaisPage() {
       {/* Header */}
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-8">
         <div className="max-w-6xl mx-auto px-4">
-          <h1 className="text-4xl font-bold text-white mb-2">SMAART PRO</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">TITAN by SMAART PRO</h1>
           <p className="text-gray-300 text-lg">Escolha seu portal de acesso</p>
         </div>
       </div>

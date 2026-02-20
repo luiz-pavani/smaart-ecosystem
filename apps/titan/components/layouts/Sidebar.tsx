@@ -36,7 +36,10 @@ export default function Sidebar({ user }: SidebarProps) {
     <aside className="w-64 bg-card border-r border-border flex flex-col h-screen sticky top-0">
       {/* Logo */}
       <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push('/portais')}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
             <Building2 className="w-6 h-6 text-white" />
           </div>
@@ -44,7 +47,7 @@ export default function Sidebar({ user }: SidebarProps) {
             <h1 className="text-lg font-bold text-foreground">Titan</h1>
             <p className="text-xs text-muted-foreground">Federações</p>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Navigation */}

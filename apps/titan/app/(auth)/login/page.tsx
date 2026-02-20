@@ -26,8 +26,8 @@ export default function LoginPage() {
 
       if (signInError) throw signInError
 
-      // Redirecionar para selecao de acesso
-      router.push('/acesso')
+      // Redirecionar para o seletor de portais
+      router.push('/portais')
       router.refresh()
     } catch (err: any) {
       console.error('Login error:', err)

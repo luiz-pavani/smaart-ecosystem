@@ -54,12 +54,15 @@ export default function TopNav({ user, mobile = false }: TopNavProps) {
               >
                 <Menu className="w-6 h-6 text-foreground" />
               </button>
-              <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/portais')}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              >
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                   <span className="text-white text-sm font-bold">T</span>
                 </div>
                 <h1 className="text-lg font-bold text-foreground">Titan</h1>
-              </div>
+              </button>
             </div>
           )}
 
