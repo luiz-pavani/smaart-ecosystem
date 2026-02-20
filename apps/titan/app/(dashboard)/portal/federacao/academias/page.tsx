@@ -19,6 +19,9 @@ export default function AcademiasFedaracaoPage() {
   const supabase = createClient()
   const [academias, setAcademias] = useState<AcademiaRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 12
 
   useEffect(() => {
     const load = async () => {
@@ -37,11 +40,15 @@ export default function AcademiasFedaracaoPage() {
 
         if (!role?.federacao_id) return
 
-        const { data: academiasData } = await supabase
+        const start = page * pageSize
+        const end = start + pageSize - 1
+
+        const { data: academiasData, count } = await supabase
           .from('academias')
-          .select('id, nome, sigla, cidade, status')
+          .select('id, nome, sigla, cidade, status', { count: 'exact' })
           .eq('federacao_id', role.federacao_id)
           .order('nome', { ascending: true })
+          .range(start, end)
 
         const { data: atletasData } = await supabase
           .from('atletas')
@@ -59,13 +66,14 @@ export default function AcademiasFedaracaoPage() {
         }))
 
         setAcademias(mapped)
+        setTotalCount(count || 0)
       } finally {
         setLoading(false)
       }
     }
 
     load()
-  }, [supabase])
+  }, [supabase, page])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -95,7 +103,22 @@ export default function AcademiasFedaracaoPage() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-white" />
           </div>
+        ) : totalCount === 0 ? (
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-8 h-8 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Nenhuma academia filiada</h3>
+              <p className="text-gray-400 mb-6">Comece filiando a primeira academia à sua federação</p>
+              <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all">
+                <Plus className="w-4 h-4 inline mr-2" />
+                Filiar Primeira Academia
+              </button>
+            </div>
+          </div>
         ) : (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {academias.map(academia => (
               <div key={academia.id} className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6 hover:border-blue-500/30 transition-all">
@@ -125,6 +148,30 @@ export default function AcademiasFedaracaoPage() {
               </div>
             ))}
           </div>
+          
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-8">
+            <p className="text-gray-400 text-sm">
+              Mostrando {page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalCount)} de {totalCount} academias
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={(page + 1) * pageSize >= totalCount}
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
+          </>
         )}
       </div>
     </div>

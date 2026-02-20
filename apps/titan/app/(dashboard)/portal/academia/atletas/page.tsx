@@ -20,6 +20,9 @@ export default function AtletasAcademiaPage() {
   const [loading, setLoading] = useState(true)
   const [atletas, setAtletas] = useState<AtletaRow[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 20
 
   useEffect(() => {
     const load = async () => {
@@ -39,13 +42,18 @@ export default function AtletasAcademiaPage() {
 
         if (!role?.academia_id) throw new Error('Academia nao encontrada')
 
-        const { data } = await supabase
+        const start = page * pageSize
+        const end = start + pageSize - 1
+
+        const { data, count } = await supabase
           .from('atletas')
-          .select('id, nome, cpf, graduacao, status')
+          .select('id, nome, cpf, graduacao, status', { count: 'exact' })
           .eq('academia_id', role.academia_id)
           .order('nome', { ascending: true })
+          .range(start, end)
 
         setAtletas(data || [])
+        setTotalCount(count || 0)
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar atletas')
       } finally {
@@ -54,7 +62,7 @@ export default function AtletasAcademiaPage() {
     }
 
     load()
-  }, [supabase])
+  }, [supabase, page])
 
   const atletasFiltrados = atletas.filter((atleta) =>
     atleta.nome?.toLowerCase().includes(search.toLowerCase())
@@ -106,7 +114,22 @@ export default function AtletasAcademiaPage() {
           </div>
         ) : error ? (
           <div className="text-red-300">{error}</div>
+        ) : totalCount === 0 ? (
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Plus className="w-8 h-8 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Nenhum atleta cadastrado</h3>
+              <p className="text-gray-400 mb-6">Comece adicionando o primeiro atleta da sua academia</p>
+              <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all">
+                <Plus className="w-4 h-4 inline mr-2" />
+                Cadastrar Primeiro Atleta
+              </button>
+            </div>
+          </div>
         ) : (
+          <>
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
             <table className="w-full">
               <thead className="bg-white/5 border-b border-white/10">
@@ -143,6 +166,30 @@ export default function AtletasAcademiaPage() {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-gray-400 text-sm">
+              Mostrando {page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalCount)} de {totalCount} atletas
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Anterior
+              </button>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={(page + 1) * pageSize >= totalCount}
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
+          </>
         )}
       </div>
     </div>

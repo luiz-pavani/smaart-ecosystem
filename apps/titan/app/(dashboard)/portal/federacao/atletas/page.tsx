@@ -18,6 +18,9 @@ export default function AtletasFedaracaoPage() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [atletas, setAtletas] = useState<AtletaRow[]>([])
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 20
 
   useEffect(() => {
     const load = async () => {
@@ -36,11 +39,15 @@ export default function AtletasFedaracaoPage() {
 
         if (!role?.federacao_id) return
 
-        const { data } = await supabase
+        const start = page * pageSize
+        const end = start + pageSize - 1
+
+        const { data, count } = await supabase
           .from('atletas')
-          .select('id, nome, graduacao, academia:academias(nome)')
+          .select('id, nome, graduacao, academia:academias(nome)', { count: 'exact' })
           .eq('federacao_id', role.federacao_id)
           .order('nome', { ascending: true })
+          .range(start, end)
 
         const mapped = (data || []).map((item: any) => ({
           id: item.id,
@@ -50,13 +57,14 @@ export default function AtletasFedaracaoPage() {
         }))
 
         setAtletas(mapped)
+        setTotalCount(count || 0)
       } finally {
         setLoading(false)
       }
     }
 
     load()
-  }, [supabase])
+  }, [supabase, page])
 
   const atletasFiltrados = atletas.filter((a) =>
     a.nome?.toLowerCase().includes(search.toLowerCase())
@@ -102,6 +110,16 @@ export default function AtletasFedaracaoPage() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-white" />
           </div>
+        ) : totalCount === 0 ? (
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8 text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Nenhum atleta encontrado</h3>
+              <p className="text-gray-400 mb-6">Aguarde o cadastro dos primeiros atletas pelas academias filiadas</p>
+            </div>
+          </div>
         ) : (
           <>
             <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
@@ -125,7 +143,28 @@ export default function AtletasFedaracaoPage() {
               </table>
             </div>
 
-            <p className="text-gray-400 text-sm mt-4">Total: {atletasFiltrados.length} atletas</p>
+            {/* Pagination */}
+            <div className="flex items-center justify-between mt-6">
+              <p className="text-gray-400 text-sm">
+                Mostrando {page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalCount)} de {totalCount} atletas
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={(page + 1) * pageSize >= totalCount}
+                  className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
           </>
         )}
       </div>

@@ -17,6 +17,7 @@ export default function FrequenciaAcademiaPage() {
   const supabase = createClient()
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
     const load = async () => {
@@ -61,6 +62,7 @@ export default function FrequenciaAcademiaPage() {
         })
 
         setRows(computed)
+        setTotalCount(computed.length)
       } finally {
         setLoading(false)
       }
@@ -105,6 +107,16 @@ export default function FrequenciaAcademiaPage() {
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-white" />
+          </div>
+        ) : totalCount === 0 ? (
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-12 text-center">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Download className="w-8 h-8 text-green-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Nenhum registro de frequência</h3>
+              <p className="text-gray-400 mb-6">Comece registrando a presença dos seus atletas</p>
+            </div>
           </div>
         ) : (
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
