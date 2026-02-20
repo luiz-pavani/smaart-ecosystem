@@ -1,20 +1,91 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Edit2, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Plus, Edit2, Trash2, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
+interface AulaItem {
+  id: string
+  name: string
+  location: string | null
+  capacity: number | null
+  current_enrollment: number | null
+  schedules: { start_time: string; end_time: string; day_of_week: number }[]
+}
+
+const dayLabels: Record<number, string> = {
+  0: 'Domingo',
+  1: 'Segunda',
+  2: 'Terca',
+  3: 'Quarta',
+  4: 'Quinta',
+  5: 'Sexta',
+  6: 'Sabado',
+}
 
 export default function AulasAcademiaPage() {
   const router = useRouter()
+  const supabase = createClient()
+  const [loading, setLoading] = useState(true)
+  const [aulas, setAulas] = useState<AulaItem[]>([])
 
-  const aulas = [
-    { id: 1, dia: 'Segunda', horario: '18:00-19:30', professor: 'Prof. Carlos', sala: 'A1', alunos: 15 },
-    { id: 2, dia: 'Segunda', horario: '19:30-21:00', professor: 'Prof. Ana', sala: 'B1', alunos: 12 },
-    { id: 3, dia: 'Quarta', horario: '18:00-19:30', professor: 'Prof. Carlos', sala: 'A1', alunos: 18 },
-    { id: 4, dia: 'Quarta', horario: '19:30-21:00', professor: 'Prof. Ana', sala: 'B1', alunos: 10 },
-    { id: 5, dia: 'Sexta', horario: '18:00-19:30', professor: 'Prof. Carlos', sala: 'A1', alunos: 16 },
-    { id: 6, dia: 'Sábado', horario: '09:00-10:30', professor: 'Prof. Ana', sala: 'A1', alunos: 20 },
-  ]
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: role } = await supabase
+          .from('user_roles')
+          .select('academia_id')
+          .eq('user_id', user.id)
+          .not('academia_id', 'is', null)
+          .limit(1)
+          .single()
+
+        if (!role?.academia_id) return
+
+        const { data } = await supabase
+          .from('classes')
+          .select('id, name, location, capacity, current_enrollment, class_schedules(start_time, end_time, day_of_week)')
+          .eq('academy_id', role.academia_id)
+          .eq('is_active', true)
+          .order('name', { ascending: true })
+
+        const mapped = (data || []).map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          location: item.location,
+          capacity: item.capacity,
+          current_enrollment: item.current_enrollment,
+          schedules: item.class_schedules || [],
+        }))
+
+        setAulas(mapped)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [supabase])
+
+  const aulasPorDia = aulas.reduce<Record<string, AulaItem[]>>((acc, aula) => {
+    aula.schedules.forEach((schedule) => {
+      const label = dayLabels[schedule.day_of_week] || `Dia ${schedule.day_of_week}`
+      acc[label] = acc[label] || []
+      acc[label].push({ ...aula, schedules: [schedule] })
+    })
+    return acc
+  }, {})
+
+  const diasOrdenados = Object.keys(aulasPorDia).sort((a, b) => {
+    const indexA = Object.values(dayLabels).indexOf(a)
+    const indexB = Object.values(dayLabels).indexOf(b)
+    return indexA - indexB
+  })
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -28,7 +99,7 @@ export default function AulasAcademiaPage() {
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
-          <h1 className="text-3xl font-bold text-white">Aulas & Horários</h1>
+          <h1 className="text-3xl font-bold text-white">Aulas & Horarios</h1>
         </div>
       </div>
 
@@ -40,34 +111,46 @@ export default function AulasAcademiaPage() {
           Nova Aula
         </button>
 
-        {/* Schedule by Day */}
-        <div className="space-y-6">
-          {['Segunda', 'Quarta', 'Sexta', 'Sábado'].map(dia => (
-            <div key={dia} className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
-              <div className="bg-white/5 px-6 py-3 border-b border-white/10">
-                <h3 className="font-semibold text-white">{dia}</h3>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-white" />
+          </div>
+        ) : diasOrdenados.length === 0 ? (
+          <div className="text-gray-400">Nenhuma aula cadastrada.</div>
+        ) : (
+          <div className="space-y-6">
+            {diasOrdenados.map((dia) => (
+              <div key={dia} className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
+                <div className="bg-white/5 px-6 py-3 border-b border-white/10">
+                  <h3 className="font-semibold text-white">{dia}</h3>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {aulasPorDia[dia].map((aula) => {
+                    const schedule = aula.schedules[0]
+                    return (
+                      <div key={`${aula.id}-${schedule.start_time}`} className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+                        <div>
+                          <p className="font-semibold text-white">{schedule.start_time} - {schedule.end_time}</p>
+                          <p className="text-gray-400 text-sm">
+                            {aula.name} • {aula.location || 'Sala nao definida'} • {aula.current_enrollment || 0}/{aula.capacity || '—'} alunos
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button className="p-2 hover:bg-red-500/20 rounded-lg text-gray-400 hover:text-red-400 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-              <div className="divide-y divide-white/5">
-                {aulas.filter(a => a.dia === dia).map(aula => (
-                  <div key={aula.id} className="px-6 py-4 flex items-center justify-between hover:bg-white/5 transition-colors">
-                    <div>
-                      <p className="font-semibold text-white">{aula.horario}</p>
-                      <p className="text-gray-400 text-sm">Prof. {aula.professor.split('. ')[1]} • Sala {aula.sala} • {aula.alunos} alunos</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 hover:bg-red-500/20 rounded-lg text-gray-400 hover:text-red-400 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

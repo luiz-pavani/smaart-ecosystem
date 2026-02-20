@@ -1,19 +1,64 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Search, Filter } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Plus, Search, Filter, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
+interface AtletaRow {
+  id: string
+  nome: string
+  cpf: string | null
+  graduacao: string | null
+  status?: string | null
+}
 
 export default function AtletasAcademiaPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [atletas, setAtletas] = useState<AtletaRow[]>([])
+  const [error, setError] = useState<string | null>(null)
 
-  const atletas = [
-    { id: 1, nome: 'João Silva', cpf: '123.456.789-00', nivel: 'Faixa Azul', status: 'Ativo' },
-    { id: 2, nome: 'Maria Santos', cpf: '987.654.321-00', nivel: 'Faixa Marrom', status: 'Ativo' },
-    { id: 3, nome: 'Pedro Oliveira', cpf: '456.123.789-00', nivel: 'Faixa Branca', status: 'Inativo' },
-    { id: 4, nome: 'Ana Costa', cpf: '789.456.123-00', nivel: 'Faixa Preta', status: 'Ativo' },
-  ]
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Nao autenticado')
+
+        const { data: role } = await supabase
+          .from('user_roles')
+          .select('academia_id')
+          .eq('user_id', user.id)
+          .not('academia_id', 'is', null)
+          .limit(1)
+          .single()
+
+        if (!role?.academia_id) throw new Error('Academia nao encontrada')
+
+        const { data } = await supabase
+          .from('atletas')
+          .select('id, nome, cpf, graduacao, status')
+          .eq('academia_id', role.academia_id)
+          .order('nome', { ascending: true })
+
+        setAtletas(data || [])
+      } catch (err: any) {
+        setError(err.message || 'Erro ao carregar atletas')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [supabase])
+
+  const atletasFiltrados = atletas.filter((atleta) =>
+    atleta.nome?.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -55,43 +100,50 @@ export default function AtletasAcademiaPage() {
           </button>
         </div>
 
-        {/* Table */}
-        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-white/5 border-b border-white/10">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">Nome</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">CPF</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">Nível</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {atletas.map((atleta) => (
-                <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 text-gray-300">{atleta.nome}</td>
-                  <td className="px-6 py-4 text-gray-400 font-mono text-sm">{atleta.cpf}</td>
-                  <td className="px-6 py-4 text-gray-300">{atleta.nivel}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      atleta.status === 'Ativo'
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-gray-500/20 text-gray-400'
-                    }`}>
-                      {atleta.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="text-blue-400 hover:text-blue-300 text-sm font-semibold transition-colors">
-                      Editar
-                    </button>
-                  </td>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-white" />
+          </div>
+        ) : error ? (
+          <div className="text-red-300">{error}</div>
+        ) : (
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-white/5 border-b border-white/10">
+                <tr>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Nome</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">CPF</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Graduacao</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Status</th>
+                  <th className="px-6 py-3 text-left text-sm font-semibold text-white">Acoes</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {atletasFiltrados.map((atleta) => (
+                  <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4 text-gray-300">{atleta.nome}</td>
+                    <td className="px-6 py-4 text-gray-400 font-mono text-sm">{atleta.cpf || '—'}</td>
+                    <td className="px-6 py-4 text-gray-300">{atleta.graduacao || '—'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        (atleta.status || 'Ativo') === 'Ativo'
+                          ? 'bg-green-500/20 text-green-400'
+                          : 'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {atleta.status || 'Ativo'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button className="text-blue-400 hover:text-blue-300 text-sm font-semibold transition-colors">
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,20 +1,59 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Search, Filter } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Search, Filter, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+
+interface AtletaRow {
+  id: string
+  nome: string
+  graduacao: string | null
+  academia?: { nome: string } | null
+}
 
 export default function AtletasFedaracaoPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [atletas, setAtletas] = useState<AtletaRow[]>([])
 
-  const atletas = [
-    { id: 1, nome: 'João Silva', academia: 'Academia Master', nivel: 'Faixa Preta', federacao: 'Cotia' },
-    { id: 2, nome: 'Maria Santos', academia: 'Judo Center', nivel: 'Faixa Marrom', federacao: 'Campinas' },
-    { id: 3, nome: 'Ana Costa', academia: 'Elite Judo', nivel: 'Faixa Preta', federacao: 'Santos' },
-    { id: 4, nome: 'Pedro Oliveira', academia: 'Academia Master', nivel: 'Faixa Azul', federacao: 'Cotia' },
-    { id: 5, nome: 'Lucas Mendes', academia: 'Iniciantes Judo', nivel: 'Faixa Branca', federacao: 'Sorocaba' },
-  ]
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true)
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: role } = await supabase
+          .from('user_roles')
+          .select('federacao_id')
+          .eq('user_id', user.id)
+          .not('federacao_id', 'is', null)
+          .limit(1)
+          .single()
+
+        if (!role?.federacao_id) return
+
+        const { data } = await supabase
+          .from('atletas')
+          .select('id, nome, graduacao, academia:academias(nome)')
+          .eq('federacao_id', role.federacao_id)
+          .order('nome', { ascending: true })
+
+        setAtletas(data || [])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
+  }, [supabase])
+
+  const atletasFiltrados = atletas.filter((a) =>
+    a.nome?.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -52,31 +91,36 @@ export default function AtletasFedaracaoPage() {
           </button>
         </div>
 
-        {/* Table */}
-        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-white/5 border-b border-white/10">
-              <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">Nome</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">Academia</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">Nível</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-white">Federação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {atletas.map((atleta) => (
-                <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4 text-gray-300">{atleta.nome}</td>
-                  <td className="px-6 py-4 text-gray-300">{atleta.academia}</td>
-                  <td className="px-6 py-4 text-gray-300">{atleta.nivel}</td>
-                  <td className="px-6 py-4 text-gray-400">{atleta.federacao}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-white" />
+          </div>
+        ) : (
+          <>
+            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-white/5 border-b border-white/10">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white">Nome</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white">Academia</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white">Graduacao</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {atletasFiltrados.map((atleta) => (
+                    <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <td className="px-6 py-4 text-gray-300">{atleta.nome}</td>
+                      <td className="px-6 py-4 text-gray-300">{atleta.academia?.nome || '—'}</td>
+                      <td className="px-6 py-4 text-gray-300">{atleta.graduacao || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        <p className="text-gray-400 text-sm mt-4">Total: {atletas.length} atletas</p>
+            <p className="text-gray-400 text-sm mt-4">Total: {atletasFiltrados.length} atletas</p>
+          </>
+        )}
       </div>
     </div>
   )
