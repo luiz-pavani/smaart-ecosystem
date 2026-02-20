@@ -42,7 +42,14 @@ export default function AtletasFedaracaoPage() {
           .eq('federacao_id', role.federacao_id)
           .order('nome', { ascending: true })
 
-        setAtletas(data || [])
+        const mapped = (data || []).map((item: any) => ({
+          id: item.id,
+          nome: item.nome,
+          graduacao: item.graduacao,
+          academia: Array.isArray(item.academia) ? item.academia[0] || null : item.academia || null,
+        }))
+
+        setAtletas(mapped)
       } finally {
         setLoading(false)
       }
