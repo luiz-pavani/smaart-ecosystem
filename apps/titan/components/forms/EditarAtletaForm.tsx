@@ -93,7 +93,7 @@ export default function EditarAtletaForm({
         throw new Error('Erro ao atualizar atleta')
       }
 
-      router.push(`/atletas/${atleta.id}`)
+      router.push('/portal/atleta/perfil')
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
