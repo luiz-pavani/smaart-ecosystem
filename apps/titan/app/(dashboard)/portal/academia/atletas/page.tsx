@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Search, Filter, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { NovoAtletaModal } from '@/components/modals/NovoAtletaModal'
 
 interface AtletaRow {
   id: string
@@ -24,6 +25,8 @@ export default function AtletasAcademiaPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [filterGraduacao, setFilterGraduacao] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [academiaId, setAcademiaId] = useState<string | null>(null)
   const pageSize = 20
 
   useEffect(() => {
@@ -134,7 +137,10 @@ export default function AtletasAcademiaPage() {
             <option value="Inativo">Inativo</option>
             <option value="Suspenso">Suspenso</option>
           </select>
-          <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all">
+          <button 
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all"
+          >
             <Plus className="w-4 h-4" />
             Novo Atleta
           </button>
@@ -224,6 +230,69 @@ export default function AtletasAcademiaPage() {
           </>
         )}
       </div>
+
+      {/* Modal */}
+      {academiaId && (
+        <NovoAtletaModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          academiaId={academiaId}
+          onSuccess={() => {
+            setPage(0)
+            load()
+          }}
+        />
+      )}
     </div>
   )
+
+  async function load() {
+    try {
+      setLoading(true)
+      setError(null)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Nao autenticado')
+
+      const { data: role } = await supabase
+        .from('user_roles')
+        .select('academia_id')
+        .eq('user_id', user.id)
+        .not('academia_id', 'is', null)
+        .limit(1)
+        .single()
+
+      if (!role?.academia_id) throw new Error('Academia nao encontrada')
+      
+      setAcademiaId(role.academia_id)
+
+      const start = page * pageSize
+      const end = start + pageSize - 1
+
+      let query = supabase
+        .from('atletas')
+        .select('id, nome, cpf, graduacao, status', { count: 'exact' })
+        .eq('academia_id', role.academia_id)
+
+      if (search) {
+        query = query.ilike('nome', `%${search}%`)
+      }
+      if (filterGraduacao) {
+        query = query.eq('graduacao', filterGraduacao)
+      }
+      if (filterStatus) {
+        query = query.eq('status', filterStatus)
+      }
+
+      const { data, count } = await query
+        .order('nome', { ascending: true })
+        .range(start, end)
+
+      setAtletas(data || [])
+      setTotalCount(count || 0)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao carregar atletas')
+    } finally {
+      setLoading(false)
+    }
+  }
 }

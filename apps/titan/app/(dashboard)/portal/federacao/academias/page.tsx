@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Building2, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { NovaAcademiaModal } from '@/components/modals/NovaAcademiaModal'
 
 interface AcademiaRow {
   id: string
@@ -23,6 +24,8 @@ export default function AcademiasFedaracaoPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [filterStatus, setFilterStatus] = useState('')
   const [filterCidade, setFilterCidade] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [federacaoId, setFederacaoId] = useState<string | null>(null)
   const pageSize = 12
 
   useEffect(() => {
@@ -41,6 +44,8 @@ export default function AcademiasFedaracaoPage() {
           .single()
 
         if (!role?.federacao_id) return
+        
+        setFederacaoId(role.federacao_id)
 
         const start = page * pageSize
         const end = start + pageSize - 1
@@ -123,7 +128,10 @@ export default function AcademiasFedaracaoPage() {
             onChange={(e) => { setFilterCidade(e.target.value); setPage(0); }}
             className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
           />
-          <button className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all ml-auto">
+          <button 
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all ml-auto"
+          >
             <Plus className="w-5 h-5" />
             Nova Academia
           </button>
@@ -201,9 +209,81 @@ export default function AcademiasFedaracaoPage() {
               </button>
             </div>
           </div>
-          </>
+          </> 
         )}
       </div>
+
+      {/* Modal */}
+      {federacaoId && (
+        <NovaAcademiaModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          federacaoId={federacaoId}
+          onSuccess={() => {
+            setPage(0)
+            load()
+          }}
+        />
+      )}
     </div>
   )
+
+  async function load() {
+    try {
+      setLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: role } = await supabase
+        .from('user_roles')
+        .select('federacao_id')
+        .eq('user_id', user.id)
+        .not('federacao_id', 'is', null)
+        .limit(1)
+        .single()
+
+      if (!role?.federacao_id) return
+      
+      setFederacaoId(role.federacao_id)
+
+      const start = page * pageSize
+      const end = start + pageSize - 1
+
+      let query = supabase
+        .from('academias')
+        .select('id, nome, sigla, cidade, status', { count: 'exact' })
+        .eq('federacao_id', role.federacao_id)
+
+      if (filterStatus) {
+        query = query.eq('status', filterStatus)
+      }
+      if (filterCidade) {
+        query = query.ilike('cidade', `%${filterCidade}%`)
+      }
+
+      const { data: academiasData, count } = await query
+        .order('nome', { ascending: true })
+        .range(start, end)
+
+      const { data: atletasData } = await supabase
+        .from('atletas')
+        .select('id, academia_id')
+        .eq('federacao_id', role.federacao_id)
+
+      const counts = new Map<string, number>()
+      ;(atletasData || []).forEach((a: any) => {
+        counts.set(a.academia_id, (counts.get(a.academia_id) || 0) + 1)
+      })
+
+      const mapped = (academiasData || []).map((a: any) => ({
+        ...a,
+        atletas: counts.get(a.id) || 0,
+      }))
+
+      setAcademias(mapped)
+      setTotalCount(count || 0)
+    } finally {
+      setLoading(false)
+    }
+  }
 }

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Plus, Edit2, Trash2, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { NovaAulaModal } from '@/components/modals/NovaAulaModal'
 
 interface AulaItem {
   id: string
@@ -29,6 +30,8 @@ export default function AulasAcademiaPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [aulas, setAulas] = useState<AulaItem[]>([])
+  const [showModal, setShowModal] = useState(false)
+  const [academiaId, setAcademiaId] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -46,6 +49,8 @@ export default function AulasAcademiaPage() {
           .single()
 
         if (!role?.academia_id) return
+        
+        setAcademiaId(role.academia_id)
 
         const { data } = await supabase
           .from('classes')
@@ -106,7 +111,10 @@ export default function AulasAcademiaPage() {
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Add Button */}
-        <button className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all mb-8">
+        <button 
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all mb-8"
+        >
           <Plus className="w-5 h-5" />
           Nova Aula
         </button>
@@ -152,6 +160,56 @@ export default function AulasAcademiaPage() {
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {academiaId && (
+        <NovaAulaModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          academiaId={academiaId}
+          onSuccess={() => load()}
+        />
+      )}
     </div>
   )
+
+  async function load() {
+    try {
+      setLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: role } = await supabase
+        .from('user_roles')
+        .select('academia_id')
+        .eq('user_id', user.id)
+        .not('academia_id', 'is', null)
+        .limit(1)
+        .single()
+
+      if (!role?.academia_id) return
+      
+      setAcademiaId(role.academia_id)
+
+      const { data } = await supabase
+        .from('classes')
+        .select('id, name, location, capacity, current_enrollment, class_schedules(start_time, end_time, day_of_week)')
+        .eq('academy_id', role.academia_id)
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+
+      const mapped = (data || []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        location: item.location,
+        capacity: item.capacity,
+        current_enrollment: item.current_enrollment,
+        schedules: item.class_schedules || [],
+      }))
+
+      setAulas(mapped)
+    } finally {
+      setLoading(false)
+    }
+  }
 }
