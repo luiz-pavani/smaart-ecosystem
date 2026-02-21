@@ -8,6 +8,9 @@ import { NovoAtletaModal } from '@/components/modals/NovoAtletaModal'
 import { exportAtletasToPDF } from '@/lib/export/pdf'
 import { exportAtletasToExcel } from '@/lib/export/excel'
 import { SearchShortcut } from '@/components/command-palette/SearchShortcut'
+import { useSelection } from '@/hooks/useSelection'
+import { BulkActions } from '@/components/bulk-actions/BulkActions'
+import { useToast } from '@/components/ui/toast'
 
 interface AtletaRow {
   id: string
@@ -20,6 +23,7 @@ interface AtletaRow {
 export default function AtletasAcademiaPage() {
   const router = useRouter()
   const supabase = createClient()
+  const { showToast } = useToast()
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [atletas, setAtletas] = useState<AtletaRow[]>([])
@@ -31,6 +35,27 @@ export default function AtletasAcademiaPage() {
   const [showModal, setShowModal] = useState(false)
   const [academiaId, setAcademiaId] = useState<string | null>(null)
   const pageSize = 20
+
+  const selection = useSelection(atletas)
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selection.selectedIds)
+    const { error } = await supabase
+      .from('atletas')
+      .delete()
+      .in('id', ids)
+
+    if (error) {
+      showToast('error', 'Erro ao excluir atletas')
+      return
+    }
+
+    showToast('success', `${ids.length} ${ids.length === 1 ? 'atleta excluído' : 'atletas excluídos'}`)
+    selection.clear()
+    // Reload data
+    const event = new Event('reload')
+    window.dispatchEvent(event)
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -74,6 +99,7 @@ export default function AtletasAcademiaPage() {
 
         setAtletas(data || [])
         setTotalCount(count || 0)
+        selection.clear()
       } catch (err: any) {
         setError(err.message || 'Erro ao carregar atletas')
       } finally {
@@ -82,7 +108,12 @@ export default function AtletasAcademiaPage() {
     }
 
     load()
-  }, [supabase, page, search, filterGraduacao, filterStatus])
+
+    // Listen for reload event
+    const handleReload = () => load()
+    window.addEventListener('reload', handleReload)
+    return () => window.removeEventListener('reload', handleReload)
+  }, [supabase, page, search, filterGraduacao, filterStatus, selection])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -194,6 +225,17 @@ export default function AtletasAcademiaPage() {
             <table className="w-full">
               <thead className="bg-white/5 border-b border-white/10">
                 <tr>
+                  <th className="px-6 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selection.isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = selection.isSomeSelected
+                      }}
+                      onChange={selection.toggleAll}
+                      className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-slate-900 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-white">Nome</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-white">CPF</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-white">Graduacao</th>
@@ -204,6 +246,14 @@ export default function AtletasAcademiaPage() {
               <tbody>
                 {atletas.map((atleta) => (
                   <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selection.isSelected(atleta.id)}
+                        onChange={() => selection.toggle(atleta.id)}
+                        className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-slate-900 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4 text-gray-300">{atleta.nome}</td>
                     <td className="px-6 py-4 text-gray-400 font-mono text-sm">{atleta.cpf || '—'}</td>
                     <td className="px-6 py-4 text-gray-300">{atleta.graduacao || '—'}</td>
@@ -263,6 +313,17 @@ export default function AtletasAcademiaPage() {
             setPage(0)
             load()
           }}
+        />
+      )}
+
+      {/* Bulk Actions */}
+      {selection.selectedCount > 0 && (
+        <BulkActions
+          selectedCount={selection.selectedCount}
+          onClear={selection.clear}
+          onDelete={handleBulkDelete}
+          onExportPDF={() => exportAtletasToPDF(selection.selectedItems)}
+          onExportExcel={() => exportAtletasToExcel(selection.selectedItems)}
         />
       )}
     </div>
