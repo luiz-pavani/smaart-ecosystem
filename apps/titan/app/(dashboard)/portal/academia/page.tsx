@@ -219,24 +219,28 @@ export default function PortalAcademiaPage() {
                 value={data.totalAtletas}
                 icon={Users}
                 color="blue"
+                onClick={() => router.push('/portal/academia/atletas')}
               />
               <MetricCard
                 title="Atletas Ativos"
                 value={data.atletasAtivos}
                 icon={TrendingUp}
                 color="green"
+                onClick={() => router.push('/portal/academia/atletas')}
               />
               <MetricCard
                 title="Aulas Ativas"
                 value={data.totalAulas}
                 icon={Calendar}
                 color="purple"
+                onClick={() => router.push('/portal/academia/aulas')}
               />
               <MetricCard
                 title="Frequência Média/Dia"
                 value={data.frequenciaMedia}
                 icon={Clock}
                 color="orange"
+                onClick={() => router.push('/portal/academia/frequencia')}
               />
             </div>
 

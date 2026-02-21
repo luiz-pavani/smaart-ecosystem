@@ -17,10 +17,20 @@ export default function PerfilAtletaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
+        const { data: role } = await supabase
+          .from('user_roles')
+          .select('atleta_id')
+          .eq('user_id', user.id)
+          .not('atleta_id', 'is', null)
+          .limit(1)
+          .single()
+
+        if (!role?.atleta_id) return
+
         const { data } = await supabase
           .from('atletas')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('id', role.atleta_id)
           .limit(1)
           .single()
 

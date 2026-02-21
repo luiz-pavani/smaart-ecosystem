@@ -10,6 +10,7 @@ interface MetricCardProps {
     label: string
   }
   color?: 'blue' | 'green' | 'purple' | 'orange' | 'red'
+  onClick?: () => void
 }
 
 const colorClasses = {
@@ -20,9 +21,18 @@ const colorClasses = {
   red: 'bg-red-500/20 text-red-400 border-red-500/50',
 }
 
-export function MetricCard({ title, value, icon: Icon, trend, color = 'blue' }: MetricCardProps) {
+export function MetricCard({ title, value, icon: Icon, trend, color = 'blue', onClick }: MetricCardProps) {
+  const isClickable = Boolean(onClick)
+  const Wrapper = isClickable ? 'button' : 'div'
+
   return (
-    <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6 hover:border-white/20 transition-all">
+    <Wrapper
+      className={`bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6 transition-all ${
+        isClickable ? 'hover:border-white/30 hover:bg-white/10 cursor-pointer text-left' : 'hover:border-white/20'
+      }`}
+      onClick={onClick}
+      {...(isClickable ? { type: 'button' } : {})}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className={`w-12 h-12 rounded-lg ${colorClasses[color]} border flex items-center justify-center`}>
           <Icon className="w-6 h-6" />
@@ -35,6 +45,6 @@ export function MetricCard({ title, value, icon: Icon, trend, color = 'blue' }: 
       </div>
       <h3 className="text-gray-400 text-sm mb-1">{title}</h3>
       <p className="text-3xl font-bold text-white">{value}</p>
-    </div>
+    </Wrapper>
   )
 }
