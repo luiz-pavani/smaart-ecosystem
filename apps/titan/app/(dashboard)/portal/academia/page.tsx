@@ -193,7 +193,7 @@ export default function PortalAcademiaPage() {
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-7xl mx-auto px-4">
           <button
-            onClick={() => router.push('/portais')}
+            onClick={() => router.push('/portal')}
             className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />

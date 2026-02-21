@@ -58,7 +58,7 @@ export default function PortalEventosPage() {
         <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
           <div>
             <button
-              onClick={() => router.push('/portais')}
+              onClick={() => router.push('/portal')}
               className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />

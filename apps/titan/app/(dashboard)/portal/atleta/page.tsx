@@ -44,11 +44,21 @@ export default function PortalAtletaPage() {
       if (!role?.atleta_id) return
 
       // Buscar dados do atleta
-      const { data: atleta } = await supabase
-        .from('atletas')
-        .select('*')
-        .eq('id', role.atleta_id)
-        .single()
+      let atleta = null
+      try {
+        const { data, error } = await supabase
+          .from('atletas')
+          .select('*')
+          .eq('id', role.atleta_id)
+          .single()
+        if (error) {
+          console.error('Erro ao buscar atleta:', error.message)
+        }
+        atleta = data || null
+      } catch (err) {
+        console.error('Erro inesperado ao buscar atleta:', err)
+        atleta = null
+      }
 
       // Total de treinos (presencas)
       const { count: totalTreinos } = await supabase
@@ -116,7 +126,7 @@ export default function PortalAtletaPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            {data?.atleta ? `Olá, ${data.atleta.nome.split(' ')[0]}!` : 'Portal do Atleta'}
+            {data?.atleta?.nome && typeof data.atleta.nome === 'string' ? `Olá, ${data.atleta.nome.split(' ')[0]}!` : 'Portal do Atleta'}
           </h1>
           <p className="text-slate-400">Acompanhe seu progresso e evolução</p>
         </div>

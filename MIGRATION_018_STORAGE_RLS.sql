@@ -60,3 +60,4 @@ CREATE POLICY "Authenticated users can view storage"
 CREATE POLICY "Authenticated users can delete storage"
   ON storage.objects FOR DELETE
   USING (auth.uid() IS NOT NULL AND bucket_id = 'atletas');
+aqui
