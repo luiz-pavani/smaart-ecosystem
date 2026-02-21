@@ -37,7 +37,7 @@ export default function Sidebar({ user }: SidebarProps) {
       {/* Logo */}
       <div className="p-6 border-b border-border">
         <button
-          onClick={() => router.push('/portais')}
+          onClick={() => router.push('/portal')}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
           <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
