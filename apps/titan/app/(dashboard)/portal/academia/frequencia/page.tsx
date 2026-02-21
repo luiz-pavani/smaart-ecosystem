@@ -16,8 +16,10 @@ export default function FrequenciaAcademiaPage() {
   const router = useRouter()
   const supabase = createClient()
   const [rows, setRows] = useState<Row[]>([])
+  const [allRows, setAllRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
   const [totalCount, setTotalCount] = useState(0)
+  const [filterPercentual, setFilterPercentual] = useState('')
 
   useEffect(() => {
     const load = async () => {
@@ -61,6 +63,7 @@ export default function FrequenciaAcademiaPage() {
           return { ...row, percentual }
         })
 
+        setAllRows(computed)
         setRows(computed)
         setTotalCount(computed.length)
       } finally {
@@ -70,6 +73,19 @@ export default function FrequenciaAcademiaPage() {
 
     load()
   }, [supabase])
+
+  // Filter client-side
+  useEffect(() => {
+    let filtered = allRows
+    if (filterPercentual === 'high') {
+      filtered = filtered.filter(r => r.percentual >= 80)
+    } else if (filterPercentual === 'medium') {
+      filtered = filtered.filter(r => r.percentual >= 50 && r.percentual < 80)
+    } else if (filterPercentual === 'low') {
+      filtered = filtered.filter(r => r.percentual < 50)
+    }
+    setRows(filtered)
+  }, [filterPercentual, allRows])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -94,10 +110,16 @@ export default function FrequenciaAcademiaPage() {
           <select className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-green-500">
             <option>Ultimos 30 dias</option>
           </select>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors">
-            <Filter className="w-4 h-4" />
-            Filtrar
-          </button>
+          <select
+            value={filterPercentual}
+            onChange={(e) => setFilterPercentual(e.target.value)}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-green-500 transition-colors"
+          >
+            <option value="">Todos os atletas</option>
+            <option value="high">Frequência alta (≥80%)</option>
+            <option value="medium">Frequência média (50-79%)</option>
+            <option value="low">Frequência baixa (&lt;50%)</option>
+          </select>
           <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-lg transition-all ml-auto">
             <Download className="w-4 h-4" />
             Relatorio

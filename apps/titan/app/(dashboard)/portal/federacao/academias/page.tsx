@@ -21,6 +21,8 @@ export default function AcademiasFedaracaoPage() {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterCidade, setFilterCidade] = useState('')
   const pageSize = 12
 
   useEffect(() => {
@@ -43,10 +45,19 @@ export default function AcademiasFedaracaoPage() {
         const start = page * pageSize
         const end = start + pageSize - 1
 
-        const { data: academiasData, count } = await supabase
+        let query = supabase
           .from('academias')
           .select('id, nome, sigla, cidade, status', { count: 'exact' })
           .eq('federacao_id', role.federacao_id)
+
+        if (filterStatus) {
+          query = query.eq('status', filterStatus)
+        }
+        if (filterCidade) {
+          query = query.ilike('cidade', `%${filterCidade}%`)
+        }
+
+        const { data: academiasData, count } = await query
           .order('nome', { ascending: true })
           .range(start, end)
 
@@ -73,7 +84,7 @@ export default function AcademiasFedaracaoPage() {
     }
 
     load()
-  }, [supabase, page])
+  }, [supabase, page, filterStatus, filterCidade])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -93,11 +104,30 @@ export default function AcademiasFedaracaoPage() {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Add Button */}
-        <button className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all mb-8">
-          <Plus className="w-5 h-5" />
-          Nova Academia
-        </button>
+        {/* Toolbar */}
+        <div className="flex gap-3 mb-8">
+          <select
+            value={filterStatus}
+            onChange={(e) => { setFilterStatus(e.target.value); setPage(0); }}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+          >
+            <option value="">Todos Status</option>
+            <option value="Ativa">Ativa</option>
+            <option value="Inativa">Inativa</option>
+            <option value="Suspensa">Suspensa</option>
+          </select>
+          <input
+            type="text"
+            placeholder="Filtrar por cidade..."
+            value={filterCidade}
+            onChange={(e) => { setFilterCidade(e.target.value); setPage(0); }}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+          />
+          <button className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all ml-auto">
+            <Plus className="w-5 h-5" />
+            Nova Academia
+          </button>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-64">

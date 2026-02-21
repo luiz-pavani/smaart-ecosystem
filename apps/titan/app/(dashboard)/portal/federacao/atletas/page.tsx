@@ -20,6 +20,7 @@ export default function AtletasFedaracaoPage() {
   const [atletas, setAtletas] = useState<AtletaRow[]>([])
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
+  const [filterGraduacao, setFilterGraduacao] = useState('')
   const pageSize = 20
 
   useEffect(() => {
@@ -42,10 +43,19 @@ export default function AtletasFedaracaoPage() {
         const start = page * pageSize
         const end = start + pageSize - 1
 
-        const { data, count } = await supabase
+        let query = supabase
           .from('atletas')
           .select('id, nome, graduacao, academia:academias(nome)', { count: 'exact' })
           .eq('federacao_id', role.federacao_id)
+
+        if (search) {
+          query = query.ilike('nome', `%${search}%`)
+        }
+        if (filterGraduacao) {
+          query = query.eq('graduacao', filterGraduacao)
+        }
+
+        const { data, count } = await query
           .order('nome', { ascending: true })
           .range(start, end)
 
@@ -64,11 +74,7 @@ export default function AtletasFedaracaoPage() {
     }
 
     load()
-  }, [supabase, page])
-
-  const atletasFiltrados = atletas.filter((a) =>
-    a.nome?.toLowerCase().includes(search.toLowerCase())
-  )
+  }, [supabase, page, search, filterGraduacao])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -96,14 +102,26 @@ export default function AtletasFedaracaoPage() {
               type="text"
               placeholder="Buscar atleta..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
               className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors">
-            <Filter className="w-4 h-4" />
-            Filtrar
-          </button>
+          <select
+            value={filterGraduacao}
+            onChange={(e) => { setFilterGraduacao(e.target.value); setPage(0); }}
+            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+          >
+            <option value="">Todas Graduações</option>
+            <option value="Branca">Branca</option>
+            <option value="Cinza">Cinza</option>
+            <option value="Azul">Azul</option>
+            <option value="Amarela">Amarela</option>
+            <option value="Laranja">Laranja</option>
+            <option value="Verde">Verde</option>
+            <option value="Roxa">Roxa</option>
+            <option value="Marrom">Marrom</option>
+            <option value="Preta">Preta</option>
+          </select>
         </div>
 
         {loading ? (
@@ -132,7 +150,7 @@ export default function AtletasFedaracaoPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {atletasFiltrados.map((atleta) => (
+                  {atletas.map((atleta) => (
                     <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-gray-300">{atleta.nome}</td>
                       <td className="px-6 py-4 text-gray-300">{atleta.academia?.nome || '—'}</td>
