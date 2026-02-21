@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { NovoAtletaModal } from '@/components/modals/NovoAtletaModal'
 import { exportAtletasToPDF } from '@/lib/export/pdf'
 import { exportAtletasToExcel } from '@/lib/export/excel'
+import { SearchShortcut } from '@/components/command-palette/SearchShortcut'
 
 interface AtletaRow {
   id: string
@@ -103,6 +104,7 @@ export default function AtletasAcademiaPage() {
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Toolbar */}
         <div className="flex gap-3 mb-8">
+          <SearchShortcut />
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { NovaAulaModal } from '@/components/modals/NovaAulaModal'
 import { exportAulasToPDF } from '@/lib/export/pdf'
 import { exportAulasToExcel } from '@/lib/export/excel'
+import { SearchShortcut } from '@/components/command-palette/SearchShortcut'
 
 interface AulaItem {
   id: string
@@ -114,6 +115,7 @@ export default function AulasAcademiaPage() {
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Toolbar */}
         <div className="flex gap-3 mb-8">
+          <SearchShortcut />
           <button
             onClick={() => exportAulasToPDF(aulas.flatMap(a => a.schedules.map(s => ({ ...a, ...s }))))}
             disabled={aulas.length === 0}

@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { NovaAcademiaModal } from '@/components/modals/NovaAcademiaModal'
 import { exportAcademiasToPDF } from '@/lib/export/pdf'
 import { exportAcademiasToExcel } from '@/lib/export/excel'
+import { SearchShortcut } from '@/components/command-palette/SearchShortcut'
 
 interface AcademiaRow {
   id: string
@@ -113,6 +114,7 @@ export default function AcademiasFedaracaoPage() {
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Toolbar */}
         <div className="flex gap-3 mb-8">
+          <SearchShortcut />
           <select
             value={filterStatus}
             onChange={(e) => { setFilterStatus(e.target.value); setPage(0); }}
