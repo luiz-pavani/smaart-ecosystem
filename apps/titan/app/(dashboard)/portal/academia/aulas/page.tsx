@@ -1,10 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Edit2, Trash2, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, Edit2, Trash2, Loader2, FileText, FileSpreadsheet } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NovaAulaModal } from '@/components/modals/NovaAulaModal'
+import { exportAulasToPDF } from '@/lib/export/pdf'
+import { exportAulasToExcel } from '@/lib/export/excel'
 
 interface AulaItem {
   id: string
@@ -110,14 +112,35 @@ export default function AulasAcademiaPage() {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Add Button */}
-        <button 
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all mb-8"
-        >
-          <Plus className="w-5 h-5" />
-          Nova Aula
-        </button>
+        {/* Toolbar */}
+        <div className="flex gap-3 mb-8">
+          <button
+            onClick={() => exportAulasToPDF(aulas.flatMap(a => a.schedules.map(s => ({ ...a, ...s }))))}
+            disabled={aulas.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-red-500/50 text-gray-300 hover:text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Exportar PDF"
+          >
+            <FileText className="w-4 h-4" />
+            PDF
+          </button>
+          <button
+            onClick={() => exportAulasToExcel(aulas.flatMap(a => a.schedules.map(s => ({ ...a, ...s }))))}
+            disabled={aulas.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-500/50 text-gray-300 hover:text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Exportar Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Excel
+          </button>
+          <div className="flex-1" />
+          <button 
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            Nova Aula
+          </button>
+        </div>
 
         {loading ? (
           <div className="flex items-center justify-center h-64">

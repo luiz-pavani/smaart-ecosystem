@@ -1,10 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Search, Filter, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, Search, Filter, Loader2, FileText, FileSpreadsheet } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NovoAtletaModal } from '@/components/modals/NovoAtletaModal'
+import { exportAtletasToPDF } from '@/lib/export/pdf'
+import { exportAtletasToExcel } from '@/lib/export/excel'
 
 interface AtletaRow {
   id: string
@@ -137,6 +139,24 @@ export default function AtletasAcademiaPage() {
             <option value="Inativo">Inativo</option>
             <option value="Suspenso">Suspenso</option>
           </select>
+          <button
+            onClick={() => exportAtletasToPDF(atletas)}
+            disabled={atletas.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-red-500/50 text-gray-300 hover:text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Exportar PDF"
+          >
+            <FileText className="w-4 h-4" />
+            PDF
+          </button>
+          <button
+            onClick={() => exportAtletasToExcel(atletas)}
+            disabled={atletas.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-green-500/50 text-gray-300 hover:text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Exportar Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Excel
+          </button>
           <button 
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all"
