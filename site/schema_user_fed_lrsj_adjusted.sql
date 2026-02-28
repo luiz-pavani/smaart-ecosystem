@@ -16,7 +16,7 @@ CREATE TABLE public.user_fed_lrsj (
   graduacao TEXT,
   dan INT,
   nivel_arbitragem TEXT,
-  academia_id UUID,
+  academia_id TEXT,
   status_membro TEXT,
   data_adesao DATE,
   plano_tipo TEXT,
@@ -26,6 +26,7 @@ CREATE TABLE public.user_fed_lrsj (
   url_documento_id TEXT,
   url_certificado_dan TEXT,
   tamanho_patch TEXT,
-  lote_id TEXT,
-  observacoes TEXT
+    lote_id TEXT,
+    observacoes TEXT,
+    academias TEXT
 );

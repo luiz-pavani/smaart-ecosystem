@@ -53,7 +53,7 @@ export default function AtletasFedaracaoPage() {
         if (role.federacao_id === LRSJ_FED_ID) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, nome_completo, graduacao, academia_id, status_membro, status_plano, data_expiracao', { count: 'exact' });
+            .select('id, nome_completo, graduacao, academias, status_membro, status_plano, data_expiracao', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -65,7 +65,7 @@ export default function AtletasFedaracaoPage() {
             id: item.id,
             nome: item.nome_completo ?? '',
             graduacao: item.graduacao ?? '',
-            academia: item.academia_id ? { nome: item.academia_id } : null,
+            academia: item.academias ? { nome: item.academias } : null,
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
           }));
