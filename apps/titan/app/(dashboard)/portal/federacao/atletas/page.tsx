@@ -61,11 +61,11 @@ export default function AtletasFedaracaoPage() {
           const res = await query.order('nome_completo', { ascending: true }).range(start, end);
           mapped = (res.data || []).map((item: any) => ({
             id: item.id,
-            nome: item.nome_completo,
-            graduacao: item.graduacao,
+            nome: item.nome_completo ?? '',
+            graduacao: item.graduacao ?? '',
             academia: item.academia_id ? { nome: item.academia_id } : null,
-            status: item.status_membro || '—',
-            validade: item.data_expiracao || '—',
+            status: item.status_membro ?? '—',
+            validade: item.data_expiracao ?? '—',
           }));
             const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
             const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
