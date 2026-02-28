@@ -174,8 +174,9 @@ export default function AtletasFedaracaoPage() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('nome');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Nome</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('academia');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Academia</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('graduacao');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Graduação</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Status</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('validade');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Validade</th>
+                    {/* STATUS column removed */}
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Situação</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('validade');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>VENCIMENTO</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -205,7 +206,7 @@ export default function AtletasFedaracaoPage() {
                                          )}
                                          <span className="text-gray-300 align-middle">{atleta.status}</span>
                                        </td>
-                      <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
+                                       <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
                     </tr>
                   ))}
                 </tbody>
