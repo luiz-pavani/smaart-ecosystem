@@ -10,6 +10,8 @@ interface AtletaRow {
   nome: string
   graduacao: string | null
   academia?: { nome: string } | null
+  status: string | null
+  validade: string | null
 }
 
 export default function AtletasFedaracaoPage() {
@@ -49,7 +51,7 @@ export default function AtletasFedaracaoPage() {
         if (role.federacao_id === LRSJ_FED_ID) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, nome_completo, graduacao, academia_id', { count: 'exact' });
+            .select('id, nome_completo, graduacao, academia_id, status_membro, data_expiracao', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -59,10 +61,14 @@ export default function AtletasFedaracaoPage() {
           const res = await query.order('nome_completo', { ascending: true }).range(start, end);
           mapped = (res.data || []).map((item: any) => ({
             id: item.id,
-            nome: item.nome,
+            nome: item.nome_completo,
             graduacao: item.graduacao,
             academia: item.academia_id ? { nome: item.academia_id } : null,
+            status: item.status_membro || '—',
+            validade: item.data_expiracao || '—',
           }));
+            const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
+            const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
           count = res.count;
         } else {
           query = supabase
@@ -162,17 +168,31 @@ export default function AtletasFedaracaoPage() {
               <table className="w-full">
                 <thead className="bg-white/5 border-b border-white/10">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white">Nome</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white">Academia</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white">Graduacao</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('nome');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Nome</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('academia');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Academia</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('graduacao');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Graduação</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Status</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('validade');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Validade</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {atletas.map((atleta) => (
+                  {[...atletas].sort((a, b) => {
+                    const valA = a[sortBy] || '';
+                    const valB = b[sortBy] || '';
+                    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+                    return 0;
+                  }).map((atleta) => (
                     <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4 text-gray-300">{atleta.nome}</td>
+                      <td className="px-6 py-4 text-gray-300">
+                        <a href={`/portal/federacao/atletas/${atleta.id}`} className="underline hover:text-blue-400 transition-colors">
+                          {atleta.nome}
+                        </a>
+                      </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.academia?.nome || '—'}</td>
                       <td className="px-6 py-4 text-gray-300">{atleta.graduacao || '—'}</td>
+                      <td className="px-6 py-4 text-gray-300">{atleta.status}</td>
+                      <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
                     </tr>
                   ))}
                 </tbody>
