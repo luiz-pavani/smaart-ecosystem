@@ -1,13 +1,9 @@
 {
-  "framework": "nextjs",
-  "git": {
-    "deploymentEnabled": true
-  },
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "rewrites": [
-    { "source": "/lp", "destination": "/landing/index.html" },
-    { "source": "/lp/(.*)", "destination": "/landing/$1" },
-    { "source": "/", "destination": "/index.html" }
+  "version": 2,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }
