@@ -56,8 +56,10 @@ export default function EditarAtletaForm({
   academiasDisponiveis,
   role,
 }: EditarAtletaFormProps) {
-  const listaAcademias = academiasDisponiveis || academias || []
-  const router = useRouter()
+    const listaAcademias = academiasDisponiveis || academias || []
+    const router = useRouter()
+    // Track if form was submitted
+    const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [graduacaoValue, setGraduacaoValue] = useState(atleta.graduacao || '')
@@ -93,7 +95,9 @@ export default function EditarAtletaForm({
         throw new Error('Erro ao atualizar atleta')
       }
 
-      router.push('/portal/atleta/perfil')
+      setSubmitted(true)
+      // Use browser history to go back
+      router.back()
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')

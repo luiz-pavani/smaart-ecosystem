@@ -9,8 +9,8 @@ CREATE TABLE atletas (
   academia_id UUID NOT NULL REFERENCES academias(id) ON DELETE RESTRICT,
   
   -- Personal Information
-  nome_completo VARCHAR(255) NOT NULL,
-  cpf VARCHAR(14) UNIQUE NOT NULL,
+  nome_completo VARCHAR(255),
+  cpf VARCHAR(14) UNIQUE,
   rg VARCHAR(20),
   data_nascimento DATE NOT NULL,
   genero VARCHAR(20), -- Masculino/Feminino/Outro

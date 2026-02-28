@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/lp", "destination": "/landing/index.html" },
+    { "source": "/lp/(.*)", "destination": "/landing/$1" },
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/judo", "destination": "/index.html" },
+    { "source": "/judo/(.*)", "destination": "/$1" }
+  ]
+}

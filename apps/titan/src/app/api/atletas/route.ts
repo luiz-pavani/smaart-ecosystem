@@ -52,6 +52,9 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
     }
 
+    // Define fedInitials before usage
+    const fedInitials = atletaData.federacao_id === 'LRSJ_UUID' ? 'lrsj' : 'other';
+
     // Upload files to Storage
     let fotoPerfilUrl = null
     let fotoDocumentoUrl = null
@@ -84,7 +87,7 @@ export async function POST(request: NextRequest) {
       const extension = fotoPerfil.name.split('.').pop()
       fotoPerfilUrl = await uploadFile(
         fotoPerfil,
-        'atletas',
+        `user_fed_${fedInitials}`,
         `${atletaData.federacao_id}/${cpfClean}/perfil_${timestamp}.${extension}`
       )
     }
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
       const extension = fotoDocumento.name.split('.').pop()
       fotoDocumentoUrl = await uploadFile(
         fotoDocumento,
-        'atletas',
+        `user_fed_${fedInitials}`,
         `${atletaData.federacao_id}/${cpfClean}/documento_${timestamp}.${extension}`
       )
     }
@@ -102,7 +105,7 @@ export async function POST(request: NextRequest) {
       const extension = certificadoArbitragem.name.split('.').pop()
       certificadoArbitragemUrl = await uploadFile(
         certificadoArbitragem,
-        'atletas',
+        `user_fed_${fedInitials}`,
         `${atletaData.federacao_id}/${cpfClean}/cert_arbitragem_${timestamp}.${extension}`
       )
     }
@@ -111,37 +114,43 @@ export async function POST(request: NextRequest) {
       const extension = certificadoDan.name.split('.').pop()
       certificadoDanUrl = await uploadFile(
         certificadoDan,
-        'atletas',
+        `user_fed_${fedInitials}`,
         `${atletaData.federacao_id}/${cpfClean}/cert_dan_${timestamp}.${extension}`
       )
     }
 
-    // Insert athlete record
-    const { data: atleta, error: insertError } = await supabase
-      .from('atletas')
-      .insert({
-        ...atletaData,
-        foto_perfil_url: fotoPerfilUrl,
-        foto_documento_url: fotoDocumentoUrl,
-        certificado_arbitragem_url: certificadoArbitragemUrl,
-        certificado_dan_url: certificadoDanUrl,
-      })
-      .select()
-      .single()
+    // Multi-channel approval logic
+    let registrationType = 'auto_cadastro';
+    if (atletaData.federacao_id) registrationType = 'federacao';
+    else if (atletaData.academia_id) registrationType = 'academia';
 
-    if (insertError) {
-      console.error('Insert error:', insertError)
+    // Prepare data for approval
+    const approvalData = {
+      ...atletaData,
+      foto_perfil_url: fotoPerfilUrl,
+      foto_documento_url: fotoDocumentoUrl,
+      certificado_arbitragem_url: certificadoArbitragemUrl,
+      certificado_dan_url: certificadoDanUrl,
+      federacao_initials: atletaData.federacao_id === 'LRSJ_UUID' ? 'lrsj' : 'other',
+      academia_initials: atletaData.academia_id || '',
+    };
+
+    // Call approval logic
+    const { approveRegistration } = await import('../../../lib/registrations/approval-logic');
+    const { success, error } = await approveRegistration({ registrationType, data: approvalData });
+
+    if (!success) {
+      console.error('Insert error:', error);
       return NextResponse.json(
-        { error: insertError.message },
+        { error: error?.message || 'Erro ao aprovar registro' },
         { status: 400 }
-      )
+      );
     }
 
     return NextResponse.json({
       success: true,
-      atleta,
-      numero_registro: atleta.numero_registro,
-    })
+      atleta: approvalData,
+    });
   } catch (error) {
     console.error('Error creating atleta:', error)
     return NextResponse.json(
@@ -163,15 +172,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    // Determine federation initials for GET
+    const fedInitials = 'lrsj'; // Example, replace with actual logic
+    const tableName = `user_fed_${fedInitials}`;
     const { data: atletas, error } = await supabase
-      .from('atletas')
-      .select(`
-        *,
-        academia:academias!atletas_academia_id_fkey (
-          id,
-          nome
-        )
-      `)
+      .from(tableName)
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {

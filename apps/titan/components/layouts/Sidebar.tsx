@@ -32,6 +32,22 @@ export default function Sidebar({ user }: SidebarProps) {
     router.refresh()
   }
 
+  // Fetch vw_roles_info for user
+  // Example: roles = [{ role: 'master_access' }, { role: 'federacao_admin', federacao_id: 'LRSJ_UUID' }, ...]
+  // Replace with actual fetch logic
+  type Role = { role: string; federacao_id?: string; academia_id?: string };
+  const roles: Role[] = user?.roles || [];
+  const hasMasterAccess = roles.some((r: Role) => r.role === 'master_access');
+  const hasFederacao = roles.some((r: Role) => r.role.startsWith('federacao'));
+  const hasAcademia = roles.some((r: Role) => r.role.startsWith('academia'));
+
+  const filteredNavigation = navigation.filter(item => {
+    if (item.name === 'Federações') return hasFederacao || hasMasterAccess;
+    if (item.name === 'Academias') return hasAcademia || hasMasterAccess;
+    if (item.name === 'Atletas') return hasMasterAccess;
+    return true;
+  });
+
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col h-screen sticky top-0">
       {/* Logo */}
@@ -52,8 +68,8 @@ export default function Sidebar({ user }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => {
-          const Icon = item.icon
+        {filteredNavigation.map((item) => {
+          const Icon = item.icon;
           return (
             <Link
               key={item.name}
@@ -63,7 +79,7 @@ export default function Sidebar({ user }: SidebarProps) {
               <Icon className="w-5 h-5" />
               <span className="font-medium">{item.name}</span>
             </Link>
-          )
+          );
         })}
       </nav>
 
@@ -91,5 +107,5 @@ export default function Sidebar({ user }: SidebarProps) {
         </button>
       </div>
     </aside>
-  )
+  );
 }

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { DAN_NIVEIS, GRADUACOES_DB } from '@/lib/utils/graduacao'
 
-interface NovoAtletaFormSimpleProps {
+export interface NovoAtletaFormSimpleProps {
   academiasDisponiveis: Array<{ id: string; nome: string }>
   federacaoId: string
   academiaId?: string
@@ -46,7 +46,9 @@ export default function NovoAtletaFormSimple({
       })
       uploadData.append('federacao_id', federacaoId)
 
-      const response = await fetch('/api/atletas', {
+      // Determine federation initials
+      const fedInitials = federacaoId === 'LRSJ_UUID' ? 'lrsj' : 'other'; // Replace logic as needed
+      const response = await fetch(`/api/user_fed_${fedInitials}`, {
         method: 'POST',
         body: uploadData,
       })
@@ -58,7 +60,7 @@ export default function NovoAtletaFormSimple({
 
       const result = await response.json()
       alert(`Atleta cadastrado com sucesso!\nNúmero de registro: ${result.numero_registro}`)
-      router.push('/atletas')
+      router.push(`/user_fed_${fedInitials}`)
       router.refresh()
     } catch (error) {
       console.error('Erro:', error)

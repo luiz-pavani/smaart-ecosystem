@@ -43,31 +43,49 @@ export default function AtletasFedaracaoPage() {
         const start = page * pageSize
         const end = start + pageSize - 1
 
-        let query = supabase
-          .from('atletas')
-          .select('id, nome, graduacao, academia:academias(nome)', { count: 'exact' })
-          .eq('federacao_id', role.federacao_id)
-
-        if (search) {
-          query = query.ilike('nome', `%${search}%`)
+        let query, mapped, count;
+        // LRSJ federation UUID (actual value)
+        const LRSJ_FED_ID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d';
+        if (role.federacao_id === LRSJ_FED_ID) {
+          query = supabase
+            .from('user_fed_lrsj')
+            .select('id, nome_completo, graduacao, academia_id', { count: 'exact' });
+          if (search) {
+            query = query.ilike('nome_completo', `%${search}%`);
+          }
+          if (filterGraduacao) {
+            query = query.eq('graduacao', filterGraduacao);
+          }
+          const res = await query.order('nome_completo', { ascending: true }).range(start, end);
+          mapped = (res.data || []).map((item: any) => ({
+            id: item.id,
+            nome: item.nome,
+            graduacao: item.graduacao,
+            academia: item.academia_id ? { nome: item.academia_id } : null,
+          }));
+          count = res.count;
+        } else {
+          query = supabase
+            .from('atletas')
+            .select('id, nome, graduacao, academia:academias(nome)', { count: 'exact' })
+            .eq('federacao_id', role.federacao_id);
+          if (search) {
+            query = query.ilike('nome', `%${search}%`);
+          }
+          if (filterGraduacao) {
+            query = query.eq('graduacao', filterGraduacao);
+          }
+          const res = await query.order('nome', { ascending: true }).range(start, end);
+          mapped = (res.data || []).map((item: any) => ({
+            id: item.id,
+            nome: item.nome_completo,
+            graduacao: item.graduacao,
+            academia: item.academia_id ? { nome: '—' } : null,
+          }));
+          count = res.count;
         }
-        if (filterGraduacao) {
-          query = query.eq('graduacao', filterGraduacao)
-        }
-
-        const { data, count } = await query
-          .order('nome', { ascending: true })
-          .range(start, end)
-
-        const mapped = (data || []).map((item: any) => ({
-          id: item.id,
-          nome: item.nome,
-          graduacao: item.graduacao,
-          academia: Array.isArray(item.academia) ? item.academia[0] || null : item.academia || null,
-        }))
-
-        setAtletas(mapped)
-        setTotalCount(count || 0)
+        setAtletas(mapped);
+        setTotalCount(count || 0);
       } finally {
         setLoading(false)
       }

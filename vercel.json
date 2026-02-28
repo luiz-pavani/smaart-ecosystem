@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "apps/titan/package.json", "use": "@vercel/next" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "apps/titan/$1" }
+  ]
+}
