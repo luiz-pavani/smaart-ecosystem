@@ -84,9 +84,11 @@ export default function AtletasFedaracaoPage() {
           const res = await query.order('nome', { ascending: true }).range(start, end);
           mapped = (res.data || []).map((item: any) => ({
             id: item.id,
-            nome: item.nome_completo,
-            graduacao: item.graduacao,
+            nome: item.nome_completo ?? '',
+            graduacao: item.graduacao ?? '',
             academia: item.academia_id ? { nome: '—' } : null,
+            status: item.status_membro ?? '—',
+            validade: item.data_expiracao ?? '—',
           }));
           count = res.count;
         }
