@@ -53,7 +53,7 @@ export default function AtletasFedaracaoPage() {
         if (role.federacao_id === LRSJ_FED_ID) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, nome_completo, graduacao, academia_id, status_membro, data_expiracao', { count: 'exact' });
+            .select('id, nome_completo, graduacao, academia_id, status_membro, status_plano, data_expiracao', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -66,7 +66,7 @@ export default function AtletasFedaracaoPage() {
             nome: item.nome_completo ?? '',
             graduacao: item.graduacao ?? '',
             academia: item.academia_id ? { nome: item.academia_id } : null,
-            status: item.status_membro ?? '—',
+            status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
           }));
             // ...existing code...
@@ -88,7 +88,7 @@ export default function AtletasFedaracaoPage() {
             nome: item.nome_completo ?? '',
             graduacao: item.graduacao ?? '',
             academia: item.academia_id ? { nome: '—' } : null,
-            status: item.status_membro ?? '—',
+            status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
           }));
           count = res.count;
@@ -195,6 +195,16 @@ export default function AtletasFedaracaoPage() {
                       <td className="px-6 py-4 text-gray-300">{atleta.academia?.nome || '—'}</td>
                       <td className="px-6 py-4 text-gray-300">{atleta.graduacao || '—'}</td>
                       <td className="px-6 py-4 text-gray-300">{atleta.status}</td>
+                                       <td className="px-6 py-4">
+                                         {atleta.status === 'Active' ? (
+                                           <span title="Ativo" className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2 align-middle"></span>
+                                         ) : atleta.status === 'Expired' ? (
+                                           <span title="Expirado" className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2 align-middle"></span>
+                                         ) : (
+                                           <span title={atleta.status || 'Indefinido'} className="inline-block w-3 h-3 rounded-full bg-gray-400 mr-2 align-middle"></span>
+                                         )}
+                                         <span className="text-gray-300 align-middle">{atleta.status}</span>
+                                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
                     </tr>
                   ))}
