@@ -67,7 +67,7 @@ export default function AtletaEditPage({ params }: { params: { id: string } }) {
             <label className="text-gray-400 mb-2 font-medium">{key}</label>
             <input
               name={key}
-              value={value ?? ""}
+              value={String(value ?? "")}
               onChange={handleChange}
               className="bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
             />
