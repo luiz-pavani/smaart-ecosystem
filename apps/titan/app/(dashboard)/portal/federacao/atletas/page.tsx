@@ -195,18 +195,17 @@ export default function AtletasFedaracaoPage() {
                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.academia?.nome || '—'}</td>
                       <td className="px-6 py-4 text-gray-300">{atleta.graduacao || '—'}</td>
-                      <td className="px-6 py-4 text-gray-300">{atleta.status}</td>
-                                       <td className="px-6 py-4">
-                                         {atleta.status === 'Active' ? (
-                                           <span title="Ativo" className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2 align-middle"></span>
-                                         ) : atleta.status === 'Expired' ? (
-                                           <span title="Expirado" className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2 align-middle"></span>
-                                         ) : (
-                                           <span title={atleta.status || 'Indefinido'} className="inline-block w-3 h-3 rounded-full bg-gray-400 mr-2 align-middle"></span>
-                                         )}
-                                         <span className="text-gray-300 align-middle">{atleta.status}</span>
-                                       </td>
-                                       <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
+                      <td className="px-6 py-4">
+                        {atleta.status === 'Active' ? (
+                          <span title="Ativo" className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2 align-middle"></span>
+                        ) : atleta.status === 'Expired' ? (
+                          <span title="Expirado" className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2 align-middle"></span>
+                        ) : (
+                          <span title={atleta.status || 'Indefinido'} className="inline-block w-3 h-3 rounded-full bg-gray-400 mr-2 align-middle"></span>
+                        )}
+                        <span className="text-gray-300 align-middle">{atleta.status}</span>
+                      </td>
+                      <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
                     </tr>
                   ))}
                 </tbody>
