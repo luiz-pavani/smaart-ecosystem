@@ -23,6 +23,8 @@ export default function AtletasFedaracaoPage() {
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
   const [filterGraduacao, setFilterGraduacao] = useState('')
+  const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
+  const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
   const pageSize = 20
 
   useEffect(() => {
@@ -67,8 +69,7 @@ export default function AtletasFedaracaoPage() {
             status: item.status_membro ?? '—',
             validade: item.data_expiracao ?? '—',
           }));
-            const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
-            const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
+            // ...existing code...
           count = res.count;
         } else {
           query = supabase
