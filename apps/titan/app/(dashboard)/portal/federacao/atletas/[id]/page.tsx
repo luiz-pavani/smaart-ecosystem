@@ -19,6 +19,7 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
       const isUUID = uuidRegex.test(params.id);
       
       let data = null;
+      let error = null;
       
       if (isUUID) {
         // Se parece UUID, busca por id
@@ -28,14 +29,24 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
           .eq("id", params.id)
           .maybeSingle();
         data = result.data;
+        error = result.error;
       } else {
-        // Senão, busca por numero_membro
-        const result = await supabase
+        // Senão, busca por numero_membro (tenta como número e como texto)
+        const numeroAsInt = parseInt(params.id, 10);
+        let result = await supabase
           .from("user_fed_lrsj")
           .select("*")
-          .eq("numero_membro", params.id)
+          .eq("numero_membro", isNaN(numeroAsInt) ? params.id : numeroAsInt)
           .maybeSingle();
         data = result.data;
+        error = result.error;
+      }
+      
+      if (error) {
+        console.error("Erro ao buscar atleta:", error);
+      }
+      if (!data) {
+        console.log("Atleta não encontrado para ID/numero_membro:", params.id);
       }
       
       setAtleta(data);
