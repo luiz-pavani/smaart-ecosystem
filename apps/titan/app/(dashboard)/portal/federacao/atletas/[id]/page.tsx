@@ -12,47 +12,55 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
-      
-      // Regex para detectar UUID
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const isUUID = uuidRegex.test(params.id);
-      
-      let data = null;
-      let error = null;
-      
-      if (isUUID) {
-        // Se parece UUID, busca por id
-        const result = await supabase
-          .from("user_fed_lrsj")
-          .select("*")
-          .eq("id", params.id)
-          .maybeSingle();
-        data = result.data;
-        error = result.error;
-      } else {
-        // Senão, busca por numero_membro (sempre como string)
-        const result = await supabase
-          .from("user_fed_lrsj")
-          .select("*")
-          .eq("numero_membro", params.id.toString())
-          .maybeSingle();
-        data = result.data;
-        error = result.error;
+      try {
+        setLoading(true);
+        
+        // Regex para detectar UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const isUUID = uuidRegex.test(params.id);
+        
+        let data = null;
+        let error = null;
+        
+        if (isUUID) {
+          // Se parece UUID, busca por id
+          const result = await supabase
+            .from("user_fed_lrsj")
+            .select("*")
+            .eq("id", params.id)
+            .maybeSingle();
+          data = result.data;
+          error = result.error;
+        } else {
+          // Senão, busca por numero_membro (sempre como string)
+          const result = await supabase
+            .from("user_fed_lrsj")
+            .select("*")
+            .eq("numero_membro", String(params.id))
+            .maybeSingle();
+          data = result.data;
+          error = result.error;
+        }
+        
+        if (error) {
+          console.error("Erro ao buscar atleta:", error);
+        }
+        if (!data) {
+          console.log("Atleta não encontrado para ID/numero_membro:", params.id);
+        } else {
+          console.log("Atleta carregado:", data.nome_completo);
+        }
+        
+        setAtleta(data);
+      } catch (err) {
+        console.error("Erro inesperado ao carregar atleta:", err);
+        setAtleta(null);
+      } finally {
+        setLoading(false);
       }
-      
-      if (error) {
-        console.error("Erro ao buscar atleta:", error);
-      }
-      if (!data) {
-        console.log("Atleta não encontrado para ID/numero_membro:", params.id);
-      }
-      
-      setAtleta(data);
-      setLoading(false);
     };
     load();
-  }, [params.id]);
+  }, [params.id, supabase]);
 
   if (loading) {
     return (
