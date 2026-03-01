@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Loader2, User, Mail, Phone, MapPin, Calendar, Award, Building2, FileText, Image as ImageIcon, CreditCard, CheckCircle } from "lucide-react";
 
-export default function AtletaDetailPage({ params }: { params: { id: string } }) {
+export default function AtletaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
@@ -15,9 +15,12 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
       try {
         setLoading(true);
         
+        // Await params in Next.js 14+
+        const { id } = await params;
+        
         // Regex para detectar UUID
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const isUUID = uuidRegex.test(params.id);
+        const isUUID = uuidRegex.test(id);
         
         let data = null;
         let error = null;
@@ -27,7 +30,7 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
           const result = await supabase
             .from("user_fed_lrsj")
             .select("*")
-            .eq("id", params.id)
+            .eq("id", id)
             .maybeSingle();
           data = result.data;
           error = result.error;
@@ -36,7 +39,7 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
           const result = await supabase
             .from("user_fed_lrsj")
             .select("*")
-            .eq("numero_membro", String(params.id))
+            .eq("numero_membro", String(id))
             .maybeSingle();
           data = result.data;
           error = result.error;
@@ -46,7 +49,7 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
           console.error("Erro ao buscar atleta:", error);
         }
         if (!data) {
-          console.log("Atleta não encontrado para ID/numero_membro:", params.id);
+          console.log("Atleta não encontrado para ID/numero_membro:", id);
         } else {
           console.log("Atleta carregado:", data.nome_completo);
         }
@@ -60,7 +63,7 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
       }
     };
     load();
-  }, [params.id, supabase]);
+  }, [supabase]);
 
   if (loading) {
     return (
