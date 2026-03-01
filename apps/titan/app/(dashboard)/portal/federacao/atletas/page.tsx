@@ -9,6 +9,7 @@ interface KyuDanOption {
   id: number
   cor_faixa: string
   kyu_dan: string
+  icones?: string
 }
 
 interface AtletaRow {
@@ -16,6 +17,8 @@ interface AtletaRow {
   numero_membro?: string
   nome: string
   graduacao: string | null
+  kyuDanIcones?: string | null
+  kyuDanNome?: string | null
   academia?: { nome: string } | null
   status: string | null
   validade: string | null
@@ -44,7 +47,7 @@ export default function AtletasFedaracaoPage() {
     const loadGraduacoes = async () => {
       const { data } = await supabase
         .from('kyu_dan')
-        .select('id, cor_faixa, kyu_dan')
+        .select('id, cor_faixa, kyu_dan, icones')
         .eq('ativo', true)
         .order('ordem', { ascending: true })
 
@@ -80,7 +83,7 @@ export default function AtletasFedaracaoPage() {
         if (role.federacao_id === LRSJ_FED_ID) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, numero_membro, nome_completo, graduacao, academias, status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)', { count: 'exact' });
+            .select('id, numero_membro, nome_completo, graduacao, academias, status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -103,6 +106,8 @@ export default function AtletasFedaracaoPage() {
             numero_membro: item.numero_membro,
             nome: item.nome_completo ?? '',
             graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
+            kyuDanIcones: item.kyu_dan?.icones || null,
+            kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
             academia: item.academias ? { nome: item.academias } : null,
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
@@ -112,7 +117,7 @@ export default function AtletasFedaracaoPage() {
         } else {
           query = supabase
             .from('atletas')
-            .select('id, nome, graduacao, academia:academias(nome), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)', { count: 'exact' })
+            .select('id, nome, graduacao, academia:academias(nome), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
             .eq('federacao_id', role.federacao_id);
           if (search) {
             query = query.ilike('nome', `%${search}%`);
@@ -125,6 +130,8 @@ export default function AtletasFedaracaoPage() {
             id: item.id,
             nome: item.nome_completo ?? '',
             graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
+            kyuDanIcones: item.kyu_dan?.icones || null,
+            kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
             academia: item.academia_id ? { nome: '—' } : null,
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
@@ -186,7 +193,7 @@ export default function AtletasFedaracaoPage() {
             nivel_arbitragem, academias, status_membro, data_adesao, plano_tipo, status_plano, 
             data_expiracao, url_foto, url_documento_id, url_certificado_dan, tamanho_patch,
             lote_id, observacoes, dados_validados, validado_em, validado_por, updated_at,
-            kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)
+            kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)
           `)
         
         if (search) query = query.ilike('nome_completo', `%${search}%`)
@@ -407,9 +414,9 @@ export default function AtletasFedaracaoPage() {
                   <tr>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('nome');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Nome</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('academia');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Academia</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('graduacao');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Graduação</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Situação</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white">Validado</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('graduacao');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Graduação">🥋</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Situação">📊</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold text-white" title="Validado">✓</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('validade');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>VENCIMENTO</th>
                   </tr>
                 </thead>
@@ -428,28 +435,25 @@ export default function AtletasFedaracaoPage() {
                         </a>
                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.academia?.nome || '—'}</td>
-                      <td className="px-6 py-4 text-gray-300">{atleta.graduacao || '—'}</td>
-                      <td className="px-6 py-4">
-                        {atleta.status === 'Active' ? (
-                          <span title="Ativo" className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2 align-middle"></span>
-                        ) : atleta.status === 'Expired' ? (
-                          <span title="Expirado" className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2 align-middle"></span>
-                        ) : (
-                          <span title={atleta.status || 'Indefinido'} className="inline-block w-3 h-3 rounded-full bg-gray-400 mr-2 align-middle"></span>
-                        )}
-                        <span className="text-gray-300 align-middle">{atleta.status}</span>
+                      <td className="px-3 py-4 text-center" title={atleta.kyuDanNome || atleta.graduacao || 'Sem graduação'}>
+                        <span className="text-2xl">
+                          {atleta.kyuDanNome?.includes('NÃO ESPECIFICADA') ? '❌' : (atleta.kyuDanIcones || (atleta.graduacao ? atleta.graduacao : '✖️'))}
+                        </span>
                       </td>
-                      <td className="px-6 py-4">
-                        {atleta.dadosValidados ? (
-                          <span className="inline-flex items-center gap-2 text-green-400">
-                            <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
-                            Sim
-                          </span>
+                      <td className="px-3 py-4 text-center">
+                        {atleta.status === 'Active' ? (
+                          <span title="Ativo" className="inline-block w-4 h-4 rounded-full bg-green-500"></span>
+                        ) : atleta.status === 'Expired' ? (
+                          <span title="Expirado" className="inline-block w-4 h-4 rounded-full bg-red-500"></span>
                         ) : (
-                          <span className="inline-flex items-center gap-2 text-yellow-400">
-                            <span className="inline-block w-2 h-2 rounded-full bg-yellow-500"></span>
-                            Não
-                          </span>
+                          <span title={atleta.status || 'Indefinido'} className="inline-block w-4 h-4 rounded-full bg-gray-400"></span>
+                        )}
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        {atleta.dadosValidados ? (
+                          <span title="Validado" className="inline-block w-4 h-4 rounded-full bg-green-500"></span>
+                        ) : (
+                          <span title="Não validado" className="inline-block w-4 h-4 rounded-full bg-yellow-500"></span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
