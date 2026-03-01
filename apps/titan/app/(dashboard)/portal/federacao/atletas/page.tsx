@@ -13,6 +13,7 @@ interface AtletaRow {
   academia?: { nome: string } | null
   status: string | null
   validade: string | null
+  dadosValidados?: boolean
 }
 
 export default function AtletasFedaracaoPage() {
@@ -24,9 +25,12 @@ export default function AtletasFedaracaoPage() {
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
   const [filterGraduacao, setFilterGraduacao] = useState('')
+  const [filterAcademia, setFilterAcademia] = useState('')
+  const [filterSituacao, setFilterSituacao] = useState('')
+  const [filterValidado, setFilterValidado] = useState('')
   const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
   const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
-  const pageSize = 20
+  const pageSize = 100
 
   useEffect(() => {
     const load = async () => {
@@ -54,12 +58,22 @@ export default function AtletasFedaracaoPage() {
         if (role.federacao_id === LRSJ_FED_ID) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, numero_membro, nome_completo, graduacao, academias, status_membro, status_plano, data_expiracao', { count: 'exact' });
+            .select('id, numero_membro, nome_completo, graduacao, academias, status_plano, data_expiracao, dados_validados', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
           if (filterGraduacao) {
             query = query.eq('graduacao', filterGraduacao);
+          }
+          if (filterAcademia) {
+            query = query.ilike('academias', `%${filterAcademia}%`);
+          }
+          if (filterSituacao) {
+            query = query.eq('status_plano', filterSituacao);
+          }
+          if (filterValidado) {
+            const isValidado = filterValidado === 'sim';
+            query = query.eq('dados_validados', isValidado);
           }
           const res = await query.order('nome_completo', { ascending: true }).range(start, end);
           mapped = (res.data || []).map((item: any) => ({
@@ -70,8 +84,8 @@ export default function AtletasFedaracaoPage() {
             academia: item.academias ? { nome: item.academias } : null,
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
+            dadosValidados: item.dados_validados ?? false,
           }));
-            // ...existing code...
           count = res.count;
         } else {
           query = supabase
@@ -92,6 +106,7 @@ export default function AtletasFedaracaoPage() {
             academia: item.academia_id ? { nome: '—' } : null,
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
+            dadosValidados: false,
           }));
           count = res.count;
         }
@@ -103,7 +118,7 @@ export default function AtletasFedaracaoPage() {
     }
 
     load()
-  }, [supabase, page, search, filterGraduacao])
+  }, [supabase, page, search, filterGraduacao, filterAcademia, filterSituacao, filterValidado])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -124,7 +139,7 @@ export default function AtletasFedaracaoPage() {
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-12">
         {/* Toolbar */}
-        <div className="flex gap-3 mb-8">
+        <div className="mb-8 space-y-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -135,22 +150,58 @@ export default function AtletasFedaracaoPage() {
               className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
-          <select
-            value={filterGraduacao}
-            onChange={(e) => { setFilterGraduacao(e.target.value); setPage(0); }}
-            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
-          >
-            <option value="">Todas Graduações</option>
-            <option value="Branca">Branca</option>
-            <option value="Cinza">Cinza</option>
-            <option value="Azul">Azul</option>
-            <option value="Amarela">Amarela</option>
-            <option value="Laranja">Laranja</option>
-            <option value="Verde">Verde</option>
-            <option value="Roxa">Roxa</option>
-            <option value="Marrom">Marrom</option>
-            <option value="Preta">Preta</option>
-          </select>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <select
+              value={filterAcademia}
+              onChange={(e) => { setFilterAcademia(e.target.value); setPage(0); }}
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+            >
+              <option value="">Todas Academias</option>
+              <option value="Santa Maria">Santa Maria</option>
+              <option value="CaJu">CaJu</option>
+              <option value="Castelo Branco">Castelo Branco</option>
+              <option value="OSL">OSL</option>
+            </select>
+
+            <select
+              value={filterGraduacao}
+              onChange={(e) => { setFilterGraduacao(e.target.value); setPage(0); }}
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+            >
+              <option value="">Todas Graduações</option>
+              <option value="Branca">Branca</option>
+              <option value="Cinza">Cinza</option>
+              <option value="Azul">Azul</option>
+              <option value="Amarela">Amarela</option>
+              <option value="Laranja">Laranja</option>
+              <option value="Verde">Verde</option>
+              <option value="Roxa">Roxa</option>
+              <option value="Marrom">Marrom</option>
+              <option value="Preta">Preta</option>
+            </select>
+
+            <select
+              value={filterSituacao}
+              onChange={(e) => { setFilterSituacao(e.target.value); setPage(0); }}
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+            >
+              <option value="">Todas Situações</option>
+              <option value="Active">Active</option>
+              <option value="Expired">Expired</option>
+              <option value="Pending">Pending</option>
+            </select>
+
+            <select
+              value={filterValidado}
+              onChange={(e) => { setFilterValidado(e.target.value); setPage(0); }}
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+            >
+              <option value="">Todos Registros</option>
+              <option value="sim">Validado</option>
+              <option value="nao">Não Validado</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (
@@ -176,8 +227,8 @@ export default function AtletasFedaracaoPage() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('nome');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Nome</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('academia');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Academia</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('graduacao');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Graduação</th>
-                    {/* STATUS column removed */}
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Situação</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white">Validado</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('validade');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>VENCIMENTO</th>
                   </tr>
                 </thead>
@@ -206,6 +257,19 @@ export default function AtletasFedaracaoPage() {
                           <span title={atleta.status || 'Indefinido'} className="inline-block w-3 h-3 rounded-full bg-gray-400 mr-2 align-middle"></span>
                         )}
                         <span className="text-gray-300 align-middle">{atleta.status}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {atleta.dadosValidados ? (
+                          <span className="inline-flex items-center gap-2 text-green-400">
+                            <span className="inline-block w-2 h-2 rounded-full bg-green-500"></span>
+                            Sim
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 text-yellow-400">
+                            <span className="inline-block w-2 h-2 rounded-full bg-yellow-500"></span>
+                            Não
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
                     </tr>
