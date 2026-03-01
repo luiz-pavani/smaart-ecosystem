@@ -117,7 +117,7 @@ export default function AtletasFedaracaoPage() {
         } else {
           query = supabase
             .from('atletas')
-            .select('id, nome, graduacao, academia:academias(nome), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
+            .select('id, nome, graduacao, academia:academias(sigla), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
             .eq('federacao_id', role.federacao_id);
           if (search) {
             query = query.ilike('nome', `%${search}%`);
@@ -132,7 +132,7 @@ export default function AtletasFedaracaoPage() {
             graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
             kyuDanIcones: item.kyu_dan?.icones || null,
             kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
-            academia: item.academia_id ? { nome: '—' } : null,
+            academia: item.academia?.sigla ? { nome: item.academia.sigla } : null,
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
             dadosValidados: false,
