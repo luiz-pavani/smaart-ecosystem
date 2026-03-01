@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Search, Filter, Loader2 } from 'lucide-react'
+import { ArrowLeft, Search, Filter, Loader2, Download, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -120,6 +120,45 @@ export default function AtletasFedaracaoPage() {
     load()
   }, [supabase, page, search, filterGraduacao, filterAcademia, filterSituacao, filterValidado])
 
+  const clearFilters = () => {
+    setSearch('')
+    setFilterGraduacao('')
+    setFilterAcademia('')
+    setFilterSituacao('')
+    setFilterValidado('')
+    setPage(0)
+  }
+
+  const downloadCSV = () => {
+    if (atletas.length === 0) {
+      alert('Nenhum atleta para exportar')
+      return
+    }
+
+    const headers = ['Nome', 'Academia', 'Graduação', 'Situação', 'Validado', 'Vencimento']
+    const csvContent = [
+      headers.join(','),
+      ...atletas.map(atleta => [
+        `"${atleta.nome.replace(/"/g, '""')}"`,
+        `"${(atleta.academia?.nome || '—').replace(/"/g, '""')}"`,
+        `"${(atleta.graduacao || '—').replace(/"/g, '""')}"`,
+        `"${(atleta.status || '—').replace(/"/g, '""')}"`,
+        atleta.dadosValidados ? 'Sim' : 'Não',
+        `"${(atleta.validade || '—').replace(/"/g, '""')}"`
+      ].join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `atletas_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Header */}
@@ -201,6 +240,24 @@ export default function AtletasFedaracaoPage() {
               <option value="sim">Validado</option>
               <option value="nao">Não Validado</option>
             </select>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-500/30 hover:border-red-500/50 rounded-lg text-red-400 hover:text-red-300 transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Limpar Filtros
+            </button>
+            <button
+              onClick={downloadCSV}
+              disabled={atletas.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 hover:border-green-500/50 rounded-lg text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-4 h-4" />
+              Baixar CSV
+            </button>
           </div>
         </div>
 
