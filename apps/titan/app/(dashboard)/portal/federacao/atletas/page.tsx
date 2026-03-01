@@ -83,7 +83,7 @@ export default function AtletasFedaracaoPage() {
         if (role.federacao_id === LRSJ_FED_ID) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, numero_membro, nome_completo, graduacao, academias, status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
+            .select('id, numero_membro, nome_completo, graduacao, academias, academia_id, academia:academia_id(sigla), status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -108,7 +108,7 @@ export default function AtletasFedaracaoPage() {
             graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
             kyuDanIcones: item.kyu_dan?.icones || null,
             kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
-            academia: item.academias ? { nome: item.academias } : null,
+            academia: item.academia?.sigla ? { nome: item.academia.sigla } : (item.academias ? { nome: item.academias } : null),
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
             dadosValidados: item.dados_validados ?? false,
@@ -190,7 +190,7 @@ export default function AtletasFedaracaoPage() {
           .select(`
             id, numero_membro, nome_completo, nome_patch, genero, data_nascimento, idade, 
             nacionalidade, email, telefone, cidade, estado, endereco_residencia, graduacao, dan, 
-            nivel_arbitragem, academias, status_membro, data_adesao, plano_tipo, status_plano, 
+            nivel_arbitragem, academias, academia_id, academia:academia_id(sigla), status_membro, data_adesao, plano_tipo, status_plano, 
             data_expiracao, url_foto, url_documento_id, url_certificado_dan, tamanho_patch,
             lote_id, observacoes, dados_validados, validado_em, validado_por, updated_at,
             kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)
