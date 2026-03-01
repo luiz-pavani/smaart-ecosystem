@@ -184,7 +184,11 @@ BEGIN
     CREATE INDEX IF NOT EXISTS idx_user_fed_lrsj_kyu_dan_id ON public.user_fed_lrsj (kyu_dan_id);
 
     UPDATE public.user_fed_lrsj
-    SET kyu_dan_id = public.resolve_kyu_dan_id(graduacao, dan, NULL)
+    SET kyu_dan_id = public.resolve_kyu_dan_id(
+      graduacao,
+      NULLIF(regexp_replace(COALESCE(dan::TEXT, ''), '[^0-9]', '', 'g'), '')::INT,
+      NULL
+    )
     WHERE kyu_dan_id IS NULL;
 
     CREATE OR REPLACE FUNCTION public.set_user_fed_lrsj_kyu_dan_id()
@@ -192,7 +196,11 @@ BEGIN
     LANGUAGE plpgsql
     AS $fn$
     BEGIN
-      NEW.kyu_dan_id := public.resolve_kyu_dan_id(NEW.graduacao, NEW.dan, NULL);
+      NEW.kyu_dan_id := public.resolve_kyu_dan_id(
+        NEW.graduacao,
+        NULLIF(regexp_replace(COALESCE(NEW.dan::TEXT, ''), '[^0-9]', '', 'g'), '')::INT,
+        NULL
+      );
 
       IF NEW.graduacao IS NOT NULL AND trim(NEW.graduacao) <> '' AND NEW.kyu_dan_id IS NULL THEN
         RAISE EXCEPTION 'Graduação inválida: %, cadastre em public.kyu_dan antes de salvar.', NEW.graduacao;
