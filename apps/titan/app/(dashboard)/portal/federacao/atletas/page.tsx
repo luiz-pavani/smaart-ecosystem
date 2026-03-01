@@ -78,9 +78,11 @@ export default function AtletasFedaracaoPage() {
         const end = start + pageSize - 1
 
         let query, mapped, count;
-        // LRSJ federation UUID (actual value)
+        // LRSJ federation identifiers (UUID atual + legado numérico)
         const LRSJ_FED_ID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d';
-        if (role.federacao_id === LRSJ_FED_ID) {
+        const roleFederacaoId = String(role.federacao_id ?? '').trim();
+        const isLrsjFederacao = roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1';
+        if (isLrsjFederacao) {
           query = supabase
             .from('user_fed_lrsj')
             .select('id, numero_membro, nome_completo, graduacao, academias, academia_id, academia:academia_id(sigla), status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
@@ -182,8 +184,10 @@ export default function AtletasFedaracaoPage() {
 
       let query
       const LRSJ_FED_ID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d'
+      const roleFederacaoId = String(role.federacao_id ?? '').trim()
+      const isLrsjFederacao = roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1'
       
-      if (role.federacao_id === LRSJ_FED_ID) {
+      if (isLrsjFederacao) {
         // Query com todos os campos da tabela
         query = supabase
           .from('user_fed_lrsj')
