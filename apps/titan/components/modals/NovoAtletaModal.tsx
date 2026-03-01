@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,10 +26,33 @@ interface NovoAtletaModalProps {
   onSuccess: () => void
 }
 
+interface KyuDanOption {
+  id: number
+  cor_faixa: string
+  kyu_dan: string
+}
+
 export function NovoAtletaModal({ isOpen, onClose, academiaId, onSuccess }: NovoAtletaModalProps) {
   const [loading, setLoading] = useState(false)
+  const [graduacoes, setGraduacoes] = useState<KyuDanOption[]>([])
   const { showToast } = useToast()
   const supabase = createClient()
+
+  useEffect(() => {
+    const loadGraduacoes = async () => {
+      const { data } = await supabase
+        .from('kyu_dan')
+        .select('id, cor_faixa, kyu_dan')
+        .eq('ativo', true)
+        .order('ordem', { ascending: true })
+
+      setGraduacoes((data as KyuDanOption[]) || [])
+    }
+
+    if (isOpen) {
+      loadGraduacoes()
+    }
+  }, [isOpen, supabase])
 
   const {
     register,
@@ -136,15 +159,14 @@ export function NovoAtletaModal({ isOpen, onClose, academiaId, onSuccess }: Novo
             className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
           >
             <option value="">Selecione...</option>
-            <option value="Branca">Branca</option>
-            <option value="Cinza">Cinza</option>
-            <option value="Azul">Azul</option>
-            <option value="Amarela">Amarela</option>
-            <option value="Laranja">Laranja</option>
-            <option value="Verde">Verde</option>
-            <option value="Roxa">Roxa</option>
-            <option value="Marrom">Marrom</option>
-            <option value="Preta">Preta</option>
+            {graduacoes.map((graduacao) => (
+              <option
+                key={graduacao.id}
+                value={`${graduacao.cor_faixa}|${graduacao.kyu_dan}`}
+              >
+                {graduacao.cor_faixa} | {graduacao.kyu_dan}
+              </option>
+            ))}
           </select>
           {errors.graduacao && (
             <p className="text-red-400 text-xs mt-1">{errors.graduacao.message}</p>

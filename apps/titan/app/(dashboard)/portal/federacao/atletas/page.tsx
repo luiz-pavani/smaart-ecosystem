@@ -1,9 +1,15 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Search, Filter, Loader2, Download, X } from 'lucide-react'
+import { ArrowLeft, Search, Loader2, Download, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+
+interface KyuDanOption {
+  id: number
+  cor_faixa: string
+  kyu_dan: string
+}
 
 interface AtletaRow {
   id: string
@@ -25,6 +31,7 @@ export default function AtletasFedaracaoPage() {
   const [page, setPage] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
   const [filterGraduacao, setFilterGraduacao] = useState('')
+  const [graduacoes, setGraduacoes] = useState<KyuDanOption[]>([])
   const [filterAcademia, setFilterAcademia] = useState('')
   const [filterSituacao, setFilterSituacao] = useState('')
   const [filterValidado, setFilterValidado] = useState('')
@@ -32,6 +39,20 @@ export default function AtletasFedaracaoPage() {
   const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
   const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
   const pageSize = 100
+
+  useEffect(() => {
+    const loadGraduacoes = async () => {
+      const { data } = await supabase
+        .from('kyu_dan')
+        .select('id, cor_faixa, kyu_dan')
+        .eq('ativo', true)
+        .order('ordem', { ascending: true })
+
+      setGraduacoes((data as KyuDanOption[]) || [])
+    }
+
+    loadGraduacoes()
+  }, [supabase])
 
   useEffect(() => {
     const load = async () => {
@@ -59,12 +80,12 @@ export default function AtletasFedaracaoPage() {
         if (role.federacao_id === LRSJ_FED_ID) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, numero_membro, nome_completo, graduacao, academias, status_plano, data_expiracao, dados_validados', { count: 'exact' });
+            .select('id, numero_membro, nome_completo, graduacao, academias, status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
           if (filterGraduacao) {
-            query = query.eq('graduacao', filterGraduacao);
+            query = query.eq('kyu_dan_id', Number(filterGraduacao));
           }
           if (filterAcademia) {
             query = query.ilike('academias', `%${filterAcademia}%`);
@@ -81,7 +102,7 @@ export default function AtletasFedaracaoPage() {
             id: item.id,
             numero_membro: item.numero_membro,
             nome: item.nome_completo ?? '',
-            graduacao: item.graduacao ?? '',
+            graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
             academia: item.academias ? { nome: item.academias } : null,
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
@@ -91,19 +112,19 @@ export default function AtletasFedaracaoPage() {
         } else {
           query = supabase
             .from('atletas')
-            .select('id, nome, graduacao, academia:academias(nome)', { count: 'exact' })
+            .select('id, nome, graduacao, academia:academias(nome), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)', { count: 'exact' })
             .eq('federacao_id', role.federacao_id);
           if (search) {
             query = query.ilike('nome', `%${search}%`);
           }
           if (filterGraduacao) {
-            query = query.eq('graduacao', filterGraduacao);
+            query = query.eq('kyu_dan_id', Number(filterGraduacao));
           }
           const res = await query.order('nome', { ascending: true }).range(start, end);
           mapped = (res.data || []).map((item: any) => ({
             id: item.id,
             nome: item.nome_completo ?? '',
-            graduacao: item.graduacao ?? '',
+            graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
             academia: item.academia_id ? { nome: '—' } : null,
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
@@ -163,12 +184,13 @@ export default function AtletasFedaracaoPage() {
             id, numero_membro, nome_completo, nome_patch, genero, data_nascimento, idade, 
             nacionalidade, email, telefone, cidade, estado, endereco_residencia, graduacao, dan, 
             nivel_arbitragem, academias, status_membro, data_adesao, plano_tipo, status_plano, 
-            data_expiracao, url_foto, url_documento_id, url_certificado_dan, tamanho_patch, 
-            lote_id, observacoes, dados_validados, validado_em, validado_por, updated_at
+            data_expiracao, url_foto, url_documento_id, url_certificado_dan, tamanho_patch,
+            lote_id, observacoes, dados_validados, validado_em, validado_por, updated_at,
+            kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)
           `)
         
         if (search) query = query.ilike('nome_completo', `%${search}%`)
-        if (filterGraduacao) query = query.eq('graduacao', filterGraduacao)
+        if (filterGraduacao) query = query.eq('kyu_dan_id', Number(filterGraduacao))
         if (filterAcademia) query = query.ilike('academias', `%${filterAcademia}%`)
         if (filterSituacao) query = query.eq('status_plano', filterSituacao)
         if (filterValidado) {
@@ -192,7 +214,7 @@ export default function AtletasFedaracaoPage() {
         const headers = [
           'ID', 'Número Membro', 'Nome Completo', 'Nome Patch', 'Gênero', 'Data Nascimento', 
           'Idade', 'Nacionalidade', 'Email', 'Telefone', 'Cidade', 'Estado', 'Endereço', 
-          'Graduação', 'Dan', 'Nível Arbitragem', 'Academia', 'Status Membro', 'Data Adesão', 
+          'Graduação', 'Cor Faixa', 'Kyu/Dan', 'Dan', 'Nível Arbitragem', 'Academia', 'Status Membro', 'Data Adesão', 
           'Plano', 'Status Plano', 'Data Expiração', 'URL Foto', 'URL Documento ID', 
           'URL Certificado Dan', 'Tamanho Patch', 'Lote ID', 'Observações', 'Dados Validados', 
           'Validado Em', 'Validado Por', 'Atualizado Em'
@@ -215,6 +237,8 @@ export default function AtletasFedaracaoPage() {
             item.estado || '',
             `"${(item.endereco_residencia || '').replace(/"/g, '""')}"`,
             `"${(item.graduacao || '').replace(/"/g, '""')}"`,
+            `"${(item.kyu_dan?.cor_faixa || '').replace(/"/g, '""')}"`,
+            `"${(item.kyu_dan?.kyu_dan || '').replace(/"/g, '""')}"`,
             item.dan || '',
             `"${(item.nivel_arbitragem || '').replace(/"/g, '""')}"`,
             `"${(item.academias || '').replace(/"/g, '""')}"`,
@@ -304,15 +328,11 @@ export default function AtletasFedaracaoPage() {
               className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
             >
               <option value="">Todas Graduações</option>
-              <option value="Branca">Branca</option>
-              <option value="Cinza">Cinza</option>
-              <option value="Azul">Azul</option>
-              <option value="Amarela">Amarela</option>
-              <option value="Laranja">Laranja</option>
-              <option value="Verde">Verde</option>
-              <option value="Roxa">Roxa</option>
-              <option value="Marrom">Marrom</option>
-              <option value="Preta">Preta</option>
+              {graduacoes.map((graduacao) => (
+                <option key={graduacao.id} value={graduacao.id}>
+                  {graduacao.cor_faixa} | {graduacao.kyu_dan}
+                </option>
+              ))}
             </select>
 
             <select

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { DAN_NIVEIS, GRADUACOES_DB } from '@/lib/utils/graduacao'
+import { DAN_NIVEIS } from '@/lib/utils/graduacao'
+import { createClient } from '@/lib/supabase/client'
 
 export interface NovoAtletaFormSimpleProps {
   academiasDisponiveis: Array<{ id: string; nome: string }>
@@ -19,7 +20,9 @@ export default function NovoAtletaFormSimple({
   role,
 }: NovoAtletaFormSimpleProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [graduacoes, setGraduacoes] = useState<Array<{ id: number; cor_faixa: string; kyu_dan: string }>>([])
 
   const [formData, setFormData] = useState({
     nome_completo: '',
@@ -34,6 +37,20 @@ export default function NovoAtletaFormSimple({
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
+
+  useEffect(() => {
+    const loadGraduacoes = async () => {
+      const { data } = await supabase
+        .from('kyu_dan')
+        .select('id, cor_faixa, kyu_dan')
+        .eq('ativo', true)
+        .order('ordem', { ascending: true })
+
+      setGraduacoes((data as Array<{ id: number; cor_faixa: string; kyu_dan: string }>) || [])
+    }
+
+    loadGraduacoes()
+  }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,7 +87,7 @@ export default function NovoAtletaFormSimple({
     }
   }
 
-  const isFaixaPreta = formData.graduacao.includes('FAIXA PRETA') || formData.graduacao.includes('VERMELHA')
+  const isFaixaPreta = formData.graduacao.toLowerCase().includes('dan') || formData.graduacao.toLowerCase().includes('preta') || formData.graduacao.toLowerCase().includes('vermelha')
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -154,9 +171,9 @@ export default function NovoAtletaFormSimple({
             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Selecione a faixa...</option>
-            {GRADUACOES_DB.map((grad) => (
-              <option key={grad} value={grad}>
-                {grad}
+            {graduacoes.map((grad) => (
+              <option key={grad.id} value={`${grad.cor_faixa}|${grad.kyu_dan}`}>
+                {grad.cor_faixa} | {grad.kyu_dan}
               </option>
             ))}
           </select>
