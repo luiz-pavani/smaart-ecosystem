@@ -31,12 +31,11 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
         data = result.data;
         error = result.error;
       } else {
-        // Senão, busca por numero_membro (tenta como número e como texto)
-        const numeroAsInt = parseInt(params.id, 10);
-        let result = await supabase
+        // Senão, busca por numero_membro (sempre como string)
+        const result = await supabase
           .from("user_fed_lrsj")
           .select("*")
-          .eq("numero_membro", isNaN(numeroAsInt) ? params.id : numeroAsInt)
+          .eq("numero_membro", params.id.toString())
           .maybeSingle();
         data = result.data;
         error = result.error;
