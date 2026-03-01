@@ -13,20 +13,28 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      // Tenta buscar por id primeiro, depois por numero_membro
-      let { data, error } = await supabase
-        .from("user_fed_lrsj")
-        .select("*")
-        .eq("id", params.id)
-        .single();
       
-      // Se não encontrou por id, tenta por numero_membro
-      if (!data) {
+      // Regex para detectar UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isUUID = uuidRegex.test(params.id);
+      
+      let data = null;
+      
+      if (isUUID) {
+        // Se parece UUID, busca por id
+        const result = await supabase
+          .from("user_fed_lrsj")
+          .select("*")
+          .eq("id", params.id)
+          .maybeSingle();
+        data = result.data;
+      } else {
+        // Senão, busca por numero_membro
         const result = await supabase
           .from("user_fed_lrsj")
           .select("*")
           .eq("numero_membro", params.id)
-          .single();
+          .maybeSingle();
         data = result.data;
       }
       
