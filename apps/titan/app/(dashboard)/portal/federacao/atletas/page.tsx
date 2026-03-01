@@ -53,7 +53,7 @@ export default function AtletasFedaracaoPage() {
         if (role.federacao_id === LRSJ_FED_ID) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, nome_completo, graduacao, academias, status_membro, status_plano, data_expiracao', { count: 'exact' });
+            .select('id, numero_membro, nome_completo, graduacao, academias, status_membro, status_plano, data_expiracao', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -189,7 +189,7 @@ export default function AtletasFedaracaoPage() {
                   }).map((atleta) => (
                     <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-gray-300">
-                        <a href={`/portal/federacao/atletas/${atleta.id}`} className="underline hover:text-blue-400 transition-colors">
+                        <a href={`/portal/federacao/atletas/${atleta.numero_membro || atleta.id}`} className="underline hover:text-blue-400 transition-colors">
                           {atleta.nome}
                         </a>
                       </td>

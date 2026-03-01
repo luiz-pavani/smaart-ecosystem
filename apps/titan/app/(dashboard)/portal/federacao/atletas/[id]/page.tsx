@@ -13,11 +13,23 @@ export default function AtletaDetailPage({ params }: { params: { id: string } })
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      // Tenta buscar por id primeiro, depois por numero_membro
+      let { data, error } = await supabase
         .from("user_fed_lrsj")
         .select("*")
         .eq("id", params.id)
         .single();
+      
+      // Se não encontrou por id, tenta por numero_membro
+      if (!data) {
+        const result = await supabase
+          .from("user_fed_lrsj")
+          .select("*")
+          .eq("numero_membro", params.id)
+          .single();
+        data = result.data;
+      }
+      
       setAtleta(data);
       setLoading(false);
     };
