@@ -85,7 +85,7 @@ export default function AtletasFedaracaoPage() {
         if (isLrsjFederacao) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, numero_membro, nome_completo, graduacao, academias, academia_id, academia:academia_id(sigla), status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
+            .select('id, numero_membro, nome_completo, graduacao, academias, academia_id, status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -103,6 +103,33 @@ export default function AtletasFedaracaoPage() {
             query = query.eq('dados_validados', isValidado);
           }
           const res = await query.order('nome_completo', { ascending: true }).range(start, end);
+
+          if (res.error) {
+            console.error('Erro ao carregar user_fed_lrsj:', res.error)
+            setAtletas([])
+            setTotalCount(0)
+            return
+          }
+
+          const academiaIds = Array.from(new Set((res.data || [])
+            .map((item: any) => item.academia_id)
+            .filter(Boolean)))
+
+          let academiaSiglaById: Record<string, string> = {}
+          if (academiaIds.length > 0) {
+            const { data: academiasData } = await supabase
+              .from('academias')
+              .select('id, sigla')
+              .in('id', academiaIds)
+
+            academiaSiglaById = (academiasData || []).reduce((acc: Record<string, string>, academia: any) => {
+              if (academia?.id && academia?.sigla) {
+                acc[academia.id] = academia.sigla
+              }
+              return acc
+            }, {})
+          }
+
           mapped = (res.data || []).map((item: any) => ({
             id: item.id,
             numero_membro: item.numero_membro,
@@ -110,7 +137,7 @@ export default function AtletasFedaracaoPage() {
             graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
             kyuDanIcones: item.kyu_dan?.icones || null,
             kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
-            academia: item.academia?.sigla ? { nome: item.academia.sigla } : (item.academias ? { nome: item.academias } : null),
+            academia: academiaSiglaById[item.academia_id] ? { nome: academiaSiglaById[item.academia_id] } : (item.academias ? { nome: item.academias } : null),
             status: item.status_plano ?? '—',
             validade: item.data_expiracao ?? '—',
             dadosValidados: item.dados_validados ?? false,
