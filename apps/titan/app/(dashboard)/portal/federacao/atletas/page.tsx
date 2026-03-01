@@ -28,6 +28,7 @@ export default function AtletasFedaracaoPage() {
   const [filterAcademia, setFilterAcademia] = useState('')
   const [filterSituacao, setFilterSituacao] = useState('')
   const [filterValidado, setFilterValidado] = useState('')
+  const [downloadingCSV, setDownloadingCSV] = useState(false)
   const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
   const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
   const pageSize = 100
@@ -129,34 +130,128 @@ export default function AtletasFedaracaoPage() {
     setPage(0)
   }
 
-  const downloadCSV = () => {
-    if (atletas.length === 0) {
-      alert('Nenhum atleta para exportar')
-      return
+  const downloadAllFilteredCSV = async () => {
+    try {
+      setDownloadingCSV(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        alert('Erro: Usuário não autenticado')
+        return
+      }
+
+      const { data: role } = await supabase
+        .from('user_roles')
+        .select('federacao_id')
+        .eq('user_id', user.id)
+        .not('federacao_id', 'is', null)
+        .limit(1)
+        .single()
+
+      if (!role?.federacao_id) {
+        alert('Erro: Federação não encontrada')
+        return
+      }
+
+      let query
+      const LRSJ_FED_ID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d'
+      
+      if (role.federacao_id === LRSJ_FED_ID) {
+        // Query com todos os campos da tabela
+        query = supabase
+          .from('user_fed_lrsj')
+          .select(`
+            id, numero_membro, nome_completo, nome_patch, genero, data_nascimento, idade, 
+            nacionalidade, email, telefone, cidade, estado, endereco_residencia, graduacao, dan, 
+            nivel_arbitragem, academias, status_membro, data_adesao, plano_tipo, status_plano, 
+            data_expiracao, url_foto, url_documento_id, url_certificado_dan, tamanho_patch, 
+            lote_id, observacoes, dados_validados, validado_em, validado_por, updated_at
+          `)
+        
+        if (search) query = query.ilike('nome_completo', `%${search}%`)
+        if (filterGraduacao) query = query.eq('graduacao', filterGraduacao)
+        if (filterAcademia) query = query.ilike('academias', `%${filterAcademia}%`)
+        if (filterSituacao) query = query.eq('status_plano', filterSituacao)
+        if (filterValidado) {
+          const isValidado = filterValidado === 'sim'
+          query = query.eq('dados_validados', isValidado)
+        }
+
+        const { data, error } = await query.order('nome_completo', { ascending: true })
+        
+        if (error) {
+          alert('Erro ao buscar dados: ' + error.message)
+          return
+        }
+
+        if (!data || data.length === 0) {
+          alert('Nenhum atleta encontrado com os filtros selecionados')
+          return
+        }
+
+        // Headers com todos os campos
+        const headers = [
+          'ID', 'Número Membro', 'Nome Completo', 'Nome Patch', 'Gênero', 'Data Nascimento', 
+          'Idade', 'Nacionalidade', 'Email', 'Telefone', 'Cidade', 'Estado', 'Endereço', 
+          'Graduação', 'Dan', 'Nível Arbitragem', 'Academia', 'Status Membro', 'Data Adesão', 
+          'Plano', 'Status Plano', 'Data Expiração', 'URL Foto', 'URL Documento ID', 
+          'URL Certificado Dan', 'Tamanho Patch', 'Lote ID', 'Observações', 'Dados Validados', 
+          'Validado Em', 'Validado Por', 'Atualizado Em'
+        ]
+
+        const csvContent = [
+          headers.join(','),
+          ...data.map((item: any) => [
+            item.id || '',
+            `"${(item.numero_membro || '').replace(/"/g, '""')}"`,
+            `"${(item.nome_completo || '').replace(/"/g, '""')}"`,
+            `"${(item.nome_patch || '').replace(/"/g, '""')}"`,
+            `"${(item.genero || '').replace(/"/g, '""')}"`,
+            item.data_nascimento || '',
+            item.idade || '',
+            `"${(item.nacionalidade || '').replace(/"/g, '""')}"`,
+            item.email || '',
+            item.telefone || '',
+            `"${(item.cidade || '').replace(/"/g, '""')}"`,
+            item.estado || '',
+            `"${(item.endereco_residencia || '').replace(/"/g, '""')}"`,
+            `"${(item.graduacao || '').replace(/"/g, '""')}"`,
+            item.dan || '',
+            `"${(item.nivel_arbitragem || '').replace(/"/g, '""')}"`,
+            `"${(item.academias || '').replace(/"/g, '""')}"`,
+            `"${(item.status_membro || '').replace(/"/g, '""')}"`,
+            item.data_adesao || '',
+            `"${(item.plano_tipo || '').replace(/"/g, '""')}"`,
+            `"${(item.status_plano || '').replace(/"/g, '""')}"`,
+            item.data_expiracao || '',
+            item.url_foto || '',
+            item.url_documento_id || '',
+            item.url_certificado_dan || '',
+            `"${(item.tamanho_patch || '').replace(/"/g, '""')}"`,
+            `"${(item.lote_id || '').replace(/"/g, '""')}"`,
+            `"${(item.observacoes || '').replace(/"/g, '""')}"`,
+            item.dados_validados ? 'Sim' : 'Não',
+            item.validado_em || '',
+            item.validado_por || '',
+            item.updated_at || ''
+          ].join(','))
+        ].join('\n')
+
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `atletas_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    } catch (error) {
+      console.error('Erro ao baixar CSV:', error)
+      alert('Erro ao baixar CSV. Verifique o console.')
+    } finally {
+      setDownloadingCSV(false)
     }
-
-    const headers = ['Nome', 'Academia', 'Graduação', 'Situação', 'Validado', 'Vencimento']
-    const csvContent = [
-      headers.join(','),
-      ...atletas.map(atleta => [
-        `"${atleta.nome.replace(/"/g, '""')}"`,
-        `"${(atleta.academia?.nome || '—').replace(/"/g, '""')}"`,
-        `"${(atleta.graduacao || '—').replace(/"/g, '""')}"`,
-        `"${(atleta.status || '—').replace(/"/g, '""')}"`,
-        atleta.dadosValidados ? 'Sim' : 'Não',
-        `"${(atleta.validade || '—').replace(/"/g, '""')}"`
-      ].join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `atletas_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
   }
 
   return (
@@ -251,12 +346,21 @@ export default function AtletasFedaracaoPage() {
               Limpar Filtros
             </button>
             <button
-              onClick={downloadCSV}
-              disabled={atletas.length === 0}
+              onClick={downloadAllFilteredCSV}
+              disabled={totalCount === 0 || downloadingCSV}
               className="flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 hover:border-green-500/50 rounded-lg text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-4 h-4" />
-              Baixar CSV
+              {downloadingCSV ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Baixando...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Baixar CSV ({totalCount} atletas)
+                </>
+              )}
             </button>
           </div>
         </div>
