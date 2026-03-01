@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 
 interface AtletaRow {
   id: string
+  numero_membro?: string
   nome: string
   graduacao: string | null
   academia?: { nome: string } | null
@@ -63,6 +64,7 @@ export default function AtletasFedaracaoPage() {
           const res = await query.order('nome_completo', { ascending: true }).range(start, end);
           mapped = (res.data || []).map((item: any) => ({
             id: item.id,
+            numero_membro: item.numero_membro,
             nome: item.nome_completo ?? '',
             graduacao: item.graduacao ?? '',
             academia: item.academias ? { nome: item.academias } : null,
