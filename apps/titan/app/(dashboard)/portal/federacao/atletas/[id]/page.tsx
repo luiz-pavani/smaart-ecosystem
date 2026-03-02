@@ -57,6 +57,54 @@ type Graduacao = {
   kyu_dan: string;
 };
 
+const GENEROS = ["Masculino", "Feminino"];
+
+const TIPOS_PLANO = [
+  "Anuidade de atleta - projeto social",
+  "Anuidade de atleta - faixa branca a marrom",
+  "Anuidade de professor - faixa preta - sho-dan",
+  "Anuidade de professor - faixa preta - ni-dan / san-dan",
+  "Anuidade de professor - faixa preta - yon-dan / go-dan",
+  "Anuidade de professor - kōdansha",
+];
+
+const PAISES_TOP = ["Brasil", "Uruguai"];
+
+const PAISES_PTBR = [
+  "Afeganistão", "África do Sul", "Albânia", "Alemanha", "Andorra", "Angola", "Antígua e Barbuda",
+  "Arábia Saudita", "Argélia", "Argentina", "Armênia", "Austrália", "Áustria", "Azerbaijão", "Bahamas",
+  "Bahrein", "Bangladesh", "Barbados", "Bélgica", "Belize", "Benim", "Belarus", "Bolívia",
+  "Bósnia e Herzegovina", "Botsuana", "Brasil", "Brunei", "Bulgária", "Burkina Faso", "Burundi",
+  "Butão", "Cabo Verde", "Camarões", "Camboja", "Canadá", "Catar", "Cazaquistão", "Chade", "Chile",
+  "China", "Chipre", "Colômbia", "Comores", "Congo", "Coreia do Norte", "Coreia do Sul", "Costa do Marfim",
+  "Costa Rica", "Croácia", "Cuba", "Dinamarca", "Djibuti", "Dominica", "Egito", "El Salvador",
+  "Emirados Árabes Unidos", "Equador", "Eritreia", "Eslováquia", "Eslovênia", "Espanha", "Essuatíni",
+  "Estados Unidos", "Estônia", "Etiópia", "Fiji", "Filipinas", "Finlândia", "França", "Gabão", "Gâmbia",
+  "Gana", "Geórgia", "Granada", "Grécia", "Guatemala", "Guiana", "Guiné", "Guiné-Bissau", "Guiné Equatorial",
+  "Haiti", "Honduras", "Hungria", "Iêmen", "Ilhas Marshall", "Índia", "Indonésia", "Irã", "Iraque",
+  "Irlanda", "Islândia", "Israel", "Itália", "Jamaica", "Japão", "Jordânia", "Kiribati", "Kuwait",
+  "Laos", "Lesoto", "Letônia", "Líbano", "Libéria", "Líbia", "Liechtenstein", "Lituânia", "Luxemburgo",
+  "Macedônia do Norte", "Madagascar", "Malásia", "Maláui", "Maldivas", "Mali", "Malta", "Marrocos",
+  "Maurícia", "Mauritânia", "México", "Micronésia", "Moçambique", "Moldávia", "Mônaco", "Mongólia",
+  "Montenegro", "Mianmar", "Namíbia", "Nauru", "Nepal", "Nicarágua", "Níger", "Nigéria", "Noruega",
+  "Nova Zelândia", "Omã", "Países Baixos", "Palau", "Panamá", "Papua-Nova Guiné", "Paquistão", "Paraguai",
+  "Peru", "Polônia", "Portugal", "Quênia", "Quirguistão", "Reino Unido", "República Centro-Africana",
+  "República Checa", "República Democrática do Congo", "República Dominicana", "Romênia", "Ruanda", "Rússia",
+  "Samoa", "San Marino", "Santa Lúcia", "São Cristóvão e Nevis", "São Tomé e Príncipe",
+  "São Vicente e Granadinas", "Seicheles", "Senegal", "Serra Leoa", "Sérvia", "Singapura", "Síria", "Somália",
+  "Sri Lanka", "Sudão", "Sudão do Sul", "Suécia", "Suíça", "Suriname", "Tailândia", "Tajiquistão",
+  "Tanzânia", "Timor-Leste", "Togo", "Tonga", "Trinidad e Tobago", "Tunísia", "Turcomenistão", "Turquia",
+  "Tuvalu", "Ucrânia", "Uganda", "Uruguai", "Uzbequistão", "Vanuatu", "Vaticano", "Venezuela", "Vietnã",
+  "Zâmbia", "Zimbábue",
+];
+
+const computeAgeByBirthYear = (dataNascimento?: string | null) => {
+  if (!dataNascimento) return null;
+  const anoNascimento = Number(String(dataNascimento).slice(0, 4));
+  if (Number.isNaN(anoNascimento)) return null;
+  return new Date().getFullYear() - anoNascimento;
+};
+
 export default function AtletaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const supabase = createClient();
@@ -148,8 +196,15 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           console.log("Atleta carregado:", data.nome_completo);
         }
         
-        setAtleta(data as AthleteRecord | null);
-        setFormData((data as AthleteRecord | null) || {});
+        const normalizedData = data
+          ? {
+              ...(data as AthleteRecord),
+              idade: computeAgeByBirthYear((data as AthleteRecord).data_nascimento),
+            }
+          : null;
+
+        setAtleta(normalizedData as AthleteRecord | null);
+        setFormData((normalizedData as AthleteRecord | null) || {});
       } catch (err) {
         console.error("Erro inesperado ao carregar atleta:", err);
         setAtleta(null);
@@ -190,6 +245,25 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
     (!dadosValidados && (isAcademia || isAtletaRole || isSelfAthlete));
 
   const setField = (field: keyof AthleteRecord, value: string) => {
+    if (field === "data_nascimento") {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+        idade: computeAgeByBirthYear(value),
+      }));
+      return;
+    }
+
+    if (field === "academia_id") {
+      const academiaSelecionada = academias.find((a) => a.id === value);
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+        academias: academiaSelecionada?.nome || null,
+      }));
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -208,7 +282,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         nome_patch: formData.nome_patch ?? null,
         genero: formData.genero ?? null,
         data_nascimento: formData.data_nascimento || null,
-        idade: formData.idade === "" || formData.idade == null ? null : Number(formData.idade),
+        idade: computeAgeByBirthYear(formData.data_nascimento ?? null),
         nacionalidade: formData.nacionalidade ?? null,
         email: formData.email ?? null,
         telefone: formData.telefone ?? null,
@@ -216,10 +290,11 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         estado: formData.estado ?? null,
         endereco_residencia: formData.endereco_residencia ?? null,
         graduacao: formData.graduacao ?? null,
-        dan: formData.dan === "" || formData.dan == null ? null : Number(formData.dan),
         nivel_arbitragem: formData.nivel_arbitragem ?? null,
         academia_id: formData.academia_id ?? null,
-        academias: formData.academias ?? null,
+        academias: formData.academia_id
+          ? academias.find((a) => a.id === formData.academia_id)?.nome || formData.academias || null
+          : formData.academias ?? null,
         status_membro: formData.status_membro ?? null,
         data_adesao: formData.data_adesao || null,
         plano_tipo: formData.plano_tipo ?? null,
@@ -331,6 +406,72 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           </div>
         );
       }
+
+      if (field === "genero") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecione o gênero</option>
+              {GENEROS.map((genero) => (
+                <option key={genero} value={genero}>
+                  {genero}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+
+      if (field === "nacionalidade") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecione a nacionalidade</option>
+              {PAISES_TOP.map((pais) => (
+                <option key={`top-${pais}`} value={pais}>
+                  {pais}
+                </option>
+              ))}
+              <option disabled>──────────</option>
+              {PAISES_PTBR.filter((pais) => !PAISES_TOP.includes(pais)).map((pais) => (
+                <option key={pais} value={pais}>
+                  {pais}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+
+      if (field === "plano_tipo") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecione o tipo de plano</option>
+              {TIPOS_PLANO.map((plano) => (
+                <option key={plano} value={plano}>
+                  {plano}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
       
       // Dropdown para graduação
       if (field === "graduacao") {
@@ -374,8 +515,13 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
     
     // Display friendly name for academia_id
     if (field === "academia_id" && value) {
-      const academia = academias.find(a => a.id === value);
-      return <InfoRow label={label} value={academia?.sigla || academia?.nome || value} />;
+      const academia = academias.find((a) => a.id === value);
+      return <InfoRow label={label} value={academia?.sigla || value} />;
+    }
+
+    if (field === "academias") {
+      const academia = academias.find((a) => a.id === (formData.academia_id ?? atleta?.academia_id));
+      return <InfoRow label={label} value={academia?.nome || value} />;
     }
     
     return <InfoRow label={label} value={value} />;
@@ -439,16 +585,11 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
                     {atleta.graduacao}
                   </div>
                 )}
-                {atleta.dan && (
-                  <div className="bg-purple-500/20 text-purple-300 px-4 py-2 rounded-lg border border-purple-500/30 font-semibold">
-                    Dan: {atleta.dan}
-                  </div>
-                )}
                 {atleta.academia_id && (() => {
                   const academia = academias.find(a => a.id === atleta.academia_id);
                   return academia ? (
                     <div className="bg-orange-500/20 text-orange-300 px-4 py-2 rounded-lg border border-orange-500/30 font-semibold">
-                      🥋 {academia.sigla || academia.nome}
+                      🥋 {academia.nome || academia.sigla}
                     </div>
                   ) : atleta.academias ? (
                     <div className="bg-gray-500/20 text-gray-300 px-4 py-2 rounded-lg border border-gray-500/30 font-semibold">
@@ -521,10 +662,10 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           {/* Dados Pessoais */}
           <InfoCard title="Dados Pessoais" icon={User}>
             <EditableRow label="Número de Membro" field="numero_membro" readOnly />
-            <EditableRow label="Gênero" field="genero" />
+            <EditableRow label="Gênero" field="genero" type="select" />
             <EditableRow label="Data de Nascimento" field="data_nascimento" type="date" />
-            <EditableRow label="Idade" field="idade" type="number" />
-            <EditableRow label="Nacionalidade" field="nacionalidade" />
+            <EditableRow label="Idade" field="idade" type="number" readOnly />
+            <EditableRow label="Nacionalidade" field="nacionalidade" type="select" />
           </InfoCard>
 
           {/* Contato */}
@@ -538,8 +679,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
 
           {/* Graduação e Arbitragem */}
           <InfoCard title="Graduação e Arbitragem" icon={Award}>
-            <EditableRow label="Graduação" field="graduacao" />
-            <EditableRow label="Nível Dan" field="dan" type="number" />
+            <EditableRow label="Graduação" field="graduacao" type="select" />
             <EditableRow label="Nível de Arbitragem" field="nivel_arbitragem" />
             <EditableRow label="Tamanho do Patch" field="tamanho_patch" />
             <EditableRow label="Nome no Patch" field="nome_patch" />
@@ -547,14 +687,14 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
 
           {/* Academia */}
           <InfoCard title="Academia" icon={Building2}>
-            <EditableRow label="Academia" field="academias" />
-            <EditableRow label="ID da Academia" field="academia_id" />
+            <EditableRow label="Sigla da Academia" field="academia_id" type="select" />
+            <EditableRow label="Academia (nome completo)" field="academias" readOnly />
           </InfoCard>
 
           {/* Plano e Status */}
           <InfoCard title="Plano e Filiação" icon={CreditCard}>
             <EditableRow label="Data de Adesão" field="data_adesao" type="date" />
-            <EditableRow label="Tipo de Plano" field="plano_tipo" />
+            <EditableRow label="Tipo de Plano" field="plano_tipo" type="select" />
             <EditableRow label="Status do Plano" field="status_plano" />
             <EditableRow label="Data de Expiração" field="data_expiracao" type="date" />
             <EditableRow label="Status do Membro" field="status_membro" />
