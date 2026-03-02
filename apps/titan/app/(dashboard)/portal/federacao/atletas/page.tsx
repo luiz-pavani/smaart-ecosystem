@@ -21,8 +21,8 @@ interface AtletaRow {
   kyuDanNome?: string | null
   academia?: { nome: string } | null
   status: string | null
+  statusMembro: string | null
   validade: string | null
-  dadosValidados?: boolean
 }
 
 export default function AtletasFedaracaoPage() {
@@ -37,7 +37,7 @@ export default function AtletasFedaracaoPage() {
   const [graduacoes, setGraduacoes] = useState<KyuDanOption[]>([])
   const [filterAcademia, setFilterAcademia] = useState('')
   const [filterSituacao, setFilterSituacao] = useState('')
-  const [filterValidado, setFilterValidado] = useState('')
+  const [filterStatusMembro, setFilterStatusMembro] = useState('')
   const [downloadingCSV, setDownloadingCSV] = useState(false)
   const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
   const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
@@ -85,7 +85,7 @@ export default function AtletasFedaracaoPage() {
         if (isLrsjFederacao) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, numero_membro, nome_completo, graduacao, academias, academia_id, status_plano, data_expiracao, dados_validados, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
+            .select('id, numero_membro, nome_completo, graduacao, academias, academia_id, status_plano, status_membro, data_expiracao, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -98,9 +98,8 @@ export default function AtletasFedaracaoPage() {
           if (filterSituacao) {
             query = query.eq('status_plano', filterSituacao);
           }
-          if (filterValidado) {
-            const isValidado = filterValidado === 'sim';
-            query = query.eq('dados_validados', isValidado);
+          if (filterStatusMembro) {
+            query = query.eq('status_membro', filterStatusMembro);
           }
           const res = await query.order('nome_completo', { ascending: true }).range(start, end);
 
@@ -139,8 +138,8 @@ export default function AtletasFedaracaoPage() {
             kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
             academia: academiaSiglaById[item.academia_id] ? { nome: academiaSiglaById[item.academia_id] } : (item.academias ? { nome: item.academias } : null),
             status: item.status_plano ?? '—',
+            statusMembro: item.status_membro ?? 'Em análise',
             validade: item.data_expiracao ?? '—',
-            dadosValidados: item.dados_validados ?? false,
           }));
           count = res.count;
         } else {
@@ -163,8 +162,8 @@ export default function AtletasFedaracaoPage() {
             kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
             academia: item.academia?.sigla ? { nome: item.academia.sigla } : null,
             status: item.status_plano ?? '—',
+            statusMembro: item.status_membro ?? 'Em análise',
             validade: item.data_expiracao ?? '—',
-            dadosValidados: false,
           }));
           count = res.count;
         }
@@ -176,14 +175,14 @@ export default function AtletasFedaracaoPage() {
     }
 
     load()
-  }, [supabase, page, search, filterGraduacao, filterAcademia, filterSituacao, filterValidado])
+  }, [supabase, page, search, filterGraduacao, filterAcademia, filterSituacao, filterStatusMembro])
 
   const clearFilters = () => {
     setSearch('')
     setFilterGraduacao('')
     setFilterAcademia('')
     setFilterSituacao('')
-    setFilterValidado('')
+    setFilterStatusMembro('')
     setPage(0)
   }
 
@@ -223,7 +222,7 @@ export default function AtletasFedaracaoPage() {
             nacionalidade, email, telefone, cidade, estado, endereco_residencia, graduacao, dan, 
             nivel_arbitragem, academias, academia_id, academia:academia_id(sigla), status_membro, data_adesao, plano_tipo, status_plano, 
             data_expiracao, url_foto, url_documento_id, url_certificado_dan, tamanho_patch,
-            lote_id, observacoes, dados_validados, validado_em, validado_por, updated_at,
+            lote_id, observacoes, validado_em, validado_por, updated_at,
             kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)
           `)
         
@@ -231,9 +230,8 @@ export default function AtletasFedaracaoPage() {
         if (filterGraduacao) query = query.eq('kyu_dan_id', Number(filterGraduacao))
         if (filterAcademia) query = query.ilike('academias', `%${filterAcademia}%`)
         if (filterSituacao) query = query.eq('status_plano', filterSituacao)
-        if (filterValidado) {
-          const isValidado = filterValidado === 'sim'
-          query = query.eq('dados_validados', isValidado)
+        if (filterStatusMembro) {
+          query = query.eq('status_membro', filterStatusMembro)
         }
 
         const { data, error } = await query.order('nome_completo', { ascending: true })
@@ -254,8 +252,7 @@ export default function AtletasFedaracaoPage() {
           'Idade', 'Nacionalidade', 'Email', 'Telefone', 'Cidade', 'Estado', 'Endereço', 
           'Graduação', 'Cor Faixa', 'Kyu/Dan', 'Dan', 'Nível Arbitragem', 'Academia', 'Status Membro', 'Data Adesão', 
           'Plano', 'Status Plano', 'Data Expiração', 'URL Foto', 'URL Documento ID', 
-          'URL Certificado Dan', 'Tamanho Patch', 'Lote ID', 'Observações', 'Dados Validados', 
-          'Validado Em', 'Validado Por', 'Atualizado Em'
+          'URL Certificado Dan', 'Tamanho Patch', 'Lote ID', 'Observações', 'Validado Em', 'Validado Por', 'Atualizado Em'
         ]
 
         const csvContent = [
@@ -291,7 +288,6 @@ export default function AtletasFedaracaoPage() {
             `"${(item.tamanho_patch || '').replace(/"/g, '""')}"`,
             `"${(item.lote_id || '').replace(/"/g, '""')}"`,
             `"${(item.observacoes || '').replace(/"/g, '""')}"`,
-            item.dados_validados ? 'Sim' : 'Não',
             item.validado_em || '',
             item.validado_por || '',
             item.updated_at || ''
@@ -385,13 +381,14 @@ export default function AtletasFedaracaoPage() {
             </select>
 
             <select
-              value={filterValidado}
-              onChange={(e) => { setFilterValidado(e.target.value); setPage(0); }}
+              value={filterStatusMembro}
+              onChange={(e) => { setFilterStatusMembro(e.target.value); setPage(0); }}
               className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
             >
-              <option value="">Todos Registros</option>
-              <option value="sim">Validado</option>
-              <option value="nao">Não Validado</option>
+              <option value="">Todos Status do Membro</option>
+              <option value="Em análise">Em análise</option>
+              <option value="Aceito">Aceito</option>
+              <option value="Rejeitado">Rejeitado</option>
             </select>
           </div>
 
@@ -447,7 +444,7 @@ export default function AtletasFedaracaoPage() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('academia');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Academia</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('graduacao');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Graduação">🥋</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Situação">📊</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold text-white" title="Validado">✓</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold text-white" title="Status do Membro">👤</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('validade');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>VENCIMENTO</th>
                   </tr>
                 </thead>
@@ -481,10 +478,12 @@ export default function AtletasFedaracaoPage() {
                         )}
                       </td>
                       <td className="px-3 py-4 text-center">
-                        {atleta.dadosValidados ? (
-                          <span title="Validado" className="inline-block w-4 h-4 rounded-full bg-green-500"></span>
+                        {atleta.statusMembro === 'Aceito' ? (
+                          <span title="Aceito" className="inline-block w-4 h-4 rounded-full bg-green-500"></span>
+                        ) : atleta.statusMembro === 'Rejeitado' ? (
+                          <span title="Rejeitado" className="inline-block w-4 h-4 rounded-full bg-red-500"></span>
                         ) : (
-                          <span title="Não validado" className="inline-block w-4 h-4 rounded-full bg-yellow-500"></span>
+                          <span title="Em análise" className="inline-block w-4 h-4 rounded-full bg-yellow-500"></span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>

@@ -34,7 +34,6 @@ type AthleteRecord = {
   tamanho_patch?: string | null;
   lote_id?: string | null;
   observacoes?: string | null;
-  dados_validados?: boolean | null;
   validado_em?: string | null;
   validado_por?: string | null;
 };
@@ -261,12 +260,13 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
       currentUserEmail.toLowerCase() === String(atleta.email).toLowerCase()
   );
 
-  const dadosValidados = Boolean(atleta?.dados_validados);
+  const statusMembroAtual = String(atleta?.status_membro ?? "").trim().toLowerCase();
+  const membroAceito = statusMembroAtual === "aceito" || statusMembroAtual === "approved";
   const canValidate = isMaster || isFederacao;
   const canEdit =
     isMaster ||
     isFederacao ||
-    (!dadosValidados && (isAcademia || isAtletaRole || isSelfAthlete));
+    (!membroAceito && (isAcademia || isAtletaRole || isSelfAthlete));
 
   const setField = (field: keyof AthleteRecord, value: string) => {
     if (field === "data_nascimento") {
@@ -356,7 +356,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
       const { data, error } = await supabase
         .from("user_fed_lrsj")
         .update({
-          dados_validados: true,
+          status_membro: "Aceito",
           validado_em: new Date().toISOString(),
           validado_por: currentUserId,
         })
@@ -708,15 +708,6 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
               <div className="flex flex-wrap gap-3">
                 {atleta.status_plano && <StatusBadge status={atleta.status_plano} />}
                 {atleta.status_membro && <StatusBadge status={atleta.status_membro} />}
-                {dadosValidados ? (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
-                    Dados validados
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium border bg-yellow-500/20 text-yellow-300 border-yellow-500/30">
-                    Aguardando validação
-                  </span>
-                )}
               </div>
 
               <div className="flex flex-wrap gap-2 mt-5">
@@ -749,13 +740,13 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
                     </button>
                   </>
                 )}
-                {canValidate && !dadosValidados && (
+                {canValidate && !membroAceito && (
                   <button
                     onClick={validateAthleteData}
                     disabled={saving}
                     className="px-4 py-2 rounded-lg bg-emerald-600/70 hover:bg-emerald-600 text-white text-sm disabled:opacity-60"
                   >
-                    Confirmar validação (Federação)
+                    Marcar como Aceito (Federação)
                   </button>
                 )}
               </div>
