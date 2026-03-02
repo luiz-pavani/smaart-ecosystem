@@ -43,19 +43,20 @@ TEMP_DIR.mkdir(exist_ok=True)
 def create_storage_bucket():
     """Cria o bucket no Supabase Storage se não existir"""
     try:
-        # Tenta listar buckets para ver se já existe
-        buckets = supabase.storage.list_buckets()
-        bucket_names = [b['name'] for b in buckets]
-        
-        if STORAGE_BUCKET not in bucket_names:
-            print(f"📦 Criando bucket '{STORAGE_BUCKET}'...")
+        # Tenta criar o bucket (se já existir, vai dar erro mas podemos ignorar)
+        print(f"📦 Verificando/criando bucket '{STORAGE_BUCKET}'...")
+        try:
             supabase.storage.create_bucket(
                 STORAGE_BUCKET,
                 options={"public": True}  # Bucket público para acesso direto às imagens
             )
             print(f"✅ Bucket '{STORAGE_BUCKET}' criado com sucesso!")
-        else:
-            print(f"✅ Bucket '{STORAGE_BUCKET}' já existe")
+        except Exception as create_error:
+            # Se o bucket já existe, é ok
+            if "already exists" in str(create_error).lower() or "duplicate" in str(create_error).lower():
+                print(f"✅ Bucket '{STORAGE_BUCKET}' já existe")
+            else:
+                raise create_error
         return True
     except Exception as e:
         print(f"❌ Erro ao criar bucket: {e}")

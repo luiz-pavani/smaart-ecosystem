@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""
+Script de auditoria para identificar os 91 registros de user_fed_lrsj sem academia_id
+Executa as queries de AUDITORIA_91_SEM_ACADEMIA_ID.sql
+"""
+import os
+import sys
+
+print("=" * 80)
+print("AUDITORIA: Registros de user_fed_lrsj sem academia_id")
+print("=" * 80)
+print()
+print("📋 Este script deve ser executado no Supabase SQL Editor")
+print("📂 Arquivo: AUDITORIA_91_SEM_ACADEMIA_ID.sql")
+print()
+print("=" * 80)
+print()
+print("Para executar a auditoria:")
+print("1. Abra https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi")
+print("2. Vá em SQL Editor")
+print("3. Cole as queries de AUDITORIA_91_SEM_ACADEMIA_ID.sql")
+print("4. Execute cada query para obter os resultados")
+print()
+print("=" * 80)
+print()
+print("📊 RESUMO ESPERADO:")
+print("-" * 80)
+print(f"Total de registros: 1242")
+print(f"Com academia_id: 1151 (92.67%)")
+print(f"Sem academia_id: 91 (7.33%)")
+print()
+print(f"Breakdown dos 91 pendentes:")
+print(f"  → ~5 registros com texto não mapeado (academias faltantes)")
+print(f"  → ~86 registros com campo academias vazio/null")
+print()
+print("=" * 80)
+print()
+print("🔍 QUERIES DISPONÍVEIS EM AUDITORIA_91_SEM_ACADEMIA_ID.sql:")
+print("-" * 80)
+print("1. Total e classificação do problema")
+print("2. Top textos de academias não mapeadas")
+print("3. Registros sem texto de academia (dados faltantes)")
+print("4. Registros com texto mas sem mapeamento")
+print("5. Validação de FK e vínculo com federação")
+print()
+print("=" * 80)

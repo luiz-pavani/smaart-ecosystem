@@ -45,6 +45,18 @@ type UserRole = {
   academia_id: string | null;
 };
 
+type Academia = {
+  id: string;
+  nome?: string;
+  sigla?: string;
+};
+
+type Graduacao = {
+  id: number;
+  cor_faixa: string;
+  kyu_dan: string;
+};
+
 export default function AtletaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const supabase = createClient();
@@ -57,6 +69,10 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string>("");
+  
+  // Dropdowns data
+  const [academias, setAcademias] = useState<Academia[]>([]);
+  const [graduacoes, setGraduacoes] = useState<Graduacao[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -81,6 +97,20 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         } else {
           setRoles([]);
         }
+        
+        // Load academias
+        const { data: academiasData } = await supabase
+          .from("academias")
+          .select("id, nome, sigla")
+          .order("sigla");
+        setAcademias((academiasData || []) as Academia[]);
+        
+        // Load graduacoes
+        const { data: graduacoesData } = await supabase
+          .from("kyu_dan")
+          .select("id, cor_faixa, kyu_dan")
+          .order("id");
+        setGraduacoes((graduacoesData || []) as Graduacao[]);
         
         // Regex para detectar UUID
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -277,10 +307,52 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   }: {
     label: string;
     field: keyof AthleteRecord;
-    type?: "text" | "number" | "date";
+    type?: "text" | "number" | "date" | "select";
     readOnly?: boolean;
   }) => {
     if (editMode && canEdit && !readOnly) {
+      // Dropdown para academia_id
+      if (field === "academia_id") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecione uma academia</option>
+              {academias.map((academia) => (
+                <option key={academia.id} value={academia.id}>
+                  {academia.sigla || academia.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+      
+      // Dropdown para graduação
+      if (field === "graduacao") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecione uma graduação</option>
+              {graduacoes.map((grad) => (
+                <option key={grad.id} value={`${grad.cor_faixa}|${grad.kyu_dan}`}>
+                  {grad.cor_faixa} | {grad.kyu_dan}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+      
       return (
         <div className="flex flex-col gap-1">
           <span className="text-gray-400 text-sm">{label}</span>
@@ -299,6 +371,13 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
     }
 
     const value = type === "date" ? normalizeDate(formData[field] ?? atleta?.[field]) : formData[field] ?? atleta?.[field];
+    
+    // Display friendly name for academia_id
+    if (field === "academia_id" && value) {
+      const academia = academias.find(a => a.id === value);
+      return <InfoRow label={label} value={academia?.sigla || academia?.nome || value} />;
+    }
+    
     return <InfoRow label={label} value={value} />;
   };
 
@@ -365,6 +444,18 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
                     Dan: {atleta.dan}
                   </div>
                 )}
+                {atleta.academia_id && (() => {
+                  const academia = academias.find(a => a.id === atleta.academia_id);
+                  return academia ? (
+                    <div className="bg-orange-500/20 text-orange-300 px-4 py-2 rounded-lg border border-orange-500/30 font-semibold">
+                      🥋 {academia.sigla || academia.nome}
+                    </div>
+                  ) : atleta.academias ? (
+                    <div className="bg-gray-500/20 text-gray-300 px-4 py-2 rounded-lg border border-gray-500/30 font-semibold">
+                      🥋 {atleta.academias}
+                    </div>
+                  ) : null;
+                })()}
               </div>
               <div className="flex flex-wrap gap-3">
                 {atleta.status_plano && <StatusBadge status={atleta.status_plano} />}
