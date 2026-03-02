@@ -68,6 +68,30 @@ const TIPOS_PLANO = [
   "Anuidade de professor - kōdansha",
 ];
 
+const NIVEIS_ARBITRAGEM = [
+  "Sem nível",
+  "Estadual C",
+  "Estadual B",
+  "Estadual A",
+  "Nacional C",
+  "Nacional B",
+  "Nacional A",
+  "Internacional C",
+  "Internacional B",
+  "Internacional A",
+];
+
+const TAMANHOS_PATCH = [
+  "Grande Azul 41cm2",
+  "Médio Azul 34cm2",
+  "Pequeno Azul 28cm2",
+  "Pequeno Rosa 28cm2",
+];
+
+const STATUS_PLANO_OPCOES = ["Válido", "Vencido"];
+
+const STATUS_MEMBRO_OPCOES = ["Em análise", "Aceito", "Rejeitado"];
+
 const PAISES_TOP = ["Brasil", "Uruguai"];
 
 const PAISES_PTBR = [
@@ -290,12 +314,12 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         estado: formData.estado ?? null,
         endereco_residencia: formData.endereco_residencia ?? null,
         graduacao: formData.graduacao ?? null,
-        nivel_arbitragem: formData.nivel_arbitragem ?? null,
+        nivel_arbitragem: formData.nivel_arbitragem ?? "Sem nível",
         academia_id: formData.academia_id ?? null,
         academias: formData.academia_id
           ? academias.find((a) => a.id === formData.academia_id)?.nome || formData.academias || null
           : formData.academias ?? null,
-        status_membro: formData.status_membro ?? null,
+        status_membro: formData.status_membro ?? "Em análise",
         data_adesao: formData.data_adesao || null,
         plano_tipo: formData.plano_tipo ?? null,
         status_plano: formData.status_plano ?? null,
@@ -472,6 +496,84 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           </div>
         );
       }
+
+      if (field === "nivel_arbitragem") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "Sem nível")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              {NIVEIS_ARBITRAGEM.map((nivel) => (
+                <option key={nivel} value={nivel}>
+                  {nivel}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+
+      if (field === "tamanho_patch") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecione o tamanho do patch</option>
+              {TAMANHOS_PATCH.map((tamanho) => (
+                <option key={tamanho} value={tamanho}>
+                  {tamanho}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+
+      if (field === "status_plano") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              <option value="">Selecione o status do plano</option>
+              {STATUS_PLANO_OPCOES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
+
+      if (field === "status_membro") {
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-gray-400 text-sm">{label}</span>
+            <select
+              value={String(formData[field] ?? "Em análise")}
+              onChange={(e) => setField(field, e.target.value)}
+              className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
+            >
+              {STATUS_MEMBRO_OPCOES.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+      }
       
       // Dropdown para graduação
       if (field === "graduacao") {
@@ -533,7 +635,12 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
       'Expired': 'bg-red-500/20 text-red-300 border-red-500/30',
       'approved': 'bg-green-500/20 text-green-300 border-green-500/30',
       'pending': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-      'rejected': 'bg-red-500/20 text-red-300 border-red-500/30'
+      'rejected': 'bg-red-500/20 text-red-300 border-red-500/30',
+      'Válido': 'bg-green-500/20 text-green-300 border-green-500/30',
+      'Vencido': 'bg-red-500/20 text-red-300 border-red-500/30',
+      'Aceito': 'bg-green-500/20 text-green-300 border-green-500/30',
+      'Em análise': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+      'Rejeitado': 'bg-red-500/20 text-red-300 border-red-500/30',
     };
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${colors[status] || 'bg-gray-500/20 text-gray-300 border-gray-500/30'}`}>
@@ -680,8 +787,8 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           {/* Graduação e Arbitragem */}
           <InfoCard title="Graduação e Arbitragem" icon={Award}>
             <EditableRow label="Graduação" field="graduacao" type="select" />
-            <EditableRow label="Nível de Arbitragem" field="nivel_arbitragem" />
-            <EditableRow label="Tamanho do Patch" field="tamanho_patch" />
+            <EditableRow label="Nível de Arbitragem" field="nivel_arbitragem" type="select" />
+            <EditableRow label="Tamanho do Patch" field="tamanho_patch" type="select" />
             <EditableRow label="Nome no Patch" field="nome_patch" />
           </InfoCard>
 
@@ -695,9 +802,9 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           <InfoCard title="Plano e Filiação" icon={CreditCard}>
             <EditableRow label="Data de Adesão" field="data_adesao" type="date" />
             <EditableRow label="Tipo de Plano" field="plano_tipo" type="select" />
-            <EditableRow label="Status do Plano" field="status_plano" />
+            <EditableRow label="Status do Plano" field="status_plano" type="select" />
             <EditableRow label="Data de Expiração" field="data_expiracao" type="date" />
-            <EditableRow label="Status do Membro" field="status_membro" />
+            <EditableRow label="Status do Membro" field="status_membro" type="select" />
             <EditableRow label="Lote" field="lote_id" />
           </InfoCard>
 
