@@ -128,6 +128,11 @@ const computeAgeByBirthYear = (dataNascimento?: string | null) => {
   return new Date().getFullYear() - anoNascimento;
 };
 
+const normalizeGraduacaoPipeSpacing = (value?: string | null) => {
+  if (!value) return value ?? null;
+  return String(value).replace(/\s*\|\s*/g, " | ").trim();
+};
+
 export default function AtletaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const supabase = createClient();
@@ -313,7 +318,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         cidade: formData.cidade ?? null,
         estado: formData.estado ?? null,
         endereco_residencia: formData.endereco_residencia ?? null,
-        graduacao: formData.graduacao ?? null,
+        graduacao: normalizeGraduacaoPipeSpacing(formData.graduacao ?? null),
         nivel_arbitragem: formData.nivel_arbitragem ?? "Sem nível",
         academia_id: formData.academia_id ?? null,
         academias: formData.academia_id
@@ -581,13 +586,13 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           <div className="flex flex-col gap-1">
             <span className="text-gray-400 text-sm">{label}</span>
             <select
-              value={String(formData[field] ?? "")}
+              value={normalizeGraduacaoPipeSpacing(String(formData[field] ?? "")) ?? ""}
               onChange={(e) => setField(field, e.target.value)}
               className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
             >
               <option value="">Selecione uma graduação</option>
               {graduacoes.map((grad) => (
-                <option key={grad.id} value={`${grad.cor_faixa}|${grad.kyu_dan}`}>
+                <option key={grad.id} value={`${grad.cor_faixa} | ${grad.kyu_dan}`}>
                   {grad.cor_faixa} | {grad.kyu_dan}
                 </option>
               ))}
@@ -613,7 +618,8 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
       );
     }
 
-    const value = type === "date" ? normalizeDate(formData[field] ?? atleta?.[field]) : formData[field] ?? atleta?.[field];
+    const rawValue = type === "date" ? normalizeDate(formData[field] ?? atleta?.[field]) : formData[field] ?? atleta?.[field];
+    const value = field === "graduacao" ? normalizeGraduacaoPipeSpacing(String(rawValue ?? "")) : rawValue;
     
     // Display friendly name for academia_id
     if (field === "academia_id" && value) {
