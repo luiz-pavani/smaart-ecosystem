@@ -77,7 +77,7 @@ CREATE TRIGGER trg_update_academy_logos_updated_at
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.generated_documents (
   id BIGSERIAL PRIMARY KEY,
-  atleta_id BIGINT NOT NULL REFERENCES public.user_fed_lrsj(id) ON DELETE CASCADE,
+  atleta_id BIGINT NOT NULL,
   document_type TEXT NOT NULL CHECK (document_type IN ('identidade', 'certificado')),
   document_url TEXT NOT NULL, -- URL do documento gerado no Storage
   template_id BIGINT REFERENCES public.document_templates(id) ON DELETE SET NULL,
@@ -93,18 +93,16 @@ CREATE TABLE IF NOT EXISTS public.generated_documents (
   is_current BOOLEAN NOT NULL DEFAULT true,
   
   generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  generated_by UUID REFERENCES auth.users(id),
-  
-  -- Index para busca rápida de documentos atuais por atleta
-  UNIQUE(atleta_id, document_type, is_current) WHERE is_current = true
+  generated_by UUID REFERENCES auth.users(id)
+
 );
 
 COMMENT ON TABLE public.generated_documents IS 'Histórico de documentos gerados para atletas (cache e auditoria)';
 COMMENT ON COLUMN public.generated_documents.content_hash IS 'Hash MD5 dos dados do atleta + versão do template';
 COMMENT ON COLUMN public.generated_documents.data_snapshot IS 'Snapshot JSON dos dados do atleta no momento da geração';
 
-CREATE INDEX idx_generated_documents_atleta_current 
-  ON public.generated_documents(atleta_id, document_type, is_current) 
+CREATE UNIQUE INDEX idx_generated_documents_atleta_current
+  ON public.generated_documents(atleta_id, document_type)
   WHERE is_current = true;
 
 CREATE INDEX idx_generated_documents_content_hash 
@@ -157,20 +155,6 @@ CREATE POLICY "Federação e master podem gerenciar logos"
       SELECT 1 FROM public.user_roles ur
       WHERE ur.user_id = auth.uid() 
       AND ur.role IN ('master_access', 'federacao_admin')
-    )
-  );
-
--- Documentos Gerados: atleta pode ver seus próprios documentos
-CREATE POLICY "Atleta pode ver seus documentos"
-  ON public.generated_documents
-  FOR SELECT
-  TO authenticated
-  USING (
-    -- Atleta vê seus próprios documentos
-    EXISTS (
-      SELECT 1 FROM public.user_fed_lrsj ufl
-      WHERE ufl.id = atleta_id
-      AND ufl.user_id = auth.uid()
     )
   );
 

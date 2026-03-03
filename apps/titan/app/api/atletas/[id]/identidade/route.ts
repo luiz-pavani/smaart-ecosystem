@@ -24,7 +24,6 @@ export async function GET(
       .from('user_fed_lrsj')
       .select(`
         id,
-        user_id,
         nome_completo,
         academias,
         data_nascimento,
@@ -48,11 +47,7 @@ export async function GET(
       )
     }
 
-    // 3. Verificar permissões
-    // Atleta pode gerar seu próprio documento
-    const isOwnDocument = atleta.user_id === user.id
-    
-    // Ou admin pode gerar
+    // 3. Verificar permissões (portal admin)
     const { data: roleData } = await supabase
       .from('user_roles')
       .select('role')
@@ -61,7 +56,7 @@ export async function GET(
     
     const isAdmin = roleData?.role && ['master_access', 'federacao_admin', 'academia_admin'].includes(roleData.role)
     
-    if (!isOwnDocument && !isAdmin) {
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Sem permissão para acessar dados deste atleta' },
         { status: 403 }

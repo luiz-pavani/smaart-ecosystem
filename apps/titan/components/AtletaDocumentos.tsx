@@ -17,6 +17,21 @@ export default function AtletaDocumentos({
   const [loadingIdentidade, setLoadingIdentidade] = useState(false)
   const [loadingCertificado, setLoadingCertificado] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+
+  const resolveAssetUrl = (asset?: string | null) => {
+    if (!asset) return ''
+    if (/^https?:\/\//i.test(asset)) return asset
+
+    const normalized = asset.replace(/^\/+/, '')
+    if (normalized.startsWith('storage/v1/object/')) {
+      return supabaseUrl ? `${supabaseUrl}/${normalized}` : `/${normalized}`
+    }
+
+    return supabaseUrl
+      ? `${supabaseUrl}/storage/v1/object/public/${normalized}`
+      : `/${normalized}`
+  }
 
   const gerarIdentidade = async () => {
     try {
@@ -49,7 +64,7 @@ export default function AtletaDocumentos({
       await new Promise((resolve, reject) => {
         background.onload = resolve
         background.onerror = reject
-        background.src = template.background_url || '/identidade-fundo.png'
+        background.src = resolveAssetUrl(template.background_url) || '/identidade-fundo.png'
       })
 
       ctx.drawImage(background, 0, 0, width, height)
@@ -117,7 +132,7 @@ export default function AtletaDocumentos({
         await new Promise((resolve, reject) => {
           logo.onload = resolve
           logo.onerror = () => resolve(null) // Ignorar erro de logo
-          logo.src = academiaLogo
+          logo.src = resolveAssetUrl(academiaLogo)
         })
 
         if (logo.complete) {
@@ -176,7 +191,7 @@ export default function AtletaDocumentos({
 
       // 4. Adicionar imagem de fundo
       try {
-        const imgData = await loadImageAsBase64(template.background_url || '/certificado-fundo.png')
+        const imgData = await loadImageAsBase64(resolveAssetUrl(template.background_url) || '/certificado-fundo.png')
         doc.addImage(imgData, 'PNG', 0, 0, width, height)
       } catch (err) {
         console.warn('Erro ao carregar fundo:', err)
@@ -226,7 +241,7 @@ export default function AtletaDocumentos({
       // Logo da Academia
       if (academiaLogo && config.logo_academia) {
         try {
-          const logoData = await loadImageAsBase64(academiaLogo)
+          const logoData = await loadImageAsBase64(resolveAssetUrl(academiaLogo))
           doc.addImage(
             logoData,
             'PNG',
