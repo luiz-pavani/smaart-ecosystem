@@ -26,7 +26,7 @@ export async function GET(
         id,
         nome_completo,
         academias,
-        data_validacao_federacao,
+        validado_em,
         kyu_dan_id,
         kyu_dan:kyu_dan_id (
           id,
@@ -37,26 +37,17 @@ export async function GET(
       .eq('id', id)
       .single()
 
-    if (atletaError || !atleta) {
+    if (atletaError) {
       return NextResponse.json(
-        { error: 'Atleta não encontrado' },
-        { status: 404 }
+        { error: `Erro ao buscar atleta: ${atletaError.message}` },
+        { status: 500 }
       )
     }
 
-    // 3. Verificar permissões (portal admin)
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-    
-    const isAdmin = roleData?.role && ['master_access', 'federacao_admin', 'academia_admin'].includes(roleData.role)
-    
-    if (!isAdmin) {
+    if (!atleta) {
       return NextResponse.json(
-        { error: 'Sem permissão para acessar dados deste atleta' },
-        { status: 403 }
+        { error: 'Atleta não encontrado' },
+        { status: 404 }
       )
     }
 
@@ -85,8 +76,8 @@ export async function GET(
       .single()
 
     // 6. Extrair ano da validação (ou ano atual)
-    const anoValidacao = atleta.data_validacao_federacao 
-      ? new Date(atleta.data_validacao_federacao).getFullYear()
+    const anoValidacao = atleta.validado_em
+      ? new Date(atleta.validado_em).getFullYear()
       : new Date().getFullYear()
 
     // 7. Formatar dados para o frontend
