@@ -33,6 +33,25 @@ export default function AtletaDocumentos({
       : `/${normalized}`
   }
 
+  const fitImageInBox = (
+    imageWidth: number,
+    imageHeight: number,
+    boxX: number,
+    boxY: number,
+    boxWidth: number,
+    boxHeight: number
+  ) => {
+    const safeBoxWidth = Math.max(1, boxWidth)
+    const safeBoxHeight = Math.max(1, boxHeight)
+    const scale = Math.min(safeBoxWidth / imageWidth, safeBoxHeight / imageHeight)
+    const drawWidth = imageWidth * scale
+    const drawHeight = imageHeight * scale
+    const drawX = boxX + (safeBoxWidth - drawWidth) / 2
+    const drawY = boxY + (safeBoxHeight - drawHeight) / 2
+
+    return { drawX, drawY, drawWidth, drawHeight }
+  }
+
   const gerarIdentidade = async () => {
     try {
       setLoadingIdentidade(true)
@@ -87,16 +106,18 @@ export default function AtletaDocumentos({
         if (!fieldConfig) return
         
         ctx.save()
-        ctx.font = `${fieldConfig.fontWeight || 'normal'} ${fieldConfig.fontSize || 24}px ${fieldConfig.fontFamily || 'Arial'}`
+        const fontSize = Math.max(12, Math.round((fieldConfig.fontSize || 24) * 0.88))
+        const textY = (fieldConfig.y || 0) + 22
+        ctx.font = `${fieldConfig.fontWeight || 'normal'} ${fontSize}px ${fieldConfig.fontFamily || 'Arial'}`
         ctx.fillStyle = fieldConfig.color || '#FFFFFF'
         ctx.textAlign = fieldConfig.align || 'left'
         
         if (fieldConfig.rotation) {
-          ctx.translate(fieldConfig.x, fieldConfig.y)
+          ctx.translate(fieldConfig.x, textY)
           ctx.rotate((fieldConfig.rotation * Math.PI) / 180)
           ctx.fillText(text, 0, 0, fieldConfig.maxWidth)
         } else {
-          ctx.fillText(text, fieldConfig.x, fieldConfig.y, fieldConfig.maxWidth)
+          ctx.fillText(text, fieldConfig.x, textY, fieldConfig.maxWidth)
         }
         
         ctx.restore()
@@ -117,23 +138,36 @@ export default function AtletaDocumentos({
         })
 
         if (logo.complete && logo.naturalWidth) {
+          const boxX = config.logo_academia.x || 150
+          const boxY = config.logo_academia.y || 130
+          const boxWidth = config.logo_academia.width || 200
+          const boxHeight = config.logo_academia.height || 200
+          const { drawX, drawY, drawWidth, drawHeight } = fitImageInBox(
+            logo.naturalWidth,
+            logo.naturalHeight,
+            boxX,
+            boxY,
+            boxWidth,
+            boxHeight
+          )
+
           ctx.drawImage(
             logo,
-            config.logo_academia.x || 150,
-            config.logo_academia.y || 130,
-            config.logo_academia.width || 200,
-            config.logo_academia.height || 200
+            drawX,
+            drawY,
+            drawWidth,
+            drawHeight
           )
         }
       }
 
       // Desenhar todos os campos de texto
-      drawText(atleta.nome, config.nome)
-      drawText(atleta.academia, config.academia)
-      drawText(atleta.dataNascimento, config.data_nascimento)
-      drawText(atleta.graduacao, config.graduacao)
-      drawText(atleta.nivelArbitragem, config.nivel_arbitragem)
-      drawText(atleta.validade, config.validade)
+      drawText(String(atleta.nome || '').toLocaleUpperCase('pt-BR'), config.nome)
+      drawText(String(atleta.academia || '').toLocaleUpperCase('pt-BR'), config.academia)
+      drawText(String(atleta.dataNascimento || '').toLocaleUpperCase('pt-BR'), config.data_nascimento)
+      drawText(String(atleta.graduacao || '').toLocaleUpperCase('pt-BR'), config.graduacao)
+      drawText(String(atleta.nivelArbitragem || '').toLocaleUpperCase('pt-BR'), config.nivel_arbitragem)
+      drawText(String(atleta.validade || '').toLocaleUpperCase('pt-BR'), config.validade)
 
       // 6. Download
       canvas.toBlob((blob) => {
@@ -272,13 +306,36 @@ export default function AtletaDocumentos({
       if (academiaLogo && config.logo_academia) {
         try {
           const logoData = await loadImageAsBase64(resolveAssetUrl(academiaLogo))
+          const boxX = config.logo_academia.x || 860
+          const boxY = config.logo_academia.y || 500
+          const boxWidth = config.logo_academia.width || 180
+          const boxHeight = config.logo_academia.height || 180
+          const logoImg = new Image()
+          logoImg.src = logoData
+
+          await new Promise((resolve) => {
+            logoImg.onload = resolve
+            logoImg.onerror = () => resolve(null)
+          })
+
+          const naturalWidth = logoImg.naturalWidth || boxWidth
+          const naturalHeight = logoImg.naturalHeight || boxHeight
+          const { drawX, drawY, drawWidth, drawHeight } = fitImageInBox(
+            naturalWidth,
+            naturalHeight,
+            boxX,
+            boxY,
+            boxWidth,
+            boxHeight
+          )
+
           doc.addImage(
             logoData,
             'PNG',
-            config.logo_academia.x || 860,
-            config.logo_academia.y || 500,
-            config.logo_academia.width || 180,
-            config.logo_academia.height || 180
+            drawX,
+            drawY,
+            drawWidth,
+            drawHeight
           )
         } catch (err) {
           console.warn('Erro ao carregar logo academia:', err)
