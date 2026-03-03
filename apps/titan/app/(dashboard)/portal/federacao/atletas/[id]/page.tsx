@@ -695,7 +695,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
               <div className="flex flex-wrap gap-3 mb-4">
                 {atleta.graduacao && (
                   <div className="bg-blue-500/20 text-blue-300 px-4 py-2 rounded-lg border border-blue-500/30 font-semibold">
-                    {atleta.graduacao}
+                    {normalizeGraduacaoPipeSpacing(atleta.graduacao)}
                   </div>
                 )}
                 {atleta.academia_id && (() => {
