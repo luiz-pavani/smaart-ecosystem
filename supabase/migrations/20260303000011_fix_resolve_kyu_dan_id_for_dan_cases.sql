@@ -8,12 +8,12 @@ CREATE OR REPLACE FUNCTION public.resolve_kyu_dan_id(
   dan_numeric INT DEFAULT NULL,
   dan_nivel_text TEXT DEFAULT NULL
 )
-RETURNS BIGINT
+RETURNS INTEGER
 LANGUAGE plpgsql
 STABLE
 AS $$
 DECLARE
-  resolved_id BIGINT;
+  resolved_id INTEGER;
   normalized_graduacao TEXT;
   resolved_dan INT;
   dan_from_text INT;
