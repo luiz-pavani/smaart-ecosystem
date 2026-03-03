@@ -33,11 +33,11 @@
 Acesse: https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi/storage/buckets
 
 #### Criar Buckets:
-1. **document-templates** (Público)
+1. **fundos** (Público)
    - Upload: `identidade_fundo.png` (imagem vazia da identidade)
    - Upload: `certificado_fundo.png` (imagem vazia do certificado)
 
-2. **academy-logos** (Público)
+2. **academias-logos** (Público)
    - Upload dos logos de cada academia conforme necessário
    - Formato: PNG com transparência (recomendado)
 
@@ -45,8 +45,8 @@ Acesse: https://supabase.com/dashboard/project/risvafrrbnozyjquxvzi/storage/buck
    - Bucket onde os documentos gerados serão armazenados (cache futuro)
 
 #### URLs Esperadas:
-- Identidade: `https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/document-templates/identidade_fundo.png`
-- Certificado: `https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/document-templates/certificado_fundo.png`
+- Identidade: `https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/fundos/identidade_fundo.png`
+- Certificado: `https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/fundos/certificado_fundo.png`
 
 ---
 
@@ -81,12 +81,12 @@ Após upload dos fundos, atualizar as URLs na tabela `document_templates`:
 ```sql
 -- Atualizar URL do fundo de Identidade
 UPDATE document_templates
-SET background_url = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/document-templates/identidade_fundo.png'
+SET background_url = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/fundos/identidade_fundo.png'
 WHERE template_type = 'identidade';
 
 -- Atualizar URL do fundo de Certificado
 UPDATE document_templates
-SET background_url = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/document-templates/certificado_fundo.png'
+SET background_url = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/fundos/certificado_fundo.png'
 WHERE template_type = 'certificado';
 ```
 
@@ -132,7 +132,7 @@ WHERE template_type = 'identidade';
 INSERT INTO academy_logos (academia_nome, logo_url, logo_width, logo_height)
 VALUES (
   'ATLÉTICA FALCONS JUDÔ',
-  'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/academy-logos/atletica-falcons.png',
+   'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/academias-logos/atletica-falcons.png',
   120,
   120
 );

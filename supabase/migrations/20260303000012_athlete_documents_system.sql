@@ -115,8 +115,8 @@ CREATE INDEX idx_generated_documents_content_hash
 -- -----------------------------------------------------------------------------
 -- NOTA: Buckets precisam ser criados via Dashboard ou via API
 -- Buckets necessários:
---   - 'document-templates': Templates (fundos) de documentos
---   - 'academy-logos': Logos de academias
+--   - 'fundos': Templates (fundos) de documentos
+--   - 'academias-logos': Logos de academias
 --   - 'athlete-documents': Documentos gerados (identidades e certificados)
 
 -- -----------------------------------------------------------------------------
@@ -217,7 +217,7 @@ INSERT INTO public.document_templates (
 ) VALUES (
   'identidade',
   'Liga RS - Identidade 2026',
-  'document-templates/identidade-fundo.png', -- Será atualizado após upload
+  'fundos/identidade-fundo.png', -- Será atualizado após upload
   'png',
   768, -- Estimado da imagem fornecida
   1280, -- Estimado da imagem fornecida
@@ -300,7 +300,7 @@ INSERT INTO public.document_templates (
 ) VALUES (
   'certificado',
   'Liga RS - Certificado 2026',
-  'document-templates/certificado-fundo.png', -- Será atualizado após upload
+  'fundos/certificado-fundo.png', -- Será atualizado após upload
   'pdf',
   1058, -- A4 landscape (aprox)
   794,
