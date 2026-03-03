@@ -8,7 +8,7 @@ UPDATE public.document_templates
 SET field_config = '{
   "nome": {
     "x": 420,
-    "y": 370,
+    "y": 400,
     "fontSize": 56,
     "fontFamily": "Arial",
     "fontWeight": "bold",
@@ -19,7 +19,7 @@ SET field_config = '{
   },
   "academia": {
     "x": 420,
-    "y": 450,
+    "y": 480,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "normal",
@@ -29,18 +29,18 @@ SET field_config = '{
     "rotation": -45
   },
   "data_nascimento": {
-    "x": 680,
+    "x": 718,
     "y": 640,
-    "fontSize": 42,
+    "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right"
   },
   "graduacao": {
-    "x": 680,
+    "x": 718,
     "y": 770,
-    "fontSize": 52,
+    "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -48,18 +48,18 @@ SET field_config = '{
     "maxWidth": 600
   },
   "nivel_arbitragem": {
-    "x": 680,
+    "x": 718,
     "y": 905,
-    "fontSize": 48,
+    "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right"
   },
   "validade": {
-    "x": 680,
+    "x": 628,
     "y": 1145,
-    "fontSize": 42,
+    "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",

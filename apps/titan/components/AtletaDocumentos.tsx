@@ -107,17 +107,16 @@ export default function AtletaDocumentos({
         
         ctx.save()
         const fontSize = Math.max(12, Math.round((fieldConfig.fontSize || 24) * 0.88))
-        const textY = (fieldConfig.y || 0) + 22
         ctx.font = `${fieldConfig.fontWeight || 'normal'} ${fontSize}px ${fieldConfig.fontFamily || 'Arial'}`
         ctx.fillStyle = fieldConfig.color || '#FFFFFF'
         ctx.textAlign = fieldConfig.align || 'left'
         
         if (fieldConfig.rotation) {
-          ctx.translate(fieldConfig.x, textY)
+          ctx.translate(fieldConfig.x, fieldConfig.y)
           ctx.rotate((fieldConfig.rotation * Math.PI) / 180)
           ctx.fillText(text, 0, 0, fieldConfig.maxWidth)
         } else {
-          ctx.fillText(text, fieldConfig.x, textY, fieldConfig.maxWidth)
+          ctx.fillText(text, fieldConfig.x, fieldConfig.y, fieldConfig.maxWidth)
         }
         
         ctx.restore()
