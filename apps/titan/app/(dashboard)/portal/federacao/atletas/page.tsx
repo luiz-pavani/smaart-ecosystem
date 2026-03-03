@@ -22,6 +22,7 @@ interface AtletaRow {
   academia?: { nome: string } | null
   status: string | null
   statusMembro: string | null
+  status_plano: string | null
   validade: string | null
 }
 
@@ -139,13 +140,14 @@ export default function AtletasFedaracaoPage() {
             academia: academiaSiglaById[item.academia_id] ? { nome: academiaSiglaById[item.academia_id] } : (item.academias ? { nome: item.academias } : null),
             status: item.status_plano ?? '—',
             statusMembro: item.status_membro ?? 'Em análise',
+            status_plano: item.status_plano ?? null,
             validade: item.data_expiracao ?? '—',
           }));
           count = res.count;
         } else {
           query = supabase
             .from('atletas')
-            .select('id, nome, graduacao, academia:academias(sigla), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
+            .select('id, nome, graduacao, status_plano, status_membro, data_expiracao, academia:academias(sigla), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
             .eq('federacao_id', role.federacao_id);
           if (search) {
             query = query.ilike('nome', `%${search}%`);
@@ -163,6 +165,7 @@ export default function AtletasFedaracaoPage() {
             academia: item.academia?.sigla ? { nome: item.academia.sigla } : null,
             status: item.status_plano ?? '—',
             statusMembro: item.status_membro ?? 'Em análise',
+            status_plano: item.status_plano ?? null,
             validade: item.data_expiracao ?? '—',
           }));
           count = res.count;
