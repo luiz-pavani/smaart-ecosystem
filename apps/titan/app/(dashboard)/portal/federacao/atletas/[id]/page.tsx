@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Loader2, User, Mail, Award, Building2, FileText, CreditCard, CheckCircle } from "lucide-react";
+import AtletaDocumentos from "@/components/AtletaDocumentos";
 
 type AthleteRecord = {
   id: number;
@@ -842,6 +843,15 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
             )}
           </div>
         )}
+
+        {/* Documentos Gerados Automaticamente */}
+        <div className="mt-6 bg-white/5 backdrop-blur rounded-xl p-6 border border-white/10">
+          <AtletaDocumentos 
+            atletaId={atleta.id} 
+            showIdentidade={true} 
+            showCertificado={true} 
+          />
+        </div>
       </div>
     </div>
   );
