@@ -30,7 +30,7 @@ SET field_config = '{
   },
   "data_nascimento_label": {
     "x": 718,
-    "y": 600,
+    "y": 570,
     "fontSize": 17,
     "fontFamily": "Arial",
     "fontWeight": "normal",
@@ -40,7 +40,7 @@ SET field_config = '{
   },
   "data_nascimento": {
     "x": 718,
-    "y": 640,
+    "y": 615,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
@@ -49,7 +49,7 @@ SET field_config = '{
   },
   "graduacao_label": {
     "x": 718,
-    "y": 725,
+    "y": 685,
     "fontSize": 17,
     "fontFamily": "Arial",
     "fontWeight": "normal",
@@ -59,7 +59,7 @@ SET field_config = '{
   },
   "graduacao": {
     "x": 718,
-    "y": 765,
+    "y": 730,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
@@ -69,7 +69,7 @@ SET field_config = '{
   },
   "nivel_arbitragem_label": {
     "x": 718,
-    "y": 860,
+    "y": 800,
     "fontSize": 17,
     "fontFamily": "Arial",
     "fontWeight": "normal",
@@ -79,7 +79,7 @@ SET field_config = '{
   },
   "nivel_arbitragem": {
     "x": 718,
-    "y": 900,
+    "y": 845,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
@@ -88,7 +88,7 @@ SET field_config = '{
   },
   "validade_label": {
     "x": 718,
-    "y": 1100,
+    "y": 915,
     "fontSize": 17,
     "fontFamily": "Arial",
     "fontWeight": "normal",
@@ -98,7 +98,7 @@ SET field_config = '{
   },
   "validade": {
     "x": 718,
-    "y": 1140,
+    "y": 960,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
