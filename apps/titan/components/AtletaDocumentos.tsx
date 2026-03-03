@@ -58,16 +58,25 @@ export default function AtletaDocumentos({
       canvas.height = height
 
       // 3. Carregar e desenhar fundo
-      const background = new Image()
-      background.crossOrigin = 'anonymous'
-      
-      await new Promise((resolve, reject) => {
-        background.onload = resolve
-        background.onerror = reject
-        background.src = resolveAssetUrl(template.background_url) || '/identidade-fundo.png'
-      })
+      try {
+        const background = new Image()
+        background.crossOrigin = 'anonymous'
+        
+        await new Promise((resolve) => {
+          background.onload = resolve
+          background.onerror = () => resolve(null) // Ignorar erro de fundo
+          background.src = resolveAssetUrl(template.background_url) || '/identidade-fundo.png'
+        })
 
-      ctx.drawImage(background, 0, 0, width, height)
+        if (background.complete && background.naturalWidth) {
+          ctx.drawImage(background, 0, 0, width, height)
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar fundo da identidade:', err)
+        // Continua mesmo sem fundo - desenhar fundo branco como fallback
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fillRect(0, 0, width, height)
+      }
 
       // 4. Configurar fonte e cores
       ctx.textBaseline = 'top'
