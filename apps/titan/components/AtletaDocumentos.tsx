@@ -82,78 +82,58 @@ export default function AtletaDocumentos({
       ctx.textBaseline = 'top'
       ctx.fillStyle = '#FFFFFF'
 
+      // Helper para desenhar texto com rotação
+      const drawText = (text: string, fieldConfig: any) => {
+        if (!fieldConfig) return
+        
+        ctx.save()
+        ctx.font = `${fieldConfig.fontWeight || 'normal'} ${fieldConfig.fontSize || 24}px ${fieldConfig.fontFamily || 'Arial'}`
+        ctx.fillStyle = fieldConfig.color || '#FFFFFF'
+        ctx.textAlign = fieldConfig.align || 'left'
+        
+        if (fieldConfig.rotation) {
+          ctx.translate(fieldConfig.x, fieldConfig.y)
+          ctx.rotate((fieldConfig.rotation * Math.PI) / 180)
+          ctx.fillText(text, 0, 0, fieldConfig.maxWidth)
+        } else {
+          ctx.fillText(text, fieldConfig.x, fieldConfig.y, fieldConfig.maxWidth)
+        }
+        
+        ctx.restore()
+      }
+
       // 5. Desenhar campos dinâmicos
       const config = template.field_config || {}
 
-      // Nome
-      if (config.nome) {
-        ctx.font = `${config.nome.fontWeight || 'bold'} ${config.nome.fontSize || 40}px ${config.nome.fontFamily || 'Arial'}`
-        ctx.fillStyle = config.nome.color || '#FFFFFF'
-        ctx.textAlign = config.nome.align || 'center'
-        ctx.fillText(atleta.nome, config.nome.x || width / 2, config.nome.y || 340, config.nome.maxWidth || 500)
-      }
-
-      // Academia
-      if (config.academia) {
-        ctx.font = `${config.academia.fontSize || 24}px ${config.academia.fontFamily || 'Arial'}`
-        ctx.fillStyle = config.academia.color || '#FFFFFF'
-        ctx.textAlign = config.academia.align || 'center'
-        ctx.fillText(atleta.academia, config.academia.x || width / 2, config.academia.y || 420, config.academia.maxWidth || 500)
-      }
-
-      // Data de Nascimento
-      if (config.data_nascimento) {
-        ctx.font = `${config.data_nascimento.fontWeight || 'bold'} ${config.data_nascimento.fontSize || 28}px ${config.data_nascimento.fontFamily || 'Arial'}`
-        ctx.fillStyle = config.data_nascimento.color || '#FFFFFF'
-        ctx.textAlign = config.data_nascimento.align || 'left'
-        ctx.fillText(atleta.dataNascimento, config.data_nascimento.x || 545, config.data_nascimento.y || 640)
-      }
-
-      // Graduação
-      if (config.graduacao) {
-        ctx.font = `${config.graduacao.fontWeight || 'bold'} ${config.graduacao.fontSize || 28}px ${config.graduacao.fontFamily || 'Arial'}`
-        ctx.fillStyle = config.graduacao.color || '#FFFFFF'
-        ctx.textAlign = config.graduacao.align || 'left'
-        ctx.fillText(atleta.graduacao, config.graduacao.x || 545, config.graduacao.y || 770)
-      }
-
-      // Nível de Arbitragem
-      if (config.nivel_arbitragem) {
-        ctx.font = `${config.nivel_arbitragem.fontWeight || 'bold'} ${config.nivel_arbitragem.fontSize || 32}px ${config.nivel_arbitragem.fontFamily || 'Arial'}`
-        ctx.fillStyle = config.nivel_arbitragem.color || '#FFFFFF'
-        ctx.textAlign = config.nivel_arbitragem.align || 'center'
-        ctx.fillText(atleta.nivelArbitragem, config.nivel_arbitragem.x || 545, config.nivel_arbitragem.y || 905)
-      }
-
-      // Validade
-      if (config.validade) {
-        ctx.font = `${config.validade.fontWeight || 'bold'} ${config.validade.fontSize || 28}px ${config.validade.fontFamily || 'Arial'}`
-        ctx.fillStyle = config.validade.color || '#FFFFFF'
-        ctx.textAlign = config.validade.align || 'left'
-        ctx.fillText(atleta.validade, config.validade.x || 545, config.validade.y || 1140)
-      }
-
-      // Logo da Academia (se houver)
+      // Logo da Academia (desenhar antes dos textos)
       if (academiaLogo && config.logo_academia) {
         const logo = new Image()
         logo.crossOrigin = 'anonymous'
         
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
           logo.onload = resolve
-          logo.onerror = () => resolve(null) // Ignorar erro de logo
+          logo.onerror = () => resolve(null)
           logo.src = resolveAssetUrl(academiaLogo)
         })
 
-        if (logo.complete) {
+        if (logo.complete && logo.naturalWidth) {
           ctx.drawImage(
             logo,
-            config.logo_academia.x || 230,
-            config.logo_academia.y || 180,
-            config.logo_academia.width || 120,
-            config.logo_academia.height || 120
+            config.logo_academia.x || 150,
+            config.logo_academia.y || 130,
+            config.logo_academia.width || 200,
+            config.logo_academia.height || 200
           )
         }
       }
+
+      // Desenhar todos os campos de texto
+      drawText(atleta.nome, config.nome)
+      drawText(atleta.academia, config.academia)
+      drawText(atleta.dataNascimento, config.data_nascimento)
+      drawText(atleta.graduacao, config.graduacao)
+      drawText(atleta.nivelArbitragem, config.nivel_arbitragem)
+      drawText(atleta.validade, config.validade)
 
       // 6. Download
       canvas.toBlob((blob) => {
@@ -213,7 +193,7 @@ export default function AtletaDocumentos({
 
       // Nome
       if (config.nome) {
-        doc.setFontSize(config.nome.fontSize || 48)
+        doc.setFontSize(config.nome.fontSize || 64)
         doc.setFont('helvetica', 'bold')
         doc.text(
           atleta.nome,
@@ -223,28 +203,64 @@ export default function AtletaDocumentos({
         )
       }
 
-      // Graduação
-      if (config.graduacao) {
-        doc.setFontSize(config.graduacao.fontSize || 36)
-        doc.setFont('helvetica', 'normal')
+      // Label "GRADUAÇÃO"
+      if (config.graduacao_label) {
+        doc.setFontSize(config.graduacao_label.fontSize || 24)
+        doc.setFont('helvetica', 'italic')
         doc.text(
-          atleta.graduacao,
-          config.graduacao.x || width / 2,
-          config.graduacao.y || 480,
-          { align: config.graduacao.align || 'center' }
+          config.graduacao_label.text || 'GRADUAÇÃO',
+          config.graduacao_label.x || width / 2,
+          config.graduacao_label.y || 436,
+          { align: config.graduacao_label.align || 'center' }
         )
       }
 
-      // Ano
+      // Graduação (valor)
+      if (config.graduacao) {
+        doc.setFontSize(config.graduacao.fontSize || 52)
+        doc.setFont('helvetica', 'bold')
+        doc.text(
+          atleta.graduacao,
+          config.graduacao.x || 530,
+          config.graduacao.y || 481,
+          { align: config.graduacao.align || 'center', maxWidth: config.graduacao.maxWidth || 600 }
+        )
+      }
+
+      // Ano (com stroke)
       if (config.ano) {
-        doc.setFontSize(config.ano.fontSize || 64)
+        doc.setFontSize(config.ano.fontSize || 96)
         doc.setFont('helvetica', 'normal')
+        
+        // jsPDF não suporta stroke nativo, então desenhamos outline manualmente
+        if (config.ano.stroke) {
+          doc.setTextColor(255, 255, 255)
+        }
+        
         doc.text(
           atleta.ano,
-          config.ano.x || width - 100,
+          config.ano.x || 960,
           config.ano.y || 130,
           { align: config.ano.align || 'right' }
         )
+      }
+
+      // Logo da Liga RS
+      if (config.logo_liga) {
+        try {
+          const logoLigaUrl = resolveAssetUrl(config.logo_liga.url || 'fundos/logo-liga-rs.png')
+          const logoLigaData = await loadImageAsBase64(logoLigaUrl)
+          doc.addImage(
+            logoLigaData,
+            'PNG',
+            config.logo_liga.x || 55,
+            config.logo_liga.y || 475,
+            config.logo_liga.width || 130,
+            config.logo_liga.height || 150
+          )
+        } catch (err) {
+          console.warn('Erro ao carregar logo Liga RS:', err)
+        }
       }
 
       // Logo da Academia
@@ -254,14 +270,33 @@ export default function AtletaDocumentos({
           doc.addImage(
             logoData,
             'PNG',
-            config.logo_academia.x || 880,
-            config.logo_academia.y || 520,
-            config.logo_academia.width || 140,
-            config.logo_academia.height || 140
+            config.logo_academia.x || 860,
+            config.logo_academia.y || 500,
+            config.logo_academia.width || 180,
+            config.logo_academia.height || 180
           )
         } catch (err) {
-          console.warn('Erro ao carregar logo:', err)
+          console.warn('Erro ao carregar logo academia:', err)
         }
+      }
+
+      // Assinatura "PRESIDENTE"
+      if (config.presidente) {
+        doc.setFontSize(config.presidente.fontSize || 16)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(150, 150, 150)
+        
+        // Linha para assinatura
+        const lineY = config.presidente.y - 10
+        doc.setDrawColor(200, 200, 200)
+        doc.line(config.presidente.x - 100, lineY, config.presidente.x + 100, lineY)
+        
+        doc.text(
+          config.presidente.text || 'PRESIDENTE',
+          config.presidente.x || 540,
+          config.presidente.y || 640,
+          { align: config.presidente.align || 'center' }
+        )
       }
 
       // 6. Download
