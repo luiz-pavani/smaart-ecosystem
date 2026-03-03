@@ -163,9 +163,18 @@ export default function AtletaDocumentos({
       // Desenhar todos os campos de texto
       drawText(String(atleta.nome || '').toLocaleUpperCase('pt-BR'), config.nome)
       drawText(String(atleta.academia || '').toLocaleUpperCase('pt-BR'), config.academia)
+      
+      // Labels
+      drawText(config.data_nascimento_label?.text || 'DATA DE NASCIMENTO', config.data_nascimento_label)
       drawText(String(atleta.dataNascimento || '').toLocaleUpperCase('pt-BR'), config.data_nascimento)
+      
+      drawText(config.graduacao_label?.text || 'GRADUAÇÃO', config.graduacao_label)
       drawText(String(atleta.graduacao || '').toLocaleUpperCase('pt-BR'), config.graduacao)
+      
+      drawText(config.nivel_arbitragem_label?.text || 'NÍVEL DE ARBITRAGEM', config.nivel_arbitragem_label)
       drawText(String(atleta.nivelArbitragem || '').toLocaleUpperCase('pt-BR'), config.nivel_arbitragem)
+      
+      drawText(config.validade_label?.text || 'VALIDADE', config.validade_label)
       drawText(String(atleta.validade || '').toLocaleUpperCase('pt-BR'), config.validade)
 
       // 6. Download

@@ -7,26 +7,36 @@
 UPDATE public.document_templates
 SET field_config = '{
   "nome": {
-    "x": 420,
-    "y": 400,
+    "x": 700,
+    "y": 380,
     "fontSize": 56,
     "fontFamily": "Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
-    "align": "left",
-    "maxWidth": 400,
+    "align": "right",
+    "maxWidth": 500,
     "rotation": -45
   },
   "academia": {
-    "x": 420,
-    "y": 480,
+    "x": 700,
+    "y": 460,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
-    "align": "left",
+    "align": "right",
     "maxWidth": 400,
     "rotation": -45
+  },
+  "data_nascimento_label": {
+    "x": 718,
+    "y": 600,
+    "fontSize": 17,
+    "fontFamily": "Arial",
+    "fontWeight": "normal",
+    "color": "#FFFFFF",
+    "align": "right",
+    "text": "DATA DE NASCIMENTO"
   },
   "data_nascimento": {
     "x": 718,
@@ -37,9 +47,19 @@ SET field_config = '{
     "color": "#FFFFFF",
     "align": "right"
   },
+  "graduacao_label": {
+    "x": 718,
+    "y": 725,
+    "fontSize": 17,
+    "fontFamily": "Arial",
+    "fontWeight": "normal",
+    "color": "#FFFFFF",
+    "align": "right",
+    "text": "GRADUAÇÃO"
+  },
   "graduacao": {
     "x": 718,
-    "y": 770,
+    "y": 765,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
@@ -47,18 +67,38 @@ SET field_config = '{
     "align": "right",
     "maxWidth": 600
   },
+  "nivel_arbitragem_label": {
+    "x": 718,
+    "y": 860,
+    "fontSize": 17,
+    "fontFamily": "Arial",
+    "fontWeight": "normal",
+    "color": "#FFFFFF",
+    "align": "right",
+    "text": "NÍVEL DE ARBITRAGEM"
+  },
   "nivel_arbitragem": {
     "x": 718,
-    "y": 905,
+    "y": 900,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right"
   },
+  "validade_label": {
+    "x": 718,
+    "y": 1100,
+    "fontSize": 17,
+    "fontFamily": "Arial",
+    "fontWeight": "normal",
+    "color": "#FFFFFF",
+    "align": "right",
+    "text": "VALIDADE"
+  },
   "validade": {
-    "x": 628,
-    "y": 1145,
+    "x": 718,
+    "y": 1140,
     "fontSize": 28,
     "fontFamily": "Arial",
     "fontWeight": "bold",
