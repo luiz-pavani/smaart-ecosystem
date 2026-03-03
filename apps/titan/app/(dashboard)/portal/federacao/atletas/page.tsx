@@ -443,7 +443,7 @@ export default function AtletasFedaracaoPage() {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('nome');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Nome</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('academia');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Academia</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('graduacao');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Graduação">🥋</th>
-                    <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Situação">📊</th>
+                    <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Status do Plano">$</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold text-white" title="Status do Membro">👤</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('validade');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>VENCIMENTO</th>
                   </tr>
@@ -464,17 +464,17 @@ export default function AtletasFedaracaoPage() {
                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.academia?.nome || '—'}</td>
                       <td className="px-3 py-4 text-center" title={atleta.kyuDanNome || atleta.graduacao || 'Sem graduação'}>
-                        <span className="text-2xl">
+                        <span className="text-lg">
                           {atleta.kyuDanNome?.includes('NÃO ESPECIFICADA') ? '❌' : (atleta.kyuDanIcones || (atleta.graduacao ? atleta.graduacao : '✖️'))}
                         </span>
                       </td>
                       <td className="px-3 py-4 text-center">
-                        {atleta.status === 'Active' ? (
-                          <span title="Ativo" className="inline-block w-4 h-4 rounded-full bg-green-500"></span>
-                        ) : atleta.status === 'Expired' ? (
-                          <span title="Expirado" className="inline-block w-4 h-4 rounded-full bg-red-500"></span>
+                        {atleta.status_plano === 'Válido' ? (
+                          <span title="Válido" className="inline-block w-4 h-4 rounded-full bg-green-500"></span>
+                        ) : atleta.status_plano === 'Vencido' ? (
+                          <span title="Vencido" className="inline-block w-4 h-4 rounded-full bg-red-500"></span>
                         ) : (
-                          <span title={atleta.status || 'Indefinido'} className="inline-block w-4 h-4 rounded-full bg-gray-400"></span>
+                          <span title={atleta.status_plano || 'Indefinido'} className="inline-block w-4 h-4 rounded-full bg-gray-400"></span>
                         )}
                       </td>
                       <td className="px-3 py-4 text-center">
