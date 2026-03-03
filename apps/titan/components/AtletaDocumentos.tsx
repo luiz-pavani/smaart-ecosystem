@@ -189,17 +189,47 @@ export default function AtletaDocumentos({
       // 5. Adicionar textos
       const config = template.field_config || {}
 
+      const fitFontSize = (
+        text: string,
+        baseSize: number,
+        minSize: number,
+        maxWidth: number,
+        style: 'normal' | 'bold' | 'italic' = 'normal'
+      ) => {
+        let currentSize = baseSize
+        doc.setFont('helvetica', style)
+        doc.setFontSize(currentSize)
+
+        while (doc.getTextWidth(text) > maxWidth && currentSize > minSize) {
+          currentSize -= 1
+          doc.setFontSize(currentSize)
+        }
+
+        return currentSize
+      }
+
       doc.setTextColor(255, 255, 255)
 
       // Nome
       if (config.nome) {
-        doc.setFontSize(config.nome.fontSize || 64)
+        const nomeX = config.nome.x || width / 2
+        const nomeY = 330
+        const nomeMaxWidth = config.nome.maxWidth || 760
+        const nomeFontSize = fitFontSize(
+          atleta.nome,
+          Math.min(config.nome.fontSize || 64, 58),
+          40,
+          nomeMaxWidth,
+          'bold'
+        )
+
+        doc.setFontSize(nomeFontSize)
         doc.setFont('helvetica', 'bold')
         doc.text(
           atleta.nome,
-          config.nome.x || width / 2,
-          config.nome.y || 345,
-          { align: config.nome.align || 'center', maxWidth: config.nome.maxWidth || 700 }
+          nomeX,
+          nomeY,
+          { align: config.nome.align || 'center' }
         )
       }
 
@@ -210,57 +240,32 @@ export default function AtletaDocumentos({
         doc.text(
           config.graduacao_label.text || 'GRADUAÇÃO',
           config.graduacao_label.x || width / 2,
-          config.graduacao_label.y || 436,
+          420,
           { align: config.graduacao_label.align || 'center' }
         )
       }
 
       // Graduação (valor)
       if (config.graduacao) {
-        doc.setFontSize(config.graduacao.fontSize || 52)
+        const graduacaoX = config.graduacao.x || 530
+        const graduacaoY = 470
+        const graduacaoMaxWidth = config.graduacao.maxWidth || 620
+        const graduacaoFontSize = fitFontSize(
+          atleta.graduacao,
+          config.graduacao.fontSize || 52,
+          36,
+          graduacaoMaxWidth,
+          'bold'
+        )
+
+        doc.setFontSize(graduacaoFontSize)
         doc.setFont('helvetica', 'bold')
         doc.text(
           atleta.graduacao,
-          config.graduacao.x || 530,
-          config.graduacao.y || 481,
-          { align: config.graduacao.align || 'center', maxWidth: config.graduacao.maxWidth || 600 }
+          graduacaoX,
+          graduacaoY,
+          { align: config.graduacao.align || 'center' }
         )
-      }
-
-      // Ano (com stroke)
-      if (config.ano) {
-        doc.setFontSize(config.ano.fontSize || 96)
-        doc.setFont('helvetica', 'normal')
-        
-        // jsPDF não suporta stroke nativo, então desenhamos outline manualmente
-        if (config.ano.stroke) {
-          doc.setTextColor(255, 255, 255)
-        }
-        
-        doc.text(
-          atleta.ano,
-          config.ano.x || 960,
-          config.ano.y || 130,
-          { align: config.ano.align || 'right' }
-        )
-      }
-
-      // Logo da Liga RS
-      if (config.logo_liga) {
-        try {
-          const logoLigaUrl = resolveAssetUrl(config.logo_liga.url || 'fundos/logo-liga-rs.png')
-          const logoLigaData = await loadImageAsBase64(logoLigaUrl)
-          doc.addImage(
-            logoLigaData,
-            'PNG',
-            config.logo_liga.x || 55,
-            config.logo_liga.y || 475,
-            config.logo_liga.width || 130,
-            config.logo_liga.height || 150
-          )
-        } catch (err) {
-          console.warn('Erro ao carregar logo Liga RS:', err)
-        }
       }
 
       // Logo da Academia
