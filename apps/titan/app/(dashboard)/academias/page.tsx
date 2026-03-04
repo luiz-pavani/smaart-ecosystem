@@ -59,10 +59,12 @@ export default function AcademiasPage() {
       const perfilData = perfilArray?.[0]
 
       if (!perfilData) {
+        console.warn('⚠️ Usuário não tem role definido:', user.id)
         window.location.href = '/login'
         return
       }
 
+      console.log('📊 Perfil do usuário:', perfilData)
       setPerfil(perfilData)
 
       // Build query based on user role
@@ -73,16 +75,21 @@ export default function AcademiasPage() {
 
       // Filter by role
       if (perfilData.role === 'academia_admin' || perfilData.role === 'academia_staff') {
+        console.log('🏢 Filtrando por academia_id:', perfilData.academia_id)
         query = query.eq('id', perfilData.academia_id)
       } else if (perfilData.role === 'federacao_admin' || perfilData.role === 'federacao_staff') {
+        console.log('🏟️ Filtrando por federacao_id:', perfilData.federacao_id)
         query = query.eq('federacao_id', perfilData.federacao_id)
+      } else {
+        console.warn('⚠️ Role não reconhecida:', perfilData.role)
       }
 
       const { data, error } = await query
 
       if (error) {
-        console.error('Error fetching academias:', error)
+        console.error('❌ Erro ao buscar academias:', error)
       } else {
+        console.log('✅ Academias carregadas:', data?.length || 0)
         setAcademias(data || [])
       }
     } finally {
