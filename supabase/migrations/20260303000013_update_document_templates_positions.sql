@@ -9,8 +9,8 @@ SET field_config = '{
   "width": 3000,
   "height": 4782,
   "nome": {
-    "x": 2000,
-    "y": 950,
+    "x": 1600,
+    "y": 900,
     "fontSize": 207,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
@@ -20,8 +20,8 @@ SET field_config = '{
     "rotation": -45
   },
   "academia": {
-    "x": 2000,
-    "y": 1100,
+    "x": 1600,
+    "y": 1050,
     "fontSize": 115,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
@@ -31,89 +31,89 @@ SET field_config = '{
     "rotation": -45
   },
   "data_nascimento_label": {
-    "x": 2800,
-    "y": 2200,
+    "x": 2300,
+    "y": 1600,
     "fontSize": 117,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 90,
+    "rotation": 0,
     "text": "DATA DE NASCIMENTO"
   },
   "data_nascimento": {
-    "x": 2800,
-    "y": 2350,
+    "x": 2300,
+    "y": 1750,
     "fontSize": 207,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 90
+    "rotation": 0
   },
   "graduacao_label": {
-    "x": 2800,
-    "y": 2600,
+    "x": 2300,
+    "y": 2100,
     "fontSize": 117,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 90,
+    "rotation": 0,
     "text": "GRADUAÇÃO"
   },
   "graduacao": {
-    "x": 2800,
-    "y": 2750,
+    "x": 2300,
+    "y": 2250,
     "fontSize": 207,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 90,
-    "maxWidth": 600
+    "rotation": 0,
+    "maxWidth": 800
   },
   "nivel_arbitragem_label": {
-    "x": 2800,
-    "y": 3000,
+    "x": 2300,
+    "y": 2700,
     "fontSize": 117,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 90,
+    "rotation": 0,
     "text": "NÍVEL DE ARBITRAGEM"
   },
   "nivel_arbitragem": {
-    "x": 2800,
-    "y": 3150,
+    "x": 2300,
+    "y": 2850,
     "fontSize": 207,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 90
+    "rotation": 0
   },
   "validade_label": {
-    "x": 2800,
+    "x": 2300,
     "y": 3400,
     "fontSize": 117,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 90,
+    "rotation": 0,
     "text": "VALIDADE"
   },
   "validade": {
-    "x": 2800,
+    "x": 2300,
     "y": 3550,
     "fontSize": 207,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 90
+    "rotation": 0
   },
   "logo_academia": {
     "x": 400,
