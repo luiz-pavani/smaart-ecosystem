@@ -164,7 +164,7 @@ export default function AtletaDocumentos({
         String(atleta.nome || '').toLocaleUpperCase('pt-BR'),
         {
           ...config.nome,
-          rotation: -45,
+          rotation: 45,
         }
       )
       drawText(String(atleta.academia || '').toLocaleUpperCase('pt-BR'), config.academia)

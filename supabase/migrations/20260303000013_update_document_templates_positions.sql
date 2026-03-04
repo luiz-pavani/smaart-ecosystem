@@ -17,7 +17,7 @@ SET field_config = '{
     "color": "#FFFFFF",
     "align": "right",
     "maxWidth": 1500,
-    "rotation": -45
+    "rotation": 45
   },
   "academia": {
     "x": 1300,
