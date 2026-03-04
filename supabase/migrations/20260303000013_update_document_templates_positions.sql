@@ -9,8 +9,8 @@ SET field_config = '{
   "width": 9000,
   "height": 14346,
   "nome": {
-    "x": 6200,
-    "y": 7500,
+    "x": 6820,
+    "y": 3800,
     "fontSize": 316,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
@@ -31,8 +31,8 @@ SET field_config = '{
     "letterSpacing": 0
   },
   "data_nascimento_label": {
-    "x": 7850,
-    "y": 6550,
+    "x": 8635,
+    "y": 6150,
     "fontSize": 316,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
@@ -43,8 +43,8 @@ SET field_config = '{
     "letterSpacing": 0
   },
   "data_nascimento": {
-    "x": 7850,
-    "y": 7150,
+    "x": 8635,
+    "y": 6750,
     "fontSize": 559,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
@@ -54,8 +54,8 @@ SET field_config = '{
     "letterSpacing": 0
   },
   "graduacao_label": {
-    "x": 7850,
-    "y": 8350,
+    "x": 8635,
+    "y": 7950,
     "fontSize": 316,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
@@ -66,8 +66,8 @@ SET field_config = '{
     "letterSpacing": 0
   },
   "graduacao": {
-    "x": 7850,
-    "y": 8950,
+    "x": 8635,
+    "y": 8550,
     "fontSize": 559,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
@@ -77,8 +77,8 @@ SET field_config = '{
     "letterSpacing": 0
   },
   "nivel_arbitragem_label": {
-    "x": 7850,
-    "y": 10150,
+    "x": 8635,
+    "y": 9750,
     "fontSize": 316,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
@@ -89,8 +89,8 @@ SET field_config = '{
     "letterSpacing": 0
   },
   "nivel_arbitragem": {
-    "x": 7850,
-    "y": 10750,
+    "x": 8635,
+    "y": 10350,
     "fontSize": 559,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
@@ -100,8 +100,8 @@ SET field_config = '{
     "letterSpacing": 0
   },
   "validade_label": {
-    "x": 7850,
-    "y": 11950,
+    "x": 8635,
+    "y": 11550,
     "fontSize": 316,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
@@ -112,8 +112,8 @@ SET field_config = '{
     "letterSpacing": 0
   },
   "validade": {
-    "x": 7850,
-    "y": 12550,
+    "x": 8635,
+    "y": 12150,
     "fontSize": 559,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
@@ -125,8 +125,8 @@ SET field_config = '{
   "logo_academia": {
     "x": 2180,
     "y": 1080,
-    "width": 2622,
-    "height": 2622,
+    "width": 3146,
+    "height": 3146,
     "allowScaleDown": true
   }
 }'::jsonb

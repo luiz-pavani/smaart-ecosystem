@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, FileText, IdCard, Loader2 } from 'lucide-react'
 
 // Versão beta para teste visual de atualizações
-const BETA_VERSION = '20.1'
+const BETA_VERSION = '20.2'
 
 interface AtletaDocumentosProps {
   atletaId: number
