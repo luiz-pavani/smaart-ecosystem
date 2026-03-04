@@ -70,9 +70,9 @@ export default function AtletaDocumentos({
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      // Dimensões padrão (ajustar conforme template real)
-      const width = template.width || 768
-      const height = template.height || 1280
+      // Dimensões conforme template (3000x4782px)
+      const width = template.field_config?.width || 3000
+      const height = template.field_config?.height || 4782
       canvas.width = width
       canvas.height = height
 
@@ -106,7 +106,7 @@ export default function AtletaDocumentos({
         if (!fieldConfig) return
         
         ctx.save()
-        const fontSize = Math.max(12, Math.round((fieldConfig.fontSize || 24) * 0.88))
+        const fontSize = fieldConfig.fontSize || 24
         ctx.font = `${fieldConfig.fontWeight || 'normal'} ${fontSize}px ${fieldConfig.fontFamily || 'Arial'}`
         ctx.fillStyle = fieldConfig.color || '#FFFFFF'
         ctx.textAlign = fieldConfig.align || 'left'
@@ -137,17 +137,16 @@ export default function AtletaDocumentos({
         })
 
         if (logo.complete && logo.naturalWidth) {
-          const boxX = config.logo_academia.x || 150
-          const boxY = config.logo_academia.y || 130
-          const boxWidth = config.logo_academia.width || 200
-          const boxHeight = config.logo_academia.height || 200
+          const boxX = config.logo_academia.x || 400
+          const boxY = config.logo_academia.y || 300
+          const maxArea = config.logo_academia.width || 750
           const { drawX, drawY, drawWidth, drawHeight } = fitImageInBox(
             logo.naturalWidth,
             logo.naturalHeight,
             boxX,
             boxY,
-            boxWidth,
-            boxHeight
+            maxArea,
+            maxArea
           )
 
           ctx.drawImage(

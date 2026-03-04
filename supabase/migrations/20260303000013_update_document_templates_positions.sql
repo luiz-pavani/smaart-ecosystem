@@ -2,114 +2,125 @@
 -- Ajustes baseados nos modelos de referência reais
 
 -- =====================================================
--- IDENTIDADE: Ajustar todas as posições e rotação
+-- IDENTIDADE: Posicionamento exato (3000x4782px)
 -- =====================================================
 UPDATE public.document_templates
 SET field_config = '{
+  "width": 3000,
+  "height": 4782,
   "nome": {
-    "x": 700,
-    "y": 380,
-    "fontSize": 56,
-    "fontFamily": "Arial",
+    "x": 2000,
+    "y": 950,
+    "fontSize": 53,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "maxWidth": 500,
+    "maxWidth": 1500,
     "rotation": -45
   },
   "academia": {
-    "x": 700,
-    "y": 460,
-    "fontSize": 28,
-    "fontFamily": "Arial",
+    "x": 2000,
+    "y": 1050,
+    "fontSize": 30,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
-    "maxWidth": 400,
+    "maxWidth": 1200,
     "rotation": -45
   },
   "data_nascimento_label": {
-    "x": 718,
-    "y": 570,
-    "fontSize": 17,
-    "fontFamily": "Arial",
+    "x": 2800,
+    "y": 2200,
+    "fontSize": 30,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
+    "rotation": 90,
     "text": "DATA DE NASCIMENTO"
   },
   "data_nascimento": {
-    "x": 718,
-    "y": 615,
-    "fontSize": 28,
-    "fontFamily": "Arial",
+    "x": 2800,
+    "y": 2250,
+    "fontSize": 53,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
-    "align": "right"
+    "align": "right",
+    "rotation": 90
   },
   "graduacao_label": {
-    "x": 718,
-    "y": 685,
-    "fontSize": 17,
-    "fontFamily": "Arial",
+    "x": 2800,
+    "y": 2400,
+    "fontSize": 30,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
+    "rotation": 90,
     "text": "GRADUAÇÃO"
   },
   "graduacao": {
-    "x": 718,
-    "y": 730,
-    "fontSize": 28,
-    "fontFamily": "Arial",
+    "x": 2800,
+    "y": 2450,
+    "fontSize": 53,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
+    "rotation": 90,
     "maxWidth": 600
   },
   "nivel_arbitragem_label": {
-    "x": 718,
-    "y": 800,
-    "fontSize": 17,
-    "fontFamily": "Arial",
+    "x": 2800,
+    "y": 2600,
+    "fontSize": 30,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
+    "rotation": 90,
     "text": "NÍVEL DE ARBITRAGEM"
   },
   "nivel_arbitragem": {
-    "x": 718,
-    "y": 845,
-    "fontSize": 28,
-    "fontFamily": "Arial",
+    "x": 2800,
+    "y": 2650,
+    "fontSize": 53,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
-    "align": "right"
+    "align": "right",
+    "rotation": 90
   },
   "validade_label": {
-    "x": 718,
-    "y": 915,
-    "fontSize": 17,
-    "fontFamily": "Arial",
+    "x": 2800,
+    "y": 2800,
+    "fontSize": 30,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
+    "rotation": 90,
     "text": "VALIDADE"
   },
   "validade": {
-    "x": 718,
-    "y": 960,
-    "fontSize": 28,
-    "fontFamily": "Arial",
+    "x": 2800,
+    "y": 2850,
+    "fontSize": 53,
+    "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
-    "align": "right"
+    "align": "right",
+    "rotation": 90
   },
   "logo_academia": {
-    "x": 150,
-    "y": 130,
-    "width": 200,
-    "height": 200
+    "x": 400,
+    "y": 300,
+    "width": 750,
+    "height": 750,
+    "allowScaleDown": true
   }
 }'::jsonb
 WHERE template_type = 'identidade';
