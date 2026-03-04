@@ -160,7 +160,13 @@ export default function AtletaDocumentos({
       }
 
       // Desenhar todos os campos de texto
-      drawText(String(atleta.nome || '').toLocaleUpperCase('pt-BR'), config.nome)
+      drawText(
+        String(atleta.nome || '').toLocaleUpperCase('pt-BR'),
+        {
+          ...config.nome,
+          rotation: -45,
+        }
+      )
       drawText(String(atleta.academia || '').toLocaleUpperCase('pt-BR'), config.academia)
       
       // Labels
