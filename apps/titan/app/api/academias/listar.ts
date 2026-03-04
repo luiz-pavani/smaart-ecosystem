@@ -26,7 +26,44 @@ export async function GET(request: NextRequest) {
     console.log('📡 [listar.ts] Fetching academias from Supabase...')
     const { data: academias, error } = await supabase
       .from('academias')
-      .select('*')
+      .select(`
+        id,
+        federacao_id,
+        nome,
+        nome_fantasia,
+        sigla,
+        cnpj,
+        inscricao_estadual,
+        inscricao_municipal,
+        logo_url,
+        endereco_rua,
+        endereco_numero,
+        endereco_complemento,
+        endereco_bairro,
+        endereco_cidade,
+        endereco_estado,
+        endereco_cep,
+        responsavel_nome,
+        responsavel_cpf,
+        responsavel_rg,
+        responsavel_telefone,
+        responsavel_email,
+        responsavel_faixa,
+        tecnico_nome,
+        tecnico_cpf,
+        tecnico_registro_profissional,
+        tecnico_telefone,
+        tecnico_email,
+        data_filiacao,
+        horario_funcionamento,
+        quantidade_alunos,
+        anualidade_status,
+        anualidade_vencimento,
+        safe2pay_subscription_id,
+        ativo,
+        created_at,
+        updated_at
+      `)
       .order('nome', { ascending: true })
 
     if (error) {
