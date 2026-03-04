@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, FileText, IdCard, Loader2 } from 'lucide-react'
 
 // Versão beta para teste visual de atualizações
-const BETA_VERSION = '20.2'
+const BETA_VERSION = '20.3'
 
 interface AtletaDocumentosProps {
   atletaId: number
@@ -20,7 +20,86 @@ export default function AtletaDocumentos({
   const [loadingIdentidade, setLoadingIdentidade] = useState(false)
   const [loadingCertificado, setLoadingCertificado] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasFontsLoaded = useRef(false)
+  const pdfFontDataRef = useRef<
+    { name: string; fileName: string; data: string }[] | null
+  >(null)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+
+  // Carrega as fontes personalizadas para uso no canvas
+  const loadCanvasFonts = async () => {
+    if (canvasFontsLoaded.current) return
+    if (typeof document === 'undefined' || !('fonts' in document)) return
+
+    const fonts = [
+      { name: 'HighwayGothic-Regular', url: '/fonts/HighwayGothic-Regular.ttf' },
+      { name: 'HighwayGothic-Condensed', url: '/fonts/HighwayGothic-Condensed-Regular.ttf' },
+    ]
+
+    await Promise.all(
+      fonts.map(async ({ name, url }) => {
+        try {
+          const font = new FontFace(name, `url(${url})`)
+          await font.load()
+          document.fonts.add(font)
+        } catch (err) {
+          console.warn(`Falha ao carregar fonte ${name} (${url}). Usando fallback.`, err)
+        }
+      })
+    )
+
+    canvasFontsLoaded.current = true
+  }
+
+  // Busca e guarda as fontes para o PDF (jsPDF)
+  const loadPdfFontData = async () => {
+    if (pdfFontDataRef.current) return pdfFontDataRef.current
+
+    const fonts = [
+      {
+        name: 'HighwayGothic',
+        fileName: 'HighwayGothic-Regular.ttf',
+        url: '/fonts/HighwayGothic-Regular.ttf',
+      },
+      {
+        name: 'HighwayGothicCondensed',
+        fileName: 'HighwayGothic-Condensed-Regular.ttf',
+        url: '/fonts/HighwayGothic-Condensed-Regular.ttf',
+      },
+    ]
+
+    const fontEntries: { name: string; fileName: string; data: string }[] = []
+
+    for (const font of fonts) {
+      try {
+        const res = await fetch(font.url)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const buffer = await res.arrayBuffer()
+        const uint8 = new Uint8Array(buffer)
+        let binary = ''
+        uint8.forEach((b) => {
+          binary += String.fromCharCode(b)
+        })
+        const base64 = btoa(binary)
+        fontEntries.push({ name: font.name, fileName: font.fileName, data: base64 })
+      } catch (err) {
+        console.warn(`Falha ao buscar fonte ${font.name} (${font.url}). Usando helvetica.`, err)
+      }
+    }
+
+    pdfFontDataRef.current = fontEntries
+    return fontEntries
+  }
+
+  const registerPdfFonts = async (doc: any) => {
+    const fonts = await loadPdfFontData()
+    fonts.forEach(({ name, fileName, data }) => {
+      doc.addFileToVFS(fileName, data)
+      doc.addFont(fileName, name, 'normal')
+    })
+
+    return fonts
+  }
 
   const resolveAssetUrl = (asset?: string | null) => {
     if (!asset) return ''
@@ -66,6 +145,8 @@ export default function AtletaDocumentos({
       const data = await response.json()
       const { atleta, academiaLogo, template } = data
 
+      await loadCanvasFonts()
+
       // 2. Criar canvas
       const canvas = canvasRef.current
       if (!canvas) return
@@ -104,20 +185,18 @@ export default function AtletaDocumentos({
       ctx.textBaseline = 'top'
       ctx.fillStyle = '#FFFFFF'
 
-      // Helper para desenhar texto com rotação, alinhamento, letterSpacing e scale
+      // Helper para desenhar texto com rotação, alinhamento e letterSpacing
       const drawText = (text: string, fieldConfig: any) => {
         if (!fieldConfig) return
         
         ctx.save()
         const fontSize = fieldConfig.fontSize || 24
         const fontWeight = fieldConfig.fontWeight || 'normal'
-        const fontFamily = fieldConfig.fontFamily || 'Arial'
+        const fontFamily = fieldConfig.fontFamily || 'HighwayGothic-Regular, Arial'
         const color = fieldConfig.color || '#FFFFFF'
         const align = fieldConfig.align || 'left'
         const rotation = fieldConfig.rotation || 0
         const letterSpacing = fieldConfig.letterSpacing !== undefined ? fieldConfig.letterSpacing : 0
-        const scaleX = fieldConfig.scaleX !== undefined ? fieldConfig.scaleX : 1
-        const scaleY = fieldConfig.scaleY !== undefined ? fieldConfig.scaleY : 1
         
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
         ctx.fillStyle = color
@@ -126,7 +205,6 @@ export default function AtletaDocumentos({
         // Se tem rotação, usar translate/rotate
         if (rotation) {
           ctx.translate(fieldConfig.x, fieldConfig.y)
-          ctx.scale(scaleX, scaleY)
           ctx.rotate((rotation * Math.PI) / 180)
           
           // Desenhar com letterSpacing
@@ -142,30 +220,17 @@ export default function AtletaDocumentos({
             }
           }
         } else {
-          // Sem rotação, aplicar scale se necessário
-          if (scaleX !== 1 || scaleY !== 1) {
-            ctx.translate(fieldConfig.x, fieldConfig.y)
-            ctx.scale(scaleX, scaleY)
-            
-            if (letterSpacing === 0) {
-              ctx.fillText(text, 0, 0)
-            } else {
-              let xPos = 0
-              for (let i = 0; i < text.length; i++) {
-                ctx.fillText(text[i], xPos, 0)
-                xPos += ctx.measureText(text[i]).width + letterSpacing
-              }
-            }
+          // Sem rotação, usar posição direta
+          let xPos = fieldConfig.x
+          
+          if (letterSpacing === 0) {
+            // Sem espaçamento extra, desenhar normalmente
+            ctx.fillText(text, xPos, fieldConfig.y)
           } else {
-            // Sem scale, renderizar normalmente
-            if (letterSpacing === 0) {
-              ctx.fillText(text, fieldConfig.x, fieldConfig.y)
-            } else {
-              let xPos = fieldConfig.x
-              for (let i = 0; i < text.length; i++) {
-                ctx.fillText(text[i], xPos, fieldConfig.y)
-                xPos += ctx.measureText(text[i]).width + letterSpacing
-              }
+            // Com letterSpacing, desenhar caractere por caractere
+            for (let i = 0; i < text.length; i++) {
+              ctx.fillText(text[i], xPos, fieldConfig.y)
+              xPos += ctx.measureText(text[i]).width + letterSpacing
             }
           }
         }
@@ -215,6 +280,7 @@ export default function AtletaDocumentos({
         String(atleta.nome || '').toLocaleUpperCase('pt-BR'),
         {
           ...config.nome,
+          fontFamily: 'HighwayGothic-Condensed, HighwayGothic-Regular, Arial',
           align: 'right',
           rotation: -45,
         }
@@ -222,7 +288,7 @@ export default function AtletaDocumentos({
       
       // Adicionar versão beta na parte inferior (centrada)
       ctx.save()
-      ctx.font = 'normal 120px Arial'
+      ctx.font = 'normal 120px HighwayGothic-Regular, Arial'
       ctx.fillStyle = '#FFFFFF'
       ctx.textAlign = 'center'
       ctx.globalAlpha = 0.6
@@ -282,6 +348,12 @@ export default function AtletaDocumentos({
         format: 'a4'
       })
 
+      const registeredFonts = await registerPdfFonts(doc)
+      const hasRegular = registeredFonts.some((f) => f.name === 'HighwayGothic')
+      const hasCondensed = registeredFonts.some((f) => f.name === 'HighwayGothicCondensed')
+      const pdfFontRegular = hasRegular ? 'HighwayGothic' : 'helvetica'
+      const pdfFontCondensed = hasCondensed ? 'HighwayGothicCondensed' : pdfFontRegular
+
       const width = doc.internal.pageSize.getWidth()
       const height = doc.internal.pageSize.getHeight()
 
@@ -301,10 +373,10 @@ export default function AtletaDocumentos({
         baseSize: number,
         minSize: number,
         maxWidth: number,
-        style: 'normal' | 'bold' | 'italic' = 'normal'
+        fontName: string
       ) => {
         let currentSize = baseSize
-        doc.setFont('helvetica', style)
+        doc.setFont(fontName, 'normal')
         doc.setFontSize(currentSize)
 
         while (doc.getTextWidth(text) > maxWidth && currentSize > minSize) {
@@ -327,11 +399,11 @@ export default function AtletaDocumentos({
           Math.min(config.nome.fontSize || 64, 58),
           40,
           nomeMaxWidth,
-          'bold'
+          pdfFontCondensed
         )
 
         doc.setFontSize(nomeFontSize)
-        doc.setFont('helvetica', 'bold')
+        doc.setFont(pdfFontCondensed, 'normal')
         doc.text(
           atleta.nome,
           nomeX,
@@ -343,7 +415,7 @@ export default function AtletaDocumentos({
       // Label "GRADUAÇÃO"
       if (config.graduacao_label) {
         doc.setFontSize(config.graduacao_label.fontSize || 24)
-        doc.setFont('helvetica', 'italic')
+        doc.setFont(pdfFontRegular, 'normal')
         doc.text(
           config.graduacao_label.text || 'GRADUAÇÃO',
           config.graduacao_label.x || width / 2,
@@ -362,11 +434,11 @@ export default function AtletaDocumentos({
           config.graduacao.fontSize || 52,
           36,
           graduacaoMaxWidth,
-          'bold'
+          pdfFontRegular
         )
 
         doc.setFontSize(graduacaoFontSize)
-        doc.setFont('helvetica', 'bold')
+        doc.setFont(pdfFontRegular, 'normal')
         doc.text(
           atleta.graduacao,
           graduacaoX,
@@ -418,7 +490,7 @@ export default function AtletaDocumentos({
       // Assinatura "PRESIDENTE"
       if (config.presidente) {
         doc.setFontSize(config.presidente.fontSize || 16)
-        doc.setFont('helvetica', 'italic')
+        doc.setFont(pdfFontRegular, 'normal')
         doc.setTextColor(150, 150, 150)
         
         // Linha para assinatura

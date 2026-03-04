@@ -1,3 +1,14 @@
+-- Ensure we can upsert by template_type
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'document_templates_template_type_key'
+  ) THEN
+    CREATE UNIQUE INDEX document_templates_template_type_key
+      ON public.document_templates (template_type);
+  END IF;
+END $$;
+
 -- Insert identidade document template configuration
 INSERT INTO public.document_templates (template_type, is_active, background_url, field_config, created_at, updated_at)
 VALUES (
