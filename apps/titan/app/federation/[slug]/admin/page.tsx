@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { BarChart3, Users, Building2, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { BarChart3, Users, Building2, TrendingUp, AlertCircle, CheckCircle2, Trophy } from 'lucide-react';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -131,6 +131,59 @@ export default function FederationAdminDashboard({ params }: { params: { slug: s
         </div>
       </div>
 
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Ações Rápidas</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Link
+            href={`/federation/${params.slug}/admin/atletas`}
+            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
+          >
+            <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+            <p className="font-medium text-gray-900">Gerenciar Atletas</p>
+            <p className="text-xs text-gray-500">Visualizar e editar</p>
+          </Link>
+
+          <Link
+            href={`/federation/${params.slug}/admin/auths`}
+            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
+          >
+            <Users className="h-8 w-8 mx-auto mb-2 text-green-600" />
+            <p className="font-medium text-gray-900">Controle de Acesso</p>
+            <p className="text-xs text-gray-500">Gerenciar permissões</p>
+          </Link>
+
+          <Link
+            href={`/federation/${params.slug}/admin/plans`}
+            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
+          >
+            <BarChart3 className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+            <p className="font-medium text-gray-900">Planos</p>
+            <p className="text-xs text-gray-500">Assinaturas</p>
+          </Link>
+
+          <a
+            href="https://sul.smoothcomp.com/pt_BR/federation/130/admin/event"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
+          >
+            <Trophy className="h-8 w-8 mx-auto mb-2 text-amber-600" />
+            <p className="font-medium text-gray-900">Competições</p>
+            <p className="text-xs text-gray-500">SmoothComp</p>
+          </a>
+
+          <Link
+            href={`/federation/${params.slug}/admin/configs`}
+            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
+          >
+            <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-600" />
+            <p className="font-medium text-gray-900">Configurações</p>
+            <p className="text-xs text-gray-500">Dados federação</p>
+          </Link>
+        </div>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
@@ -161,48 +214,6 @@ export default function FederationAdminDashboard({ params }: { params: { slug: s
           subtext="Com acesso"
           href={`/federation/${params.slug}/admin/auths`}
         />
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Ações Rápidas</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link
-            href={`/federation/${params.slug}/admin/atletas`}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
-          >
-            <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-            <p className="font-medium text-gray-900">Gerenciar Atletas</p>
-            <p className="text-xs text-gray-500">Visualizar e editar</p>
-          </Link>
-
-          <Link
-            href={`/federation/${params.slug}/admin/auths`}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
-          >
-            <Users className="h-8 w-8 mx-auto mb-2 text-green-600" />
-            <p className="font-medium text-gray-900">Controle de Acesso</p>
-            <p className="text-xs text-gray-500">Gerenciar permissões</p>
-          </Link>
-
-          <Link
-            href={`/federation/${params.slug}/admin/plans`}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
-          >
-            <BarChart3 className="h-8 w-8 mx-auto mb-2 text-purple-600" />
-            <p className="font-medium text-gray-900">Planos</p>
-            <p className="text-xs text-gray-500">Assinaturas</p>
-          </Link>
-
-          <Link
-            href={`/federation/${params.slug}/admin/configs`}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition text-center"
-          >
-            <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-600" />
-            <p className="font-medium text-gray-900">Configurações</p>
-            <p className="text-xs text-gray-500">Dados federação</p>
-          </Link>
-        </div>
       </div>
 
       {/* Recent Activity */}
