@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   const debug = {
     env: {
       url: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ SET' : '❌ MISSING',
-      serviceKey: process.env.SUPABASE_SERVICE_KEY ? '✅ SET' : '❌ MISSING',
+      serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ SET' : '❌ MISSING',
     },
     timestamp: new Date().toISOString(),
     errors: [] as string[],
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_KEY
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!url) {
       debug.errors.push('NEXT_PUBLIC_SUPABASE_URL is missing')
