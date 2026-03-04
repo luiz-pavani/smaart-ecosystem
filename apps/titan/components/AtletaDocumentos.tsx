@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, FileText, IdCard, Loader2 } from 'lucide-react'
 
 // Versão beta para teste visual de atualizações
-const BETA_VERSION = '20.3'
+const BETA_VERSION = '21'
 
 interface AtletaDocumentosProps {
   atletaId: number
@@ -285,15 +285,6 @@ export default function AtletaDocumentos({
           rotation: -45,
         }
       )
-      
-      // Adicionar versão beta na parte inferior (centrada)
-      ctx.save()
-      ctx.font = 'normal 120px HighwayGothic-Regular, Arial'
-      ctx.fillStyle = '#FFFFFF'
-      ctx.textAlign = 'center'
-      ctx.globalAlpha = 0.6
-      ctx.fillText(`v${BETA_VERSION}`, width / 2, height - 300)
-      ctx.restore()
       
       // Labels
       drawText(config.data_nascimento_label?.text || 'DATA DE NASCIMENTO', { ...config.data_nascimento_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
