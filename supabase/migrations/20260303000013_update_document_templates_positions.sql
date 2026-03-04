@@ -11,7 +11,7 @@ SET field_config = '{
   "nome": {
     "x": 1400,
     "y": 1000,
-    "fontSize": 207,
+    "fontSize": 68,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -22,7 +22,7 @@ SET field_config = '{
   "academia": {
     "x": 1400,
     "y": 1150,
-    "fontSize": 115,
+    "fontSize": 38,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -33,7 +33,7 @@ SET field_config = '{
   "data_nascimento_label": {
     "x": 2400,
     "y": 1550,
-    "fontSize": 117,
+    "fontSize": 38,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -44,7 +44,7 @@ SET field_config = '{
   "data_nascimento": {
     "x": 2400,
     "y": 1750,
-    "fontSize": 207,
+    "fontSize": 68,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -54,7 +54,7 @@ SET field_config = '{
   "graduacao_label": {
     "x": 2400,
     "y": 2050,
-    "fontSize": 117,
+    "fontSize": 38,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -65,7 +65,7 @@ SET field_config = '{
   "graduacao": {
     "x": 2400,
     "y": 2250,
-    "fontSize": 207,
+    "fontSize": 68,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -76,7 +76,7 @@ SET field_config = '{
   "nivel_arbitragem_label": {
     "x": 2400,
     "y": 2650,
-    "fontSize": 117,
+    "fontSize": 38,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -87,7 +87,7 @@ SET field_config = '{
   "nivel_arbitragem": {
     "x": 2400,
     "y": 2850,
-    "fontSize": 207,
+    "fontSize": 68,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -97,7 +97,7 @@ SET field_config = '{
   "validade_label": {
     "x": 2400,
     "y": 3250,
-    "fontSize": 117,
+    "fontSize": 38,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -108,7 +108,7 @@ SET field_config = '{
   "validade": {
     "x": 2400,
     "y": 3450,
-    "fontSize": 207,
+    "fontSize": 68,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
