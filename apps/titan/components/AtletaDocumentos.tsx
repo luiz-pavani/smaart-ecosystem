@@ -104,7 +104,7 @@ export default function AtletaDocumentos({
       ctx.textBaseline = 'top'
       ctx.fillStyle = '#FFFFFF'
 
-      // Helper para desenhar texto com rotação, alinhamento e letterSpacing
+      // Helper para desenhar texto com rotação, alinhamento, letterSpacing e scale
       const drawText = (text: string, fieldConfig: any) => {
         if (!fieldConfig) return
         
@@ -116,6 +116,8 @@ export default function AtletaDocumentos({
         const align = fieldConfig.align || 'left'
         const rotation = fieldConfig.rotation || 0
         const letterSpacing = fieldConfig.letterSpacing !== undefined ? fieldConfig.letterSpacing : 0
+        const scaleX = fieldConfig.scaleX !== undefined ? fieldConfig.scaleX : 1
+        const scaleY = fieldConfig.scaleY !== undefined ? fieldConfig.scaleY : 1
         
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
         ctx.fillStyle = color
@@ -124,6 +126,7 @@ export default function AtletaDocumentos({
         // Se tem rotação, usar translate/rotate
         if (rotation) {
           ctx.translate(fieldConfig.x, fieldConfig.y)
+          ctx.scale(scaleX, scaleY)
           ctx.rotate((rotation * Math.PI) / 180)
           
           // Desenhar com letterSpacing
@@ -139,17 +142,30 @@ export default function AtletaDocumentos({
             }
           }
         } else {
-          // Sem rotação, usar posição direta
-          let xPos = fieldConfig.x
-          
-          if (letterSpacing === 0) {
-            // Sem espaçamento extra, desenhar normalmente
-            ctx.fillText(text, xPos, fieldConfig.y)
+          // Sem rotação, aplicar scale se necessário
+          if (scaleX !== 1 || scaleY !== 1) {
+            ctx.translate(fieldConfig.x, fieldConfig.y)
+            ctx.scale(scaleX, scaleY)
+            
+            if (letterSpacing === 0) {
+              ctx.fillText(text, 0, 0)
+            } else {
+              let xPos = 0
+              for (let i = 0; i < text.length; i++) {
+                ctx.fillText(text[i], xPos, 0)
+                xPos += ctx.measureText(text[i]).width + letterSpacing
+              }
+            }
           } else {
-            // Com letterSpacing, desenhar caractere por caractere
-            for (let i = 0; i < text.length; i++) {
-              ctx.fillText(text[i], xPos, fieldConfig.y)
-              xPos += ctx.measureText(text[i]).width + letterSpacing
+            // Sem scale, renderizar normalmente
+            if (letterSpacing === 0) {
+              ctx.fillText(text, fieldConfig.x, fieldConfig.y)
+            } else {
+              let xPos = fieldConfig.x
+              for (let i = 0; i < text.length; i++) {
+                ctx.fillText(text[i], xPos, fieldConfig.y)
+                xPos += ctx.measureText(text[i]).width + letterSpacing
+              }
             }
           }
         }
