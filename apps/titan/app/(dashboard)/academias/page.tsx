@@ -1,188 +1,358 @@
-import { createClient } from '@/lib/supabase/server'
-import { Plus, Pencil, Globe, AlertCircle, CheckCircle2 } from 'lucide-react'
+'use client'
 
-// Helper function to format dates
-function formatDate(dateString: string | null): string {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('pt-BR')
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
+import Image from 'next/image'
+import { Eye, Edit, Trash2, CheckCircle, Clock, Calendar, AlertCircle, Settings2 } from 'lucide-react'
+import { useColumnOrder } from '@/hooks/useColumnOrder'
+import ColumnOrderDialog from '@/components/ColumnOrderDialog'
+
+interface Academia {
+  id: string
+  nome: string
+  sigla: string | null
+  cnpj: string | null
+  ativo: boolean
+  anualidade_status: string
+  anualidade_vencimento: string | null
+  logo_url: string | null
+  responsavel_email: string | null
+  responsavel_telefone: string | null
+  endereco_cidade: string | null
+  endereco_estado: string | null
+  federacao_id: string
 }
 
-// Helper function to check if plan is expired
-function isPlanExpired(expireDate: string | null): boolean {
-  if (!expireDate) return false
-  const today = new Date()
-  const expire = new Date(expireDate)
-  return expire < today
-}
+export default function AcademiasPage() {
+  const [academias, setAcademias] = useState<Academia[]>([])
+  const [loading, setLoading] = useState(true)
+  const [perfil, setPerfil] = useState<any>(null)
+  const [columnDialogOpen, setColumnDialogOpen] = useState(false)
+  const supabase = createClient()
+  const { columns, isLoaded, moveColumn, resetToDefault } = useColumnOrder()
 
-// Helper function to get days until expiration
-function daysUntilExpiration(expireDate: string | null): number | null {
-  if (!expireDate) return null
-  const today = new Date()
-  const expire = new Date(expireDate)
-  const diff = expire.getTime() - today.getTime()
-  return Math.ceil(diff / (1000 * 60 * 60 * 24))
-}
+  useEffect(() => {
+    loadAcademias()
+  }, [])
 
-export default async function AcademiasPage() {
-  const supabase = await createClient()
-  
-  // Fetch academias from database
-  const { data: academias } = await supabase
-    .from('academias')
-    .select('*')
-    .order('nome', { ascending: true })
+  const loadAcademias = async () => {
+    try {
+      setLoading(true)
 
-  const academiasData = academias || []
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        window.location.href = '/login'
+        return
+      }
+
+      // Get user profile to check role
+      const { data: perfilArray } = await supabase
+        .from('user_roles')
+        .select('role, federacao_id, academia_id')
+        .eq('user_id', user.id)
+        .limit(1)
+
+      const perfilData = perfilArray?.[0]
+
+      if (!perfilData) {
+        window.location.href = '/login'
+        return
+      }
+
+      setPerfil(perfilData)
+
+      // Build query based on user role
+      let query = supabase
+        .from('academias')
+        .select('*')
+        .order('nome', { ascending: true })
+
+      // Filter by role
+      if (perfilData.role === 'academia_admin' || perfilData.role === 'academia_staff') {
+        query = query.eq('id', perfilData.academia_id)
+      } else if (perfilData.role === 'federacao_admin' || perfilData.role === 'federacao_staff') {
+        query = query.eq('federacao_id', perfilData.federacao_id)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Error fetching academias:', error)
+      } else {
+        setAcademias(data || [])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (id: string, nome: string) => {
+    if (!confirm(`Tem certeza que deseja excluir a academia "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/academias/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erro ao excluir academia')
+      }
+
+      alert('✅ Academia excluída com sucesso!')
+      loadAcademias()
+    } catch (error) {
+      console.error('Error deleting academia:', error)
+      alert(`❌ ${error instanceof Error ? error.message : 'Erro ao excluir academia'}`)
+    }
+  }
+
+  // Statistics
+  const total = academias.length
+  const ativas = academias.filter(a => a.ativo).length
+  const emDia = academias.filter(a => a.anualidade_status === 'paga').length
+  const vencidas = academias.filter(a => a.anualidade_status === 'vencida').length
+
+  const getStatusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      paga: 'bg-green-100 text-green-800',
+      pendente: 'bg-yellow-100 text-yellow-800',
+      vencida: 'bg-red-100 text-red-800',
+    }
+    const labels: Record<string, string> = {
+      paga: 'Em dia',
+      pendente: 'Pendente',
+      vencida: 'Vencida',
+    }
+    return { color: colors[status] || 'bg-gray-100 text-gray-800', label: labels[status] || status }
+  }
+
+  const formatDate = (date: string | null) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleDateString('pt-BR')
+  }
+
+  const isVencida = (vencimento: string | null) => {
+    if (!vencimento) return false
+    return new Date(vencimento) < new Date()
+  }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="flex-1 space-y-6 p-8">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Academias</h1>
-          <p className="text-muted-foreground mt-2">
-            {academiasData.length} academia{academiasData.length !== 1 ? 's' : ''} cadastrada{academiasData.length !== 1 ? 's' : ''}
+          <h2 className="text-3xl font-bold text-foreground">Academias Filiadas</h2>
+          <p className="text-muted-foreground">
+            Gerencie o cadastro de todas as academias
           </p>
         </div>
-        <a
-          href="/academias/nova"
-          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-all active:scale-[0.98]"
-        >
-          <Plus className="w-5 h-5" />
-          Nova Academia
-        </a>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setColumnDialogOpen(true)}
+            className="bg-muted text-muted-foreground hover:bg-muted/80 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            title="Reordenar colunas"
+          >
+            <Settings2 className="w-4 h-4" />
+            Colunas
+          </button>
+          <Link href="/academias/nova">
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              + Nova Academia
+            </button>
+          </Link>
+        </div>
       </div>
 
-      {/* Empty State */}
-      {academiasData.length === 0 && (
-        <div className="bg-card rounded-2xl p-12 text-center border border-border">
-          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Plus className="w-8 h-8 text-muted-foreground" />
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="bg-card p-6 rounded-lg shadow border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-muted-foreground">Total de Academias</p>
+            <span className="text-2xl">🏢</span>
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2">
-            Nenhuma academia cadastrada
-          </h3>
-          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-            Cadastre sua primeira academia filiada para começar a gerenciar atletas, 
-            eventos e pagamentos.
-          </p>
-          <a
-            href="/academias/nova"
-            className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-all active:scale-[0.98]"
-          >
-            <Plus className="w-5 h-5" />
-            Cadastrar Primeira Academia
-          </a>
+          <div className="text-2xl font-bold text-foreground">{total}</div>
+          <p className="text-xs text-muted-foreground">{ativas} ativas</p>
         </div>
-      )}
 
-      {/* Academia List/Table */}
-      {academiasData.length > 0 && (
-        <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Nome</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">País</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Anuidade 2026</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Vencimento</th>
-                  <th className="text-left py-4 px-6 text-sm font-semibold text-foreground">Status</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-foreground">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {academiasData.map((academia: any) => {
-                  const expired = isPlanExpired(academia.plan_expire_date)
-                  const daysLeft = daysUntilExpiration(academia.plan_expire_date)
-                  
-                  return (
-                    <tr key={academia.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                      <td className="py-4 px-6">
-                        <a href={`/academias/${academia.id}`} className="font-medium text-foreground hover:text-primary transition-colors">
-                          {academia.nome}
-                        </a>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Globe className="w-4 h-4" />
-                          <span className="text-sm">{academia.pais || 'Brasil'}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                          academia.plan_status === 'Active' && !expired
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                            : expired || academia.plan_status === 'Expired'
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
-                        }`}>
-                          {academia.plan_status === 'Active' && !expired ? (
-                            <>
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              Ativa
-                            </>
-                          ) : expired || academia.plan_status === 'Expired' ? (
-                            <>
-                              <AlertCircle className="w-3.5 h-3.5" />
-                              Expirada
-                            </>
-                          ) : (
-                            'Sem dados'
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        {academia.plan_expire_date ? (
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium text-foreground">
-                              {formatDate(academia.plan_expire_date)}
-                            </p>
-                            {daysLeft !== null && daysLeft >= 0 && (
-                              <p className="text-xs text-muted-foreground">
-                                {daysLeft === 0 ? 'Vence hoje' : `${daysLeft} dias`}
-                              </p>
+        <div className="bg-card p-6 rounded-lg shadow border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-muted-foreground">Anualidade Em Dia</p>
+            <span className="text-2xl">✅</span>
+          </div>
+          <div className="text-2xl font-bold text-foreground">{emDia}</div>
+          <p className="text-xs text-muted-foreground">
+            {total > 0 ? ((emDia / total) * 100).toFixed(1) : 0}% do total
+          </p>
+        </div>
+
+        <div className="bg-card p-6 rounded-lg shadow border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-muted-foreground">Anualidade Vencida</p>
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <div className="text-2xl font-bold text-foreground">{vencidas}</div>
+          <p className="text-xs text-muted-foreground">Requer atenção</p>
+        </div>
+
+        <div className="bg-card p-6 rounded-lg shadow border border-border">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-muted-foreground">Buscar</p>
+            <span className="text-2xl">🔍</span>
+          </div>
+          <input
+            type="text"
+            placeholder="Nome ou CNPJ..."
+            className="w-full rounded border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+      </div>
+
+      {/* Academias Table */}
+      <div className="bg-card rounded-lg shadow border border-border">
+        <div className="p-6 border-b border-border">
+          <h3 className="text-lg font-semibold text-foreground">Lista de Academias</h3>
+        </div>
+        <div className="p-6">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mb-4"></div>
+              <p className="text-muted-foreground">Carregando academias...</p>
+            </div>
+          ) : academias.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <span className="text-6xl mb-4">🏢</span>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Nenhuma academia cadastrada</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Comece cadastrando a primeira academia da sua {perfil?.role?.includes('academia') ? 'academia' : 'federação'}
+              </p>
+              <Link href="/academias/nova">
+                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                  + Cadastrar Primeira Academia
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-4 font-medium text-muted-foreground">Academia</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">CNPJ</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Localização</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Responsável</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Anualidade</th>
+                    <th className="text-center p-4 font-medium text-muted-foreground">Status</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {academias.map((academia) => {
+                    const paymentStatus = getStatusBadge(academia.anualidade_status)
+                    const vencida = isVencida(academia.anualidade_vencimento)
+                    
+                    return (
+                      <tr key={academia.id} className="border-b border-border hover:bg-muted">
+                        <td className="p-4">
+                          <Link href={`/academias/${academia.id}`} className="hover:text-blue-600">
+                            <div className="font-medium text-foreground">{academia.nome}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {academia.sigla ? `SIGLA: ${academia.sigla}` : '-'}
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="p-4">
+                          <code className="text-xs bg-muted text-foreground px-2 py-1 rounded">
+                            {academia.cnpj ? academia.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : '-'}
+                          </code>
+                        </td>
+                        <td className="p-4 text-sm text-foreground">
+                          {academia.endereco_cidade && academia.endereco_estado 
+                            ? `${academia.endereco_cidade}, ${academia.endereco_estado}` 
+                            : '-'}
+                        </td>
+                        <td className="p-4 text-sm text-foreground">
+                          <div className="max-w-xs truncate">{academia.responsavel_email || '-'}</div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <div>
+                              <div className={`text-xs font-medium px-2 py-1 rounded ${paymentStatus.color}`}>
+                                {paymentStatus.label}
+                              </div>
+                              {vencida && (
+                                <div className="text-xs text-red-600 mt-1">
+                                  Vencida em {formatDate(academia.anualidade_vencimento)}
+                                </div>
+                              )}
+                              {!vencida && academia.anualidade_vencimento && (
+                                <div className="text-xs text-gray-600 mt-1">
+                                  Vence em {formatDate(academia.anualidade_vencimento)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            {academia.ativo ? (
+                              <div title="Ativa"><CheckCircle className="w-4 h-4 text-green-600" /></div>
+                            ) : (
+                              <div title="Inativa"><Clock className="w-4 h-4 text-gray-400" /></div>
                             )}
-                            {daysLeft !== null && daysLeft < 0 && (
-                              <p className="text-xs text-red-600 dark:text-red-400">
-                                Vencida há {Math.abs(daysLeft)} dias
-                              </p>
+                            {vencida && (
+                              <div title="Anualidade vencida"><AlertCircle className="w-4 h-4 text-red-600" /></div>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                          academia.ativo
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
-                        }`}>
-                          {academia.ativo ? 'Ativa' : 'Inativa'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center justify-end gap-2">
-                          <a
-                            href={`/academias/${academia.id}/editar`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-muted hover:bg-muted/80 rounded-md transition-colors"
-                          >
-                            <Pencil className="w-4 h-4" />
-                            Editar
-                          </a>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Link
+                              href={`/academias/${academia.id}`}
+                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Ver detalhes"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                            <Link
+                              href={`/academias/${academia.id}/editar`}
+                              className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Link>
+                            <button
+                              onClick={() => handleDelete(academia.id, academia.nome)}
+                              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+
+        <ColumnOrderDialog
+          columns={columns}
+          isOpen={columnDialogOpen}
+          onClose={() => setColumnDialogOpen(false)}
+          onReorder={moveColumn}
+          onReset={resetToDefault}
+        />
+      </div>
     </div>
   )
 }

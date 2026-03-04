@@ -1,328 +1,297 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import Link from 'next/link'
+import Image from 'next/image'
+import { ArrowLeft, Edit, Phone, Mail, MapPin, Calendar, Building2, FileText, User } from 'lucide-react'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Edit2, MapPin, Phone, Mail, Users, Loader2 } from 'lucide-react'
-
-interface Academia {
-  id: string
-  nome: string
-  sigla: string
-  cnpj?: string
-  inscricao_estadual?: string
-  inscricao_municipal?: string
-  endereco_cep?: string
-  endereco_rua?: string
-  endereco_numero?: string
-  endereco_complemento?: string
-  endereco_bairro?: string
-  endereco_cidade?: string
-  endereco_estado?: string
-  responsavel_nome?: string
-  responsavel_cpf?: string
-  responsavel_email?: string
-  responsavel_telefone?: string
-  tecnico_nome?: string
-  tecnico_cpf?: string
-  tecnico_email?: string
-  tecnico_telefone?: string
-  tecnico_registro_profissional?: string
-  status?: string
-  plano?: string
-  data_filiacao?: string
-  logo_url?: string
-  plan_status?: string
-  plan_expire_date?: string
-  ativo?: boolean
-  pais?: string
+interface PageProps {
+  params: Promise<{ id: string }>
 }
 
-export default function AcademiaDetailsPage() {
-  const router = useRouter()
-  const params = useParams()
-  const academiaId = params.id as string
-  const supabase = createClient()
+export default async function AcademiaDetalhesPage(props: PageProps) {
+  const params = await props.params
+  const supabase = await createClient()
 
-  const [academia, setAcademia] = useState<Academia | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  useEffect(() => {
-    loadAcademia()
-  }, [academiaId])
-
-  const loadAcademia = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const { data, error: fetchError } = await supabase
-        .from('academias')
-        .select('*')
-        .eq('id', academiaId)
-        .single()
-
-      if (fetchError) {
-        if (fetchError.code === 'PGRST116') {
-          throw new Error('Academia não encontrada')
-        }
-        throw fetchError
-      }
-
-      setAcademia(data)
-    } catch (err) {
-      console.error('Error loading academia:', err)
-      setError(err instanceof Error ? err.message : 'Erro ao carregar academia')
-    } finally {
-      setLoading(false)
-    }
+  if (!user) {
+    redirect('/login')
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-muted-foreground">Carregando academia...</p>
-        </div>
-      </div>
-    )
-  }
+  const { data: academia, error } = await supabase
+    .from('academias')
+    .select(`
+      *,
+      federacao:federacoes!academias_federacao_id_fkey (
+        id,
+        nome,
+        sigla
+      )
+    `)
+    .eq('id', params.id)
+    .single()
 
   if (error || !academia) {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Voltar
-        </button>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <p className="text-red-600 font-medium">{error || 'Academia não encontrada'}</p>
-          <button
-            onClick={() => router.push('/academias')}
-            className="mt-4 text-red-600 hover:text-red-700 underline"
-          >
-            Voltar para Academias
-          </button>
-        </div>
-      </div>
-    )
+    redirect('/academias')
   }
 
+  const formatCNPJ = (cnpj: string | null) => {
+    if (!cnpj) return '-'
+    return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+  }
+
+  const formatDate = (date: string | null) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleDateString('pt-BR')
+  }
+
+  const isVencida = (vencimento: string | null) => {
+    if (!vencimento) return false
+    return new Date(vencimento) < new Date()
+  }
+
+  const getAnualidadeStatus = (status: string) => {
+    const statusMap: Record<string, { label: string; color: string }> = {
+      paga: { label: 'Em dia', color: 'text-green-600 bg-green-50' },
+      pendente: { label: 'Pendente', color: 'text-yellow-600 bg-yellow-50' },
+      vencida: { label: 'Vencida', color: 'text-red-600 bg-red-50' },
+    }
+    return statusMap[status] || { label: status, color: 'text-gray-600 bg-gray-50' }
+  }
+
+  const statusData = getAnualidadeStatus(academia.anualidade_status || 'pendente')
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-4 sm:p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-4 transition-colors"
+    <div className="flex-1 space-y-6 p-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/academias"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            Voltar
-          </button>
-          
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-foreground">{academia.nome}</h1>
-              <p className="text-lg text-muted-foreground mt-2">{academia.sigla}</p>
+          </Link>
+          <div>
+            <h2 className="text-3xl font-bold text-foreground">Detalhes da Academia</h2>
+            <p className="text-muted-foreground">Informações completas do cadastro</p>
+          </div>
+        </div>
+        <Link
+          href={`/academias/${academia.id}/editar`}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          <Edit className="w-4 h-4" />
+          Editar Academia
+        </Link>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Logo e Informações Básicas */}
+          <div className="bg-card rounded-lg shadow border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-6">Informações Básicas</h3>
+            <div className="grid gap-6">
+              {academia.logo_url && (
+                <div className="flex justify-center">
+                  <Image
+                    src={academia.logo_url}
+                    alt={academia.nome}
+                    width={200}
+                    height={200}
+                    className="max-w-xs object-contain"
+                  />
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                  <p className="text-foreground font-medium mt-1">{academia.nome}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Nome Fantasia</label>
+                  <p className="text-foreground font-medium mt-1">{academia.nome_fantasia || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Sigla</label>
+                  <p className="text-foreground font-medium mt-1">{academia.sigla || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">CNPJ</label>
+                  <p className="text-foreground font-medium mt-1">{formatCNPJ(academia.cnpj)}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <p className="text-foreground font-medium mt-1">
+                    <span className={`inline-block px-2 py-1 rounded text-sm ${academia.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                      {academia.ativo ? 'Ativa' : 'Inativa'}
+                    </span>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Data de Filiação</label>
+                  <p className="text-foreground font-medium mt-1">{formatDate(academia.data_filiacao)}</p>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => router.push(`/academias/${academiaId}/editar`)}
-              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-all active:scale-[0.98]"
-            >
-              <Edit2 className="w-5 h-5" />
-              Editar Academia
-            </button>
+          </div>
+
+          {/* Dados de Endereço */}
+          <div className="bg-card rounded-lg shadow border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+              <MapPin className="w-5 h-5" /> Endereço
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-muted-foreground">Rua</label>
+                <p className="text-foreground mt-1">{academia.endereco_rua || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Número</label>
+                <p className="text-foreground mt-1">{academia.endereco_numero || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Complemento</label>
+                <p className="text-foreground mt-1">{academia.endereco_complemento || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Bairro</label>
+                <p className="text-foreground mt-1">{academia.endereco_bairro || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Cidade</label>
+                <p className="text-foreground mt-1">{academia.endereco_cidade || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Estado</label>
+                <p className="text-foreground mt-1">{academia.endereco_estado || '-'}</p>
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-muted-foreground">CEP</label>
+                <p className="text-foreground mt-1">{academia.endereco_cep || '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Responsável Principal */}
+          <div className="bg-card rounded-lg shadow border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+              <User className="w-5 h-5" /> Responsável Principal
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                <p className="text-foreground font-medium mt-1">{academia.responsavel_nome || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">CPF</label>
+                <p className="text-foreground mt-1">{academia.responsavel_cpf || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">RG</label>
+                <p className="text-foreground mt-1">{academia.responsavel_rg || '-'}</p>
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium text-muted-foreground">Faixa</label>
+                <p className="text-foreground mt-1">{academia.responsavel_faixa || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <Phone className="w-4 h-4" /> Telefone
+                </label>
+                <p className="text-foreground mt-1">{academia.responsavel_telefone || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <Mail className="w-4 h-4" /> Email
+                </label>
+                <p className="text-foreground mt-1">{academia.responsavel_email || '-'}</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Status Badge */}
-        {academia.status && (
-          <div className="mb-6">
-            <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-              academia.status === 'ativo'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-gray-100 text-gray-800'
-            }`}>
-              {academia.status === 'ativo' ? '✓ Ativa' : 'Inativa'}
-            </span>
-          </div>
-        )}
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column - Contato */}
-          <div className="bg-card rounded-2xl p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4">Informações de Contato</h2>
-            
-            {academia.responsavel_email && (
-              <div className="flex items-start gap-3 mb-4">
-                <Mail className="w-5 h-5 text-muted-foreground mt-1" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <a href={`mailto:${academia.responsavel_email}`} className="text-foreground hover:text-primary transition-colors font-medium">
-                    {academia.responsavel_email}
-                  </a>
-                </div>
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Anualidade */}
+          <div className="bg-card rounded-lg shadow border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+              <Calendar className="w-5 h-5" /> Anualidade
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Status:</span>
+                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${statusData.color}`}>
+                  {statusData.label}
+                </span>
               </div>
-            )}
-
-            {academia.responsavel_telefone && (
-              <div className="flex items-start gap-3 mb-4">
-                <Phone className="w-5 h-5 text-muted-foreground mt-1" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Telefone</p>
-                  <a href={`tel:${academia.responsavel_telefone}`} className="text-foreground hover:text-primary transition-colors font-medium">
-                    {academia.responsavel_telefone}
-                  </a>
-                </div>
-              </div>
-            )}
-
-            {!academia.responsavel_email && !academia.responsavel_telefone && (
-              <p className="text-muted-foreground italic">Sem contato cadastrado</p>
-            )}
-          </div>
-
-          {/* Right Column - Endereço */}
-          <div className="bg-card rounded-2xl p-6 border border-border">
-            <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              Localização
-            </h2>
-
-            {academia.endereco_rua ? (
-              <div className="space-y-2 text-sm">
-                <p className="text-foreground font-medium">
-                  {academia.endereco_rua}, {academia.endereco_numero}
-                  {academia.endereco_complemento && ` - ${academia.endereco_complemento}`}
-                </p>
-                <p className="text-muted-foreground">
-                  {academia.endereco_bairro}
-                </p>
-                <p className="text-muted-foreground">
-                  {academia.endereco_cidade}, {academia.endereco_estado}
-                </p>
-                {academia.endereco_cep && (
-                  <p className="text-muted-foreground">
-                    CEP: {academia.endereco_cep}
-                  </p>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Vencimento</label>
+                <p className="text-foreground font-medium mt-1">{formatDate(academia.anualidade_vencimento)}</p>
+                {isVencida(academia.anualidade_vencimento) && (
+                  <p className="text-xs text-red-600 mt-1">Vencida</p>
                 )}
               </div>
-            ) : (
-              <p className="text-muted-foreground italic">Endereço não cadastrado</p>
-            )}
-          </div>
-        </div>
-
-        {/* Responsável Info */}
-        {(academia.responsavel_nome || academia.tecnico_nome) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            {academia.responsavel_nome && (
-              <div className="bg-card rounded-2xl p-6 border border-border">
-                <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Responsável
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <p className="text-foreground font-medium">{academia.responsavel_nome}</p>
-                  {academia.responsavel_cpf && (
-                    <p className="text-muted-foreground">CPF: {academia.responsavel_cpf}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {academia.tecnico_nome && (
-              <div className="bg-card rounded-2xl p-6 border border-border">
-                <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Técnico Responsável
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <p className="text-foreground font-medium">{academia.tecnico_nome}</p>
-                  {academia.tecnico_email && (
-                    <a href={`mailto:${academia.tecnico_email}`} className="text-primary hover:underline">
-                      {academia.tecnico_email}
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Documentação */}
-        {(academia.cnpj || academia.inscricao_estadual) && (
-          <div className="bg-card rounded-2xl p-6 border border-border mt-6">
-            <h2 className="text-xl font-bold text-foreground mb-4">Documentação</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {academia.cnpj && (
+              {academia.safe2pay_subscription_id && (
                 <div>
-                  <p className="text-sm text-muted-foreground">CNPJ</p>
-                  <p className="text-foreground font-monospace font-medium">{academia.cnpj}</p>
-                </div>
-              )}
-              {academia.inscricao_estadual && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Inscrição Estadual</p>
-                  <p className="text-foreground font-monospace font-medium">{academia.inscricao_estadual}</p>
-                </div>
-              )}
-              {academia.inscricao_municipal && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Inscrição Municipal</p>
-                  <p className="text-foreground font-monospace font-medium">{academia.inscricao_municipal}</p>
+                  <label className="text-sm font-medium text-muted-foreground">ID Safe2Pay</label>
+                  <p className="text-foreground text-sm mt-1 break-all">{academia.safe2pay_subscription_id}</p>
                 </div>
               )}
             </div>
           </div>
-        )}
 
-        {/* Plano Info */}
-        {(academia.plano || academia.data_filiacao) && (
-          <div className="bg-card rounded-2xl p-6 border border-border mt-6">
-            <h2 className="text-xl font-bold text-foreground mb-4">Informações de Filiação</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {academia.plano && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Plano</p>
-                  <p className="text-foreground font-medium">{academia.plano}</p>
-                </div>
-              )}
-              {academia.data_filiacao && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Data de Filiação</p>
-                  <p className="text-foreground font-medium">
-                    {new Date(academia.data_filiacao).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-              )}
+          {/* Dados Operacionais */}
+          <div className="bg-card rounded-lg shadow border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+              <Building2 className="w-5 h-5" /> Dados Operacionais
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Quantidade de Alunos</label>
+                <p className="text-foreground font-bold text-lg mt-1">{academia.quantidade_alunos || 0}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Horário de Funcionamento</label>
+                <p className="text-foreground mt-1 text-sm">
+                  {academia.horario_funcionamento || 'Não informado'}
+                </p>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Edit Button */}
-        <div className="mt-8 flex gap-4">
-          <button
-            onClick={() => router.push(`/academias/${academiaId}/editar`)}
-            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-8 rounded-lg transition-all active:scale-[0.98]"
-          >
-            <Edit2 className="w-5 h-5" />
-            Editar Academia
-          </button>
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground font-medium py-3 px-8 rounded-lg transition-all active:scale-[0.98]"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Voltar
-          </button>
+          {/* Responsável Técnico */}
+          {academia.tecnico_nome && (
+            <div className="bg-card rounded-lg shadow border border-border p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-6">Responsável Técnico</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Nome</label>
+                  <p className="text-foreground mt-1">{academia.tecnico_nome}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">CPF</label>
+                  <p className="text-foreground mt-1">{academia.tecnico_cpf || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Registro Profissional</label>
+                  <p className="text-foreground mt-1">{academia.tecnico_registro_profissional || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Telefone</label>
+                  <p className="text-foreground mt-1">{academia.tecnico_telefone || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Email</label>
+                  <p className="text-foreground mt-1 break-all">{academia.tecnico_email || '-'}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

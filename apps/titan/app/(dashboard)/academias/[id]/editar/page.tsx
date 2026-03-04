@@ -1,59 +1,40 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import EditarAcademiaForm from '@/components/forms/EditarAcademiaForm'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Save, Loader2, MapPin } from 'lucide-react'
+interface PageProps {
+  params: Promise<{ id: string }>
+}
 
-export default function EditarAcademiaPage() {
-  const router = useRouter()
-  const params = useParams()
-  const academiaId = params.id as string
-  const supabase = createClient()
-  
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [cepLoading, setCepLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    nome: '',
-    sigla: '',
-    cnpj: '',
-    inscricao_estadual: '',
-    inscricao_municipal: '',
-    
-    // Endereço
-    endereco_cep: '',
-    endereco_rua: '',
-    endereco_numero: '',
-    endereco_complemento: '',
-    endereco_bairro: '',
-    endereco_cidade: '',
-    endereco_estado: '',
-    
-    // Responsável
-    responsavel_nome: '',
-    responsavel_cpf: '',
-    responsavel_rg: '',
-    responsavel_telefone: '',
-    responsavel_email: '',
-    responsavel_faixa: '',
-    
-    // Responsável Técnico
-    tecnico_nome: '',
-    tecnico_cpf: '',
-    tecnico_registro_profissional: '',
-    tecnico_telefone: '',
-    tecnico_email: '',
-    
-    // Status
-    status: 'ativo',
-  })
+export default async function EditarAcademiaPage(props: PageProps) {
+  const params = await props.params
+  const supabase = await createClient()
 
-  useEffect(() => {
-    loadAcademia()
-  }, [])
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const loadAcademia = async () => {
+  if (!user) {
+    redirect('/login')
+  }
+
+  // Get academy data
+  const { data: academia, error } = await supabase
+    .from('academias')
+    .select('*')
+    .eq('id', params.id)
+    .single()
+
+  if (error || !academia) {
+    redirect('/academias')
+  }
+
+  return (
+    <EditarAcademiaForm
+      academia={academia}
+    />
+  )
+}
     try {
       const { data, error } = await supabase
         .from('academias')
