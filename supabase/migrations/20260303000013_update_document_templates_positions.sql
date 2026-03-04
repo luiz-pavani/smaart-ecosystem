@@ -9,8 +9,8 @@ SET field_config = '{
   "width": 3000,
   "height": 4782,
   "nome": {
-    "x": 1300,
-    "y": 1950,
+    "x": 1900,
+    "y": 2500,
     "fontSize": 207,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
