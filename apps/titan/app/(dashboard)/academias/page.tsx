@@ -67,43 +67,46 @@ export default function AcademiasPage() {
       console.log('📊 Perfil do usuário:', perfilData)
       setPerfil(perfilData)
 
-      // First, fetch ALL academias without filters (to check if RLS is the issue)
-      console.log('📤 Buscando TODAS as academias sem filtros...')
-      let query = supabase
-        .from('academias')
-        .select('*')
-        .order('nome', { ascending: true })
-
-      const { data, error } = await query
-
-      if (error) {
-        console.error('❌ Erro ao buscar academias:', error)
-        console.error('Estatus do erro:', error.code)
-        console.error('Mensagem completa:', error.message)
-        console.error('Detalhes:', error.details)
-        console.error('Hint:', error.hint)
+      // Fetch from API endpoint instead of direct Supabase query
+      console.log('📤 Buscando academias via API endpoint...')
+      const response = await fetch('/api/academias/listar')
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('❌ Erro na API:', errorData.error)
+        console.error('Status:', response.status)
         setAcademias([])
-      } else {
-        console.log('✅ Todas as academias carregadas:', data?.length || 0)
-        
-        // Now filter on client side based on user role
-        let filtered = data || []
-        
-        if (perfilData.role === 'academia_admin' || perfilData.role === 'academia_staff') {
-          if (perfilData.academia_id) {
-            console.log('🏢 Filtrando client-side por academia_id:', perfilData.academia_id)
-            filtered = filtered.filter(a => a.id === perfilData.academia_id)
-          }
-        } else if (perfilData.role === 'federacao_admin' || perfilData.role === 'federacao_staff') {
-          if (perfilData.federacao_id) {
-            console.log('🏟️ Filtrando client-side por federacao_id:', perfilData.federacao_id)
-            filtered = filtered.filter(a => a.federacao_id === perfilData.federacao_id)
-          }
+        return
+      }
+
+      const { academias, error: apiError } = await response.json()
+
+      if (apiError) {
+        console.error('❌ Erro da API:', apiError)
+        setAcademias([])
+        return
+      }
+
+      console.log('✅ Academias retornadas pela API:', academias?.length || 0)
+      
+      // Now filter on client side based on user role
+      let filtered = academias || []
+      
+      if (perfilData.role === 'academia_admin' || perfilData.role === 'academia_staff') {
+        if (perfilData.academia_id) {
+          console.log('🏢 Filtrando client-side por academia_id:', perfilData.academia_id)
+          filtered = filtered.filter((a: Academia) => a.id === perfilData.academia_id)
         }
-        
-        console.log('✅ Academias após filtro client-side:', filtered.length)
-        console.table(filtered)
-        setAcademias(filtered)
+      } else if (perfilData.role === 'federacao_admin' || perfilData.role === 'federacao_staff') {
+        if (perfilData.federacao_id) {
+          console.log('🏟️ Filtrando client-side por federacao_id:', perfilData.federacao_id)
+          filtered = filtered.filter((a: Academia) => a.federacao_id === perfilData.federacao_id)
+        }
+      }
+      
+      console.log('✅ Academias após filtro:', filtered.length)
+      console.table(filtered)
+      setAcademias(filtered)
     } finally {
       setLoading(false)
     }

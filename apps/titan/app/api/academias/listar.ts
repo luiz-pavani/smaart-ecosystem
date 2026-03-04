@@ -7,25 +7,38 @@ export async function GET(request: NextRequest) {
     const key = process.env.SUPABASE_SERVICE_KEY
 
     if (!url || !key) {
-      return NextResponse.json({ academias: [] })
+      console.error('Missing Supabase URL or Service Key')
+      return NextResponse.json({ error: 'Supabase not configured', academias: [] }, { status: 500 })
     }
 
     const supabase = createClient(url, key)
 
-    // Buscar todas as academias
+    // Buscar TODAS as academias com todos os campos
+    console.log('Fetching academias from Supabase...')
     const { data: academias, error } = await supabase
       .from('academias')
-      .select('id, sigla, nome')
+      .select('*')
       .order('nome', { ascending: true })
 
     if (error) {
-      console.log('Erro ao buscar academias:', error.message)
-      return NextResponse.json({ academias: [] })
+      console.error('❌ Erro ao buscar academias:', error)
+      console.error('Error code:', error.code)
+      console.error('Error message:', error.message)
+      console.error('Error details:', error.details)
+      return NextResponse.json({ 
+        error: error.message,
+        code: error.code,
+        academias: [] 
+      }, { status: 400 })
     }
 
-    return NextResponse.json({ academias: academias || [] })
+    console.log(`✅ Fetched ${academias?.length || 0} academias`)
+    return NextResponse.json({ academias: academias || [] }, { status: 200 })
   } catch (error) {
-    console.error('Erro:', error)
-    return NextResponse.json({ academias: [] })
+    console.error('❌ Catch error:', error)
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      academias: [] 
+    }, { status: 500 })
   }
 }
