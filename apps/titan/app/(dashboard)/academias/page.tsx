@@ -71,15 +71,22 @@ export default function AcademiasPage() {
       console.log('📤 Buscando academias via API endpoint...')
       const response = await fetch('/api/academias/listar')
       
+      console.log('📊 Response status:', response.status)
+      console.log('📊 Response ok:', response.ok)
+      
       if (!response.ok) {
         const errorData = await response.json()
         console.error('❌ Erro na API:', errorData.error)
+        console.error('Detalhes:', errorData)
         console.error('Status:', response.status)
         setAcademias([])
         return
       }
 
-      const { academias, error: apiError } = await response.json()
+      const responseData = await response.json()
+      console.log('📥 Response data:', responseData)
+      
+      const { academias, error: apiError } = responseData
 
       if (apiError) {
         console.error('❌ Erro da API:', apiError)
