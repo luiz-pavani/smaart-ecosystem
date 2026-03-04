@@ -6,12 +6,12 @@
 -- =====================================================
 UPDATE public.document_templates
 SET field_config = '{
-  "width": 3000,
-  "height": 4782,
+  "width": 9000,
+  "height": 14346,
   "nome": {
-    "x": 1900,
-    "y": 2500,
-    "fontSize": 207,
+    "x": 6200,
+    "y": 7500,
+    "fontSize": 621,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -31,9 +31,9 @@ SET field_config = '{
     "rotation": -45
   },
   "data_nascimento_label": {
-    "x": 2450,
-    "y": 2350,
-    "fontSize": 117,
+    "x": 7850,
+    "y": 7050,
+    "fontSize": 351,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -42,9 +42,9 @@ SET field_config = '{
     "text": "DATA DE NASCIMENTO"
   },
   "data_nascimento": {
-    "x": 2450,
-    "y": 2550,
-    "fontSize": 207,
+    "x": 7850,
+    "y": 7650,
+    "fontSize": 621,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -52,9 +52,9 @@ SET field_config = '{
     "rotation": 0
   },
   "graduacao_label": {
-    "x": 2450,
-    "y": 2950,
-    "fontSize": 117,
+    "x": 7850,
+    "y": 8850,
+    "fontSize": 351,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -63,9 +63,9 @@ SET field_config = '{
     "text": "GRADUAÇÃO"
   },
   "graduacao": {
-    "x": 2450,
-    "y": 3150,
-    "fontSize": 207,
+    "x": 7850,
+    "y": 9450,
+    "fontSize": 621,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -74,9 +74,9 @@ SET field_config = '{
     "maxWidth": 1300
   },
   "nivel_arbitragem_label": {
-    "x": 2450,
-    "y": 3550,
-    "fontSize": 117,
+    "x": 7850,
+    "y": 10650,
+    "fontSize": 351,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -85,9 +85,9 @@ SET field_config = '{
     "text": "NÍVEL DE ARBITRAGEM"
   },
   "nivel_arbitragem": {
-    "x": 2450,
-    "y": 3750,
-    "fontSize": 207,
+    "x": 7850,
+    "y": 11250,
+    "fontSize": 621,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -95,9 +95,9 @@ SET field_config = '{
     "rotation": 0
   },
   "validade_label": {
-    "x": 2450,
-    "y": 4150,
-    "fontSize": 117,
+    "x": 7850,
+    "y": 12450,
+    "fontSize": 351,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "normal",
     "color": "#FFFFFF",
@@ -106,9 +106,9 @@ SET field_config = '{
     "text": "VALIDADE"
   },
   "validade": {
-    "x": 2450,
-    "y": 4350,
-    "fontSize": 207,
+    "x": 7850,
+    "y": 13050,
+    "fontSize": 621,
     "fontFamily": "Avenir Next, Avenir, Arial",
     "fontWeight": "bold",
     "color": "#FFFFFF",
@@ -116,10 +116,10 @@ SET field_config = '{
     "rotation": 0
   },
   "logo_academia": {
-    "x": 560,
-    "y": 360,
-    "width": 760,
-    "height": 760,
+    "x": 2180,
+    "y": 1080,
+    "width": 2280,
+    "height": 2280,
     "allowScaleDown": true
   }
 }'::jsonb
