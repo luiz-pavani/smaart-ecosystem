@@ -109,7 +109,7 @@ export default function AtletaDocumentos({
         const fontSize = fieldConfig.fontSize || 24
         ctx.font = `${fieldConfig.fontWeight || 'normal'} ${fontSize}px ${fieldConfig.fontFamily || 'Arial'}`
         ctx.fillStyle = fieldConfig.color || '#FFFFFF'
-        ctx.textAlign = fieldConfig.align || 'left'
+        ctx.textAlign = 'right'
         
         if (fieldConfig.rotation) {
           ctx.translate(fieldConfig.x, fieldConfig.y)
@@ -164,23 +164,23 @@ export default function AtletaDocumentos({
         String(atleta.nome || '').toLocaleUpperCase('pt-BR'),
         {
           ...config.nome,
+          align: 'right',
           rotation: 45,
         }
       )
-      drawText(String(atleta.academia || '').toLocaleUpperCase('pt-BR'), config.academia)
       
       // Labels
-      drawText(config.data_nascimento_label?.text || 'DATA DE NASCIMENTO', config.data_nascimento_label)
-      drawText(String(atleta.dataNascimento || '').toLocaleUpperCase('pt-BR'), config.data_nascimento)
+      drawText(config.data_nascimento_label?.text || 'DATA DE NASCIMENTO', { ...config.data_nascimento_label, align: 'right' })
+      drawText(String(atleta.dataNascimento || '').toLocaleUpperCase('pt-BR'), { ...config.data_nascimento, align: 'right' })
       
-      drawText(config.graduacao_label?.text || 'GRADUAÇÃO', config.graduacao_label)
-      drawText(String(atleta.graduacao || '').toLocaleUpperCase('pt-BR'), config.graduacao)
+      drawText(config.graduacao_label?.text || 'GRADUAÇÃO', { ...config.graduacao_label, align: 'right' })
+      drawText(String(atleta.graduacao || '').toLocaleUpperCase('pt-BR'), { ...config.graduacao, align: 'right' })
       
-      drawText(config.nivel_arbitragem_label?.text || 'NÍVEL DE ARBITRAGEM', config.nivel_arbitragem_label)
-      drawText(String(atleta.nivelArbitragem || '').toLocaleUpperCase('pt-BR'), config.nivel_arbitragem)
+      drawText(config.nivel_arbitragem_label?.text || 'NÍVEL DE ARBITRAGEM', { ...config.nivel_arbitragem_label, align: 'right' })
+      drawText(String(atleta.nivelArbitragem || '').toLocaleUpperCase('pt-BR'), { ...config.nivel_arbitragem, align: 'right' })
       
-      drawText(config.validade_label?.text || 'VALIDADE', config.validade_label)
-      drawText(String(atleta.validade || '').toLocaleUpperCase('pt-BR'), config.validade)
+      drawText(config.validade_label?.text || 'VALIDADE', { ...config.validade_label, align: 'right' })
+      drawText(String(atleta.validade || '').toLocaleUpperCase('pt-BR'), { ...config.validade, align: 'right' })
 
       // 6. Download
       canvas.toBlob((blob) => {
