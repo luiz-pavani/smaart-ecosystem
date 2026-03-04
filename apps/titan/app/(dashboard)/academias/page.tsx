@@ -67,51 +67,43 @@ export default function AcademiasPage() {
       console.log('📊 Perfil do usuário:', perfilData)
       setPerfil(perfilData)
 
-      // Build query based on user role
+      // First, fetch ALL academias without filters (to check if RLS is the issue)
+      console.log('📤 Buscando TODAS as academias sem filtros...')
       let query = supabase
         .from('academias')
         .select('*')
         .order('nome', { ascending: true })
 
-      // Filter by role
-      if (perfilData.role === 'academia_admin' || perfilData.role === 'academia_staff') {
-        if (!perfilData.academia_id) {
-          console.warn('⚠️ Academia staff sem academia_id definido')
-          setAcademias([])
-          return
-        }
-        console.log('🏢 Filtrando por academia_id:', perfilData.academia_id)
-        query = query.eq('id', perfilData.academia_id)
-      } else if (perfilData.role === 'federacao_admin' || perfilData.role === 'federacao_staff') {
-        if (!perfilData.federacao_id) {
-          console.warn('⚠️ Federação staff sem federacao_id definido')
-          setAcademias([])
-          return
-        }
-        console.log('🏟️ Filtrando por federacao_id:', perfilData.federacao_id)
-        query = query.eq('federacao_id', perfilData.federacao_id)
-      } else {
-        console.warn('⚠️ Role não reconhecida:', perfilData.role)
-        // Se tiver admin role, traz todas
-        if (perfilData.role === 'admin') {
-          console.log('🔓 Admin - carregando todas as academias')
-        } else {
-          setAcademias([])
-          return
-        }
-      }
-
-      console.log('📤 Enviando query ao Supabase...')
       const { data, error } = await query
 
       if (error) {
         console.error('❌ Erro ao buscar academias:', error)
-        console.error('Detalhes do erro:', error.message)
+        console.error('Estatus do erro:', error.code)
+        console.error('Mensagem completa:', error.message)
+        console.error('Detalhes:', error.details)
+        console.error('Hint:', error.hint)
+        setAcademias([])
       } else {
-        console.log('✅ Academias carregadas:', data?.length || 0)
-        console.table(data)
-        setAcademias(data || [])
-      }
+        console.log('✅ Todas as academias carregadas:', data?.length || 0)
+        
+        // Now filter on client side based on user role
+        let filtered = data || []
+        
+        if (perfilData.role === 'academia_admin' || perfilData.role === 'academia_staff') {
+          if (perfilData.academia_id) {
+            console.log('🏢 Filtrando client-side por academia_id:', perfilData.academia_id)
+            filtered = filtered.filter(a => a.id === perfilData.academia_id)
+          }
+        } else if (perfilData.role === 'federacao_admin' || perfilData.role === 'federacao_staff') {
+          if (perfilData.federacao_id) {
+            console.log('🏟️ Filtrando client-side por federacao_id:', perfilData.federacao_id)
+            filtered = filtered.filter(a => a.federacao_id === perfilData.federacao_id)
+          }
+        }
+        
+        console.log('✅ Academias após filtro client-side:', filtered.length)
+        console.table(filtered)
+        setAcademias(filtered)
     } finally {
       setLoading(false)
     }
