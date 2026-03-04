@@ -296,17 +296,17 @@ export default function AtletaDocumentos({
       ctx.restore()
       
       // Labels
-      drawText(config.data_nascimento_label?.text || 'DATA DE NASCIMENTO', { ...config.data_nascimento_label, align: 'right' })
-      drawText(String(atleta.dataNascimento || '').toLocaleUpperCase('pt-BR'), { ...config.data_nascimento, align: 'right' })
+      drawText(config.data_nascimento_label?.text || 'DATA DE NASCIMENTO', { ...config.data_nascimento_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
+      drawText(String(atleta.dataNascimento || '').toLocaleUpperCase('pt-BR'), { ...config.data_nascimento, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
       
-      drawText(config.graduacao_label?.text || 'GRADUAÇÃO', { ...config.graduacao_label, align: 'right' })
-      drawText(String(atleta.graduacao || '').toLocaleUpperCase('pt-BR'), { ...config.graduacao, align: 'right' })
+      drawText(config.graduacao_label?.text || 'GRADUAÇÃO', { ...config.graduacao_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
+      drawText(String(atleta.graduacao || '').toLocaleUpperCase('pt-BR'), { ...config.graduacao, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
       
-      drawText(config.nivel_arbitragem_label?.text || 'NÍVEL DE ARBITRAGEM', { ...config.nivel_arbitragem_label, align: 'right' })
-      drawText(String(atleta.nivelArbitragem || '').toLocaleUpperCase('pt-BR'), { ...config.nivel_arbitragem, align: 'right' })
+      drawText(config.nivel_arbitragem_label?.text || 'NÍVEL DE ARBITRAGEM', { ...config.nivel_arbitragem_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
+      drawText(String(atleta.nivelArbitragem || '').toLocaleUpperCase('pt-BR'), { ...config.nivel_arbitragem, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
       
-      drawText(config.validade_label?.text || 'VALIDADE', { ...config.validade_label, align: 'right' })
-      drawText(String(atleta.validade || '').toLocaleUpperCase('pt-BR'), { ...config.validade, align: 'right' })
+      drawText(config.validade_label?.text || 'VALIDADE', { ...config.validade_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
+      drawText(String(atleta.validade || '').toLocaleUpperCase('pt-BR'), { ...config.validade, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
 
       // 6. Download
       canvas.toBlob((blob) => {
@@ -416,6 +416,7 @@ export default function AtletaDocumentos({
       if (config.graduacao_label) {
         doc.setFontSize(config.graduacao_label.fontSize || 24)
         doc.setFont(pdfFontRegular, 'normal')
+        doc.setTextColor(255, 255, 255)
         doc.text(
           config.graduacao_label.text || 'GRADUAÇÃO',
           config.graduacao_label.x || width / 2,
@@ -504,6 +505,9 @@ export default function AtletaDocumentos({
           config.presidente.y || 640,
           { align: config.presidente.align || 'center' }
         )
+        
+        // Restaurar cor para branco (caso haja mais textos depois)
+        doc.setTextColor(255, 255, 255)
       }
 
       // 6. Download
