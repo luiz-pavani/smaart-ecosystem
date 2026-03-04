@@ -16,9 +16,8 @@ SET field_config = '{
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "maxWidth": 1500,
     "rotation": -45,
-    "letterSpacing": "normal"
+    "letterSpacing": 0
   },
   "academia": {
     "x": 1300,
@@ -28,8 +27,8 @@ SET field_config = '{
     "fontWeight": "normal",
     "color": "#FFFFFF",
     "align": "right",
-    "maxWidth": 1200,
-    "rotation": -45
+    "rotation": -45,
+    "letterSpacing": 0
   },
   "data_nascimento_label": {
     "x": 7850,
@@ -40,7 +39,8 @@ SET field_config = '{
     "color": "#FFFFFF",
     "align": "right",
     "rotation": 0,
-    "text": "DATA DE NASCIMENTO"
+    "text": "DATA DE NASCIMENTO",
+    "letterSpacing": 0
   },
   "data_nascimento": {
     "x": 7850,
@@ -50,7 +50,8 @@ SET field_config = '{
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 0
+    "rotation": 0,
+    "letterSpacing": 0
   },
   "graduacao_label": {
     "x": 7850,
@@ -61,7 +62,8 @@ SET field_config = '{
     "color": "#FFFFFF",
     "align": "right",
     "rotation": 0,
-    "text": "GRADUAÇÃO"
+    "text": "GRADUAÇÃO",
+    "letterSpacing": 0
   },
   "graduacao": {
     "x": 7850,
@@ -72,7 +74,7 @@ SET field_config = '{
     "color": "#FFFFFF",
     "align": "right",
     "rotation": 0,
-    "maxWidth": 1300
+    "letterSpacing": 0
   },
   "nivel_arbitragem_label": {
     "x": 7850,
@@ -83,7 +85,8 @@ SET field_config = '{
     "color": "#FFFFFF",
     "align": "right",
     "rotation": 0,
-    "text": "NÍVEL DE ARBITRAGEM"
+    "text": "NÍVEL DE ARBITRAGEM",
+    "letterSpacing": 0
   },
   "nivel_arbitragem": {
     "x": 7850,
@@ -93,7 +96,8 @@ SET field_config = '{
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 0
+    "rotation": 0,
+    "letterSpacing": 0
   },
   "validade_label": {
     "x": 7850,
@@ -104,7 +108,8 @@ SET field_config = '{
     "color": "#FFFFFF",
     "align": "right",
     "rotation": 0,
-    "text": "VALIDADE"
+    "text": "VALIDADE",
+    "letterSpacing": 0
   },
   "validade": {
     "x": 7850,
@@ -114,7 +119,8 @@ SET field_config = '{
     "fontWeight": "bold",
     "color": "#FFFFFF",
     "align": "right",
-    "rotation": 0
+    "rotation": 0,
+    "letterSpacing": 0
   },
   "logo_academia": {
     "x": 2180,
