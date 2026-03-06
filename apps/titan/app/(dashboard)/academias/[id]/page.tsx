@@ -61,7 +61,7 @@ export default async function AcademiaDetalhesPage(props: PageProps) {
     return statusMap[status] || { label: status, color: 'text-gray-600 bg-gray-50' }
   }
 
-  const statusData = getAnuidadeStatus(academia.anuidade_status || 'pendente')
+  const statusData = getAnuidadeStatus(academia.anualidade_status || 'pendente')
 
   return (
     <div className="flex-1 space-y-6 p-8">
@@ -217,10 +217,10 @@ export default async function AcademiaDetalhesPage(props: PageProps) {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Anualidade */}
+          {/* Anuidade */}
           <div className="bg-card rounded-lg shadow border border-border p-6">
             <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
-              <Calendar className="w-5 h-5" /> Anualidade
+              <Calendar className="w-5 h-5" /> Anuidade
             </h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -231,8 +231,8 @@ export default async function AcademiaDetalhesPage(props: PageProps) {
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Vencimento</label>
-                <p className="text-foreground font-medium mt-1">{formatDate(academia.anuidade_vencimento)}</p>
-                {isVencida(academia.anuidade_vencimento) && (
+                <p className="text-foreground font-medium mt-1">{formatDate(academia.anualidade_vencimento)}</p>
+                {isVencida(academia.anualidade_vencimento) && (
                   <p className="text-xs text-red-600 mt-1">Vencida</p>
                 )}
               </div>

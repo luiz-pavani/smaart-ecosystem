@@ -39,8 +39,8 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
     tecnico_email: academia.tecnico_email || '',
     horario_funcionamento: academia.horario_funcionamento || '',
     quantidade_alunos: academia.quantidade_alunos || 0,
-    anuidade_status: academia.anualidade_status || 'pendente',
-    anuidade_vencimento: academia.anualidade_vencimento || '',
+    anualidade_status: academia.anualidade_status || 'pendente',
+    anualidade_vencimento: academia.anualidade_vencimento || '',
     ativo: academia.ativo !== false,
   })
 
@@ -266,7 +266,7 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Status</label>
               <select
-                value={formData.anuidade_status}
+                value={formData.anualidade_status}
                 onChange={(e) => updateField('anualidade_status', e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               >
@@ -280,7 +280,7 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
               <label className="block text-sm font-medium text-foreground mb-2">Vencimento</label>
               <input
                 type="date"
-                value={formData.anuidade_vencimento}
+                value={formData.anualidade_vencimento}
                 onChange={(e) => updateField('anualidade_vencimento', e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               />
