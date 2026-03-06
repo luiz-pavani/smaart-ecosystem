@@ -39,7 +39,7 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
     tecnico_email: academia.tecnico_email || '',
     horario_funcionamento: academia.horario_funcionamento || '',
     quantidade_alunos: academia.quantidade_alunos || 0,
-    anualidade_status: academia.anualidade_status || 'Pendente',
+    anualidade_status: academia.anualidade_status || 'pendente',
     anualidade_vencimento: academia.anualidade_vencimento || '',
     ativo: academia.ativo !== false,
   })
@@ -270,10 +270,10 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
                 onChange={(e) => updateField('anualidade_status', e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               >
-                <option value="Pendente">Pendente</option>
-                <option value="Ativa">Ativa</option>
-                <option value="Vencida">Vencida</option>
-                <option value="Cancelada">Cancelada</option>
+                <option value="pendente">Pendente</option>
+                <option value="paga">Paga (Em dia)</option>
+                <option value="vencida">Vencida</option>
+                <option value="cancelada">Cancelada</option>
               </select>
             </div>
             <div>

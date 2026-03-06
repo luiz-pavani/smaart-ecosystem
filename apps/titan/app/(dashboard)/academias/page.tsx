@@ -34,6 +34,27 @@ export default function AcademiasPage() {
 
   useEffect(() => {
     loadAcademias()
+
+    // Reload data when page becomes visible (user returns from edit page)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('📄 Page became visible - reloading academias...')
+        loadAcademias()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Also set up a refresh interval for real-time updates (every 10 seconds)
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Auto-refreshing academias...')
+      loadAcademias()
+    }, 10000)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(refreshInterval)
+    }
   }, [])
 
   const loadAcademias = async () => {
