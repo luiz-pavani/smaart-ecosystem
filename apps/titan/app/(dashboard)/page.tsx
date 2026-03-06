@@ -131,7 +131,7 @@ export default async function DashboardPage() {
             <DollarSign className="w-6 h-6 text-primary" />
             <div>
               <p className="font-medium text-foreground">Gerar Cobrança</p>
-              <p className="text-sm text-muted-foreground">Anualidades/Taxas</p>
+              <p className="text-sm text-muted-foreground">Anuidades/Taxas</p>
             </div>
           </a>
         </div>

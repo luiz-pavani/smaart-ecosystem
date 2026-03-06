@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Eye, Edit, Trash2, CheckCircle, Clock, Calendar, AlertCircle, Settings2 } from 'lucide-react'
-import { useColumnOrder } from '@/hooks/useColumnOrder'
-import ColumnOrderDialog from '@/components/ColumnOrderDialog'
+import { Eye, Edit, Trash2, CheckCircle, Clock, Calendar, AlertCircle } from 'lucide-react'
+
 
 interface Academia {
   id: string
@@ -14,8 +13,8 @@ interface Academia {
   sigla: string | null
   cnpj: string | null
   ativo: boolean
-  anualidade_status: string
-  anualidade_vencimento: string | null
+  anuidade_status: string
+  anuidade_vencimento: string | null
   logo_url: string | null
   responsavel_email: string | null
   responsavel_telefone: string | null
@@ -28,9 +27,7 @@ export default function AcademiasPage() {
   const [academias, setAcademias] = useState<Academia[]>([])
   const [loading, setLoading] = useState(true)
   const [perfil, setPerfil] = useState<any>(null)
-  const [columnDialogOpen, setColumnDialogOpen] = useState(false)
   const supabase = createClient()
-  const { columns, isLoaded, moveColumn, resetToDefault } = useColumnOrder()
 
   useEffect(() => {
     loadAcademias()
@@ -166,8 +163,8 @@ export default function AcademiasPage() {
   // Statistics
   const total = academias.length
   const ativas = academias.filter(a => a.ativo).length
-  const emDia = academias.filter(a => a.anualidade_status === 'paga').length
-  const vencidas = academias.filter(a => a.anualidade_status === 'vencida').length
+  const emDia = academias.filter(a => a.anuidade_status === 'paga').length
+  const vencidas = academias.filter(a => a.anuidade_status === 'vencida').length
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -202,21 +199,11 @@ export default function AcademiasPage() {
             Gerencie o cadastro de todas as academias
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setColumnDialogOpen(true)}
-            className="bg-muted text-muted-foreground hover:bg-muted/80 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-            title="Reordenar colunas"
-          >
-            <Settings2 className="w-4 h-4" />
-            Colunas
+        <Link href="/academias/criar">
+          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+            + Nova Anuidade
           </button>
-          <Link href="/academias/nova">
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-              + Nova Academia
-            </button>
-          </Link>
-        </div>
+        </Link>
       </div>
 
       {/* Statistics Cards */}
@@ -232,7 +219,7 @@ export default function AcademiasPage() {
 
         <div className="bg-card p-6 rounded-lg shadow border border-border">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-muted-foreground">Anualidade Em Dia</p>
+            <p className="text-sm font-medium text-muted-foreground">Anuidade Em Dia</p>
             <span className="text-2xl">✅</span>
           </div>
           <div className="text-2xl font-bold text-foreground">{emDia}</div>
@@ -243,7 +230,7 @@ export default function AcademiasPage() {
 
         <div className="bg-card p-6 rounded-lg shadow border border-border">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-muted-foreground">Anualidade Vencida</p>
+            <p className="text-sm font-medium text-muted-foreground">Anuidade Vencida</p>
             <span className="text-2xl">⚠️</span>
           </div>
           <div className="text-2xl font-bold text-foreground">{vencidas}</div>
@@ -296,15 +283,15 @@ export default function AcademiasPage() {
                     <th className="text-left p-4 font-medium text-muted-foreground">CNPJ</th>
                     <th className="text-left p-4 font-medium text-muted-foreground">Localização</th>
                     <th className="text-left p-4 font-medium text-muted-foreground">Responsável</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Anualidade</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Anuidade</th>
                     <th className="text-center p-4 font-medium text-muted-foreground">Status</th>
                     <th className="text-right p-4 font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {academias.map((academia) => {
-                    const paymentStatus = getStatusBadge(academia.anualidade_status)
-                    const vencida = isVencida(academia.anualidade_vencimento)
+                    const paymentStatus = getStatusBadge(academia.anuidade_status)
+                    const vencida = isVencida(academia.anuidade_vencimento)
                     
                     return (
                       <tr key={academia.id} className="border-b border-border hover:bg-muted">
@@ -338,7 +325,7 @@ export default function AcademiasPage() {
                               </div>
                               {vencida && (
                                 <div className="text-xs text-red-600 mt-1">
-                                  Vencida em {formatDate(academia.anualidade_vencimento)}
+                                  Vencida em {formatDate(academia.anuidade_vencimento)}
                                 </div>
                               )}
                               {!vencida && academia.anualidade_vencimento && (
@@ -357,7 +344,7 @@ export default function AcademiasPage() {
                               <div title="Inativa"><Clock className="w-4 h-4 text-gray-400" /></div>
                             )}
                             {vencida && (
-                              <div title="Anualidade vencida"><AlertCircle className="w-4 h-4 text-red-600" /></div>
+                              <div title="Anuidade vencida"><AlertCircle className="w-4 h-4 text-red-600" /></div>
                             )}
                           </div>
                         </td>

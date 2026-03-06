@@ -5,43 +5,39 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 
-interface EditarAcademiaFormProps {
-  academia: any
-}
-
-export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps) {
+export default function CriarAcademiaForm() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
-    nome: academia.nome || '',
-    nome_fantasia: academia.nome_fantasia || '',
-    sigla: academia.sigla || '',
-    cnpj: academia.cnpj || '',
-    inscricao_estadual: academia.inscricao_estadual || '',
-    inscricao_municipal: academia.inscricao_municipal || '',
-    endereco_rua: academia.endereco_rua || '',
-    endereco_numero: academia.endereco_numero || '',
-    endereco_complemento: academia.endereco_complemento || '',
-    endereco_bairro: academia.endereco_bairro || '',
-    endereco_cidade: academia.endereco_cidade || '',
-    endereco_estado: academia.endereco_estado || '',
-    endereco_cep: academia.endereco_cep || '',
-    responsavel_nome: academia.responsavel_nome || '',
-    responsavel_cpf: academia.responsavel_cpf || '',
-    responsavel_rg: academia.responsavel_rg || '',
-    responsavel_faixa: academia.responsavel_faixa || '',
-    responsavel_telefone: academia.responsavel_telefone || '',
-    responsavel_email: academia.responsavel_email || '',
-    tecnico_nome: academia.tecnico_nome || '',
-    tecnico_cpf: academia.tecnico_cpf || '',
-    tecnico_registro_profissional: academia.tecnico_registro_profissional || '',
-    tecnico_telefone: academia.tecnico_telefone || '',
-    tecnico_email: academia.tecnico_email || '',
-    horario_funcionamento: academia.horario_funcionamento || '',
-    quantidade_alunos: academia.quantidade_alunos || 0,
-    anuidade_status: academia.anuidade_status || 'pendente',
-    anuidade_vencimento: academia.anuidade_vencimento || '',
-    ativo: academia.ativo !== false,
+    nome: '',
+    nome_fantasia: '',
+    sigla: '',
+    cnpj: '',
+    inscricao_estadual: '',
+    inscricao_municipal: '',
+    endereco_rua: '',
+    endereco_numero: '',
+    endereco_complemento: '',
+    endereco_bairro: '',
+    endereco_cidade: '',
+    endereco_estado: '',
+    endereco_cep: '',
+    responsavel_nome: '',
+    responsavel_cpf: '',
+    responsavel_rg: '',
+    responsavel_faixa: '',
+    responsavel_telefone: '',
+    responsavel_email: '',
+    tecnico_nome: '',
+    tecnico_cpf: '',
+    tecnico_registro_profissional: '',
+    tecnico_telefone: '',
+    tecnico_email: '',
+    horario_funcionamento: '',
+    quantidade_alunos: 0,
+    anuidade_status: 'pendente',
+    anuidade_vencimento: '',
+    ativo: true,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,22 +45,22 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
     setSaving(true)
 
     try {
-      const response = await fetch(`/api/academias/${academia.id}`, {
-        method: 'PUT',
+      const response = await fetch('/api/academias', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Erro ao atualizar academia')
+        throw new Error(error.error || 'Erro ao criar academia')
       }
 
-      alert('✅ Academia atualizada com sucesso!')
+      alert('✅ Academia criada com sucesso!')
       router.push('/academias')
     } catch (error) {
       console.error('Error:', error)
-      alert(`❌ ${error instanceof Error ? error.message : 'Erro ao atualizar academia'}`)
+      alert(`❌ ${error instanceof Error ? error.message : 'Erro ao criar academia'}`)
     } finally {
       setSaving(false)
     }
@@ -85,8 +81,8 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h2 className="text-3xl font-bold text-foreground">Editar Academia</h2>
-          <p className="text-muted-foreground">Atualize os dados de {academia.nome}</p>
+          <h2 className="text-3xl font-bold text-foreground">Nova Academia</h2>
+          <p className="text-muted-foreground">Cadastre uma nova academia no sistema</p>
         </div>
       </div>
 
@@ -298,12 +294,12 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Salvando...
+                Criando...
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Salvar
+                Criar Academia
               </>
             )}
           </button>

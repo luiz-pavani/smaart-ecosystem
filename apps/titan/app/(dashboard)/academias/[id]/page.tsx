@@ -52,7 +52,7 @@ export default async function AcademiaDetalhesPage(props: PageProps) {
     return new Date(vencimento) < new Date()
   }
 
-  const getAnualidadeStatus = (status: string) => {
+  const getAnuidadeStatus = (status: string) => {
     const statusMap: Record<string, { label: string; color: string }> = {
       paga: { label: 'Em dia', color: 'text-green-600 bg-green-50' },
       pendente: { label: 'Pendente', color: 'text-yellow-600 bg-yellow-50' },
@@ -61,7 +61,7 @@ export default async function AcademiaDetalhesPage(props: PageProps) {
     return statusMap[status] || { label: status, color: 'text-gray-600 bg-gray-50' }
   }
 
-  const statusData = getAnualidadeStatus(academia.anualidade_status || 'pendente')
+  const statusData = getAnuidadeStatus(academia.anuidade_status || 'pendente')
 
   return (
     <div className="flex-1 space-y-6 p-8">
@@ -231,8 +231,8 @@ export default async function AcademiaDetalhesPage(props: PageProps) {
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Vencimento</label>
-                <p className="text-foreground font-medium mt-1">{formatDate(academia.anualidade_vencimento)}</p>
-                {isVencida(academia.anualidade_vencimento) && (
+                <p className="text-foreground font-medium mt-1">{formatDate(academia.anuidade_vencimento)}</p>
+                {isVencida(academia.anuidade_vencimento) && (
                   <p className="text-xs text-red-600 mt-1">Vencida</p>
                 )}
               </div>
