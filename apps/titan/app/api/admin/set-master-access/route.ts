@@ -107,7 +107,6 @@ export async function POST(request: NextRequest) {
           role: 'master_access',
           federacao_id: null,
           academia_id: null,
-          nivel: 1,
         },
       ])
 
