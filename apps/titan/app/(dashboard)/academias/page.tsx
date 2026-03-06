@@ -381,14 +381,6 @@ export default function AcademiasPage() {
             </div>
           )}
         </div>
-
-        <ColumnOrderDialog
-          columns={columns}
-          isOpen={columnDialogOpen}
-          onClose={() => setColumnDialogOpen(false)}
-          onReorder={moveColumn}
-          onReset={resetToDefault}
-        />
       </div>
     </div>
   )
