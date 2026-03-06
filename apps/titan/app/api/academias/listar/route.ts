@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+// API endpoint to list all academias
 export async function GET(request: NextRequest) {
   console.log('🔧 [listar.ts] GET request started')
   
