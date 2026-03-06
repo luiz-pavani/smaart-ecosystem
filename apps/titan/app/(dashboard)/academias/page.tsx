@@ -42,15 +42,8 @@ export default function AcademiasPage() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
-    // Also set up a refresh interval for real-time updates (every 10 seconds)
-    const refreshInterval = setInterval(() => {
-      console.log('🔄 Auto-refreshing academias...')
-      loadAcademias()
-    }, 10000)
-
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      clearInterval(refreshInterval)
     }
   }, [])
 
