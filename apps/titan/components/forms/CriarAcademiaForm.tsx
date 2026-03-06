@@ -35,8 +35,8 @@ export default function CriarAcademiaForm() {
     tecnico_email: '',
     horario_funcionamento: '',
     quantidade_alunos: 0,
-    anuidade_status: 'pendente',
-    anuidade_vencimento: '',
+    anualidade_status: 'pendente',
+    anualidade_vencimento: '',
     ativo: true,
   })
 
@@ -262,8 +262,8 @@ export default function CriarAcademiaForm() {
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Status</label>
               <select
-                value={formData.anuidade_status}
-                onChange={(e) => updateField('anuidade_status', e.target.value)}
+                value={formData.anualidade_status}
+                onChange={(e) => updateField('anualidade_status', e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               >
                 <option value="pendente">Pendente</option>
@@ -276,8 +276,8 @@ export default function CriarAcademiaForm() {
               <label className="block text-sm font-medium text-foreground mb-2">Vencimento</label>
               <input
                 type="date"
-                value={formData.anuidade_vencimento}
-                onChange={(e) => updateField('anuidade_vencimento', e.target.value)}
+                value={formData.anualidade_vencimento}
+                onChange={(e) => updateField('anualidade_vencimento', e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               />
             </div>

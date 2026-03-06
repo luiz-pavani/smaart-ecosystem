@@ -39,8 +39,8 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
     tecnico_email: academia.tecnico_email || '',
     horario_funcionamento: academia.horario_funcionamento || '',
     quantidade_alunos: academia.quantidade_alunos || 0,
-    anuidade_status: academia.anuidade_status || 'pendente',
-    anuidade_vencimento: academia.anuidade_vencimento || '',
+    anuidade_status: academia.anualidade_status || 'pendente',
+    anuidade_vencimento: academia.anualidade_vencimento || '',
     ativo: academia.ativo !== false,
   })
 
@@ -267,7 +267,7 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
               <label className="block text-sm font-medium text-foreground mb-2">Status</label>
               <select
                 value={formData.anuidade_status}
-                onChange={(e) => updateField('anuidade_status', e.target.value)}
+                onChange={(e) => updateField('anualidade_status', e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               >
                 <option value="pendente">Pendente</option>
@@ -281,7 +281,7 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
               <input
                 type="date"
                 value={formData.anuidade_vencimento}
-                onChange={(e) => updateField('anuidade_vencimento', e.target.value)}
+                onChange={(e) => updateField('anualidade_vencimento', e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               />
             </div>

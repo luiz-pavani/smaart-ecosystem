@@ -156,8 +156,8 @@ export default function AcademiasPage() {
   // Statistics
   const total = academias.length
   const ativas = academias.filter(a => a.ativo).length
-  const emDia = academias.filter(a => a.anuidade_status === 'paga').length
-  const vencidas = academias.filter(a => a.anuidade_status === 'vencida').length
+  const emDia = academias.filter(a => a.anualidade_status === 'paga').length
+  const vencidas = academias.filter(a => a.anualidade_status === 'vencida').length
 
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
@@ -283,8 +283,8 @@ export default function AcademiasPage() {
                 </thead>
                 <tbody>
                   {academias.map((academia) => {
-                    const paymentStatus = getStatusBadge(academia.anuidade_status)
-                    const vencida = isVencida(academia.anuidade_vencimento)
+                    const paymentStatus = getStatusBadge(academia.anualidade_status)
+                    const vencida = isVencida(academia.anualidade_vencimento)
                     
                     return (
                       <tr key={academia.id} className="border-b border-border hover:bg-muted">
@@ -318,12 +318,12 @@ export default function AcademiasPage() {
                               </div>
                               {vencida && (
                                 <div className="text-xs text-red-600 mt-1">
-                                  Vencida em {formatDate(academia.anuidade_vencimento)}
+                                  Vencida em {formatDate(academia.anualidade_vencimento)}
                                 </div>
                               )}
-                              {!vencida && academia.anuidade_vencimento && (
+                              {!vencida && academia.anualidade_vencimento && (
                                 <div className="text-xs text-gray-600 mt-1">
-                                  Vence em {formatDate(academia.anuidade_vencimento)}
+                                  Vence em {formatDate(academia.anualidade_vencimento)}
                                 </div>
                               )}
                             </div>
