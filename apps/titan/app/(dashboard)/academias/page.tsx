@@ -13,8 +13,8 @@ interface Academia {
   sigla: string | null
   cnpj: string | null
   ativo: boolean
-  anuidade_status: string
-  anuidade_vencimento: string | null
+  anualidade_status: string
+  anualidade_vencimento: string | null
   logo_url: string | null
   responsavel_email: string | null
   responsavel_telefone: string | null
