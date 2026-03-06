@@ -328,9 +328,9 @@ export default function AcademiasPage() {
                                   Vencida em {formatDate(academia.anuidade_vencimento)}
                                 </div>
                               )}
-                              {!vencida && academia.anualidade_vencimento && (
+                              {!vencida && academia.anuidade_vencimento && (
                                 <div className="text-xs text-gray-600 mt-1">
-                                  Vence em {formatDate(academia.anualidade_vencimento)}
+                                  Vence em {formatDate(academia.anuidade_vencimento)}
                                 </div>
                               )}
                             </div>
