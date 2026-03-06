@@ -39,6 +39,8 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
     tecnico_email: academia.tecnico_email || '',
     horario_funcionamento: academia.horario_funcionamento || '',
     quantidade_alunos: academia.quantidade_alunos || 0,
+    anualidade_status: academia.anualidade_status || 'Pendente',
+    anualidade_vencimento: academia.anualidade_vencimento || '',
     ativo: academia.ativo !== false,
   })
 
@@ -252,6 +254,35 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
                 onChange={(e) => updateField('horario_funcionamento', e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
                 placeholder="Ex: 08:00 - 22:00"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Anualidade */}
+        <div className="bg-card rounded-lg shadow border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-6">Anualidade</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Status</label>
+              <select
+                value={formData.anualidade_status}
+                onChange={(e) => updateField('anualidade_status', e.target.value)}
+                className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
+              >
+                <option value="Pendente">Pendente</option>
+                <option value="Ativa">Ativa</option>
+                <option value="Vencida">Vencida</option>
+                <option value="Cancelada">Cancelada</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Vencimento</label>
+              <input
+                type="date"
+                value={formData.anualidade_vencimento}
+                onChange={(e) => updateField('anualidade_vencimento', e.target.value)}
+                className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               />
             </div>
           </div>
