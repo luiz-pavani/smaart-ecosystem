@@ -34,31 +34,24 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError) {
-      // If user already exists, update password
+      // If user already exists, get user and update password
       if (authError.message?.includes('already exists')) {
         console.log(`⚠️ User ${email} already exists, updating password`)
         
-        const { data: updateData, error: updateError } = await supabase.auth.admin.updateUserById(
-          authData?.user?.id || '',
-          { password }
-        )
+        // Look up the existing user by email
+        const { data: users } = await supabase.auth.admin.listUsers()
+        const existingUser = users?.users?.find(u => u.email === email)
         
-        if (updateError) {
-          // Try to get user by email
-          const { data: users } = await supabase.auth.admin.listUsers()
-          const existingUser = users?.users?.find(u => u.email === email)
+        if (existingUser) {
+          const { error: pwError } = await supabase.auth.admin.updateUserById(
+            existingUser.id,
+            { password }
+          )
           
-          if (existingUser) {
-            const { error: pwError } = await supabase.auth.admin.updateUserById(
-              existingUser.id,
-              { password }
-            )
-            
-            if (pwError) {
-              console.error('❌ Password update error:', pwError)
-            } else {
-              console.log(`✅ Password updated for ${email}`)
-            }
+          if (pwError) {
+            console.error('❌ Password update error:', pwError)
+          } else {
+            console.log(`✅ Password updated for ${email}`)
           }
         }
       } else {
