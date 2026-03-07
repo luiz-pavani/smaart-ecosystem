@@ -190,6 +190,7 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   doc.setTextColor(0, 0, 0)
   doc.setFontSize(18)
   doc.text('CERTIFICADO DE FILIAÇÃO', 105, 82, { align: 'center' })
+  doc.setFontSize(13)
   doc.text('E AUTORIZAÇÃO DE FUNCIONAMENTO', 105, 90, { align: 'center' })
 
   doc.setFont('helvetica', 'normal')
@@ -203,55 +204,67 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   const texto5 = `Este certificado atesta a regularidade cadastral e estatutária da academia perante esta entidade oficial de regulação do esporte e possui validade até `
   const texto6 = `Emitido em ${dataFormatada}.`
 
-  const bloco = [texto1, '', '', texto3, '', texto4, '', texto5, '', texto6].filter(Boolean)
-
   let y = 104
-  bloco.forEach((linha, index) => {
-    if (index === 2) {
-      // Destaque sóbrio para o nome da academia
-      doc.setFillColor(241, 245, 249)
-      doc.setDrawColor(corPrimaria[0], corPrimaria[1], corPrimaria[2])
-      doc.roundedRect(24, y - 5, 162, 13, 2, 2, 'FD')
-      doc.setTextColor(0, 0, 0)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(13)
-      doc.text(texto2, 105, y + 3, { align: 'center' })
-      doc.setTextColor(0, 0, 0)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(11)
-      y += 16
-      
-      // Registro logo abaixo do box
-      doc.setFontSize(9)
-      doc.text(`Registro: ${numeroRegistro}`, 105, y, { align: 'center' })
-      y += 8
-      return
+  
+  // Texto de certificação - justificado
+  doc.setFont('helvetica', 'normal')
+  const textoCert = doc.splitTextToSize(texto1, 155) as string[]
+  textoCert.forEach((linha: string, idx: number) => {
+    if (idx === textoCert.length - 1) {
+      doc.text(linha, 27, y, { align: 'left' })
+    } else {
+      doc.text(linha, 27, y, { align: 'justify' })
     }
-
-    // Responsável em negrito
-    if (index === 3) {
-      doc.setFont('helvetica', 'bold')
-      doc.text(`Responsável: ${linha}`, 27, y)
-      doc.setFont('helvetica', 'normal')
-      y += 6
-      return
-    }
-
-    // Validade em negrito
-    if (index === 7) {
-      const linhas = doc.splitTextToSize(linha, 155)
-      doc.text(linhas, 27, y)
-      y += linhas.length * 6
-      doc.setFont('helvetica', 'bold')
-      doc.text(validadeFormatada, 27, y - 6 + linhas.length * 6)
-      doc.setFont('helvetica', 'normal')
-      return
-    }
-
-    const linhas = doc.splitTextToSize(linha, 155)
-    doc.text(linhas, 27, y)
-    y += linhas.length * 6
+    y += 6
   })
+  
+  y += 4
+  
+  // Nome da academia em box
+  doc.setFillColor(241, 245, 249)
+  doc.setDrawColor(corPrimaria[0], corPrimaria[1], corPrimaria[2])
+  doc.roundedRect(24, y - 5, 162, 13, 2, 2, 'FD')
+  doc.setTextColor(0, 0, 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(13)
+  doc.text(texto2, 105, y + 3, { align: 'center' })
+  doc.setTextColor(0, 0, 0)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11)
+  y += 16
+  
+  // Registro logo abaixo do box
+  doc.setFontSize(9)
+  doc.text(`Registro: ${numeroRegistro}`, 105, y, { align: 'center' })
+  y += 8
+  
+  // Responsável em negrito
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.text(`Responsável: ${texto3}`, 27, y)
+  doc.setFont('helvetica', 'normal')
+  y += 6
+  
+  // Localidade
+  doc.setFontSize(10)
+  doc.text(texto4, 27, y)
+  y += 8
+  
+  // Validade - texto com validade em negrito
+  doc.setFontSize(10)
+  const textoValidade = doc.splitTextToSize(texto5, 155) as string[]
+  textoValidade.forEach((linha: string, idx: number) => {
+    doc.text(linha, 27, y)
+    y += 6
+  })
+  doc.setFont('helvetica', 'bold')
+  doc.text(validadeFormatada, 27, y - 6)
+  doc.setFont('helvetica', 'normal')
+  y += 6
+  
+  // Emitido em
+  doc.setFontSize(10)
+  doc.text(texto6, 27, y)
 
   // Linha antes do rodapé
   doc.setDrawColor(150, 150, 150)
