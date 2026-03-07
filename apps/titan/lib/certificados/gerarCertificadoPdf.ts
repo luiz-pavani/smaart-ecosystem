@@ -168,15 +168,13 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
 
   // Cabeçalho cadastral institucional (LRSJ)
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(71, 85, 105)
+  doc.setTextColor(0, 0, 0)
   doc.setFontSize(9.5)
-  const cabecalhoCnpj = federacao.cnpj ? `CNPJ: ${federacao.cnpj}` : 'CNPJ: Não informado'
-  const cabecalhoFundacao = `Fundação: ${fundacaoFormatada}`
-  const cabecalhoEndereco = enderecoFederacaoSemCidade
-    ? `Endereço: ${enderecoFederacaoSemCidade}`
-    : 'Endereço: Não informado'
-
-  const linhasCabecalho = [cabecalhoCnpj, cabecalhoFundacao, cabecalhoEndereco]
+  const linhasCabecalho = [
+    'CNPJ: 05.503.443/0001-19',
+    'Fundada em 5 de outubro de 2001.',
+    'Rua Roberto Romano, 430 - S.Maria/RS - www.lrsj.com.br'
+  ]
   let yCabecalho = 58
   linhasCabecalho.forEach((linha) => {
     const partes = doc.splitTextToSize(linha, 170)
@@ -189,13 +187,13 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   doc.line(25, 71, 185, 71)
 
   doc.setFont('helvetica', 'bold')
-  doc.setTextColor(corSecundaria[0], corSecundaria[1], corSecundaria[2])
+  doc.setTextColor(0, 0, 0)
   doc.setFontSize(18)
   doc.text('CERTIFICADO DE FILIAÇÃO', 105, 82, { align: 'center' })
   doc.text('E AUTORIZAÇÃO DE FUNCIONAMENTO', 105, 90, { align: 'center' })
 
   doc.setFont('helvetica', 'normal')
-  doc.setTextColor(corTexto[0], corTexto[1], corTexto[2])
+  doc.setTextColor(0, 0, 0)
   doc.setFontSize(11)
 
   const texto1 = `A ${federacao.nome_completo}, no uso de suas atribuições legais e estatutárias, CERTIFICA que a academia abaixo descrita encontra-se devidamente filiada e autorizada a funcionar e a promover a prática do judô.`
@@ -214,11 +212,11 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
       doc.setFillColor(241, 245, 249)
       doc.setDrawColor(corPrimaria[0], corPrimaria[1], corPrimaria[2])
       doc.roundedRect(24, y - 5, 162, 13, 2, 2, 'FD')
-      doc.setTextColor(corSecundaria[0], corSecundaria[1], corSecundaria[2])
+      doc.setTextColor(0, 0, 0)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(13)
       doc.text(texto2, 105, y + 3, { align: 'center' })
-      doc.setTextColor(corTexto[0], corTexto[1], corTexto[2])
+      doc.setTextColor(0, 0, 0)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(11)
       y += 16
@@ -230,20 +228,20 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
     y += linhas.length * 6
   })
 
-  doc.setDrawColor(corSecundaria[0], corSecundaria[1], corSecundaria[2])
+  doc.setDrawColor(0, 0, 0)
   doc.line(70, 238, 140, 238)
+  doc.setTextColor(0, 0, 0)
   doc.setFontSize(10)
   doc.text(federacao.nome_completo, 105, 244, { align: 'center' })
 
   doc.setFontSize(9)
-  doc.setTextColor(100, 116, 139)
+  doc.setTextColor(0, 0, 0)
   doc.text(`Registro: ${numeroRegistro}`, 105, 250, { align: 'center' })
 
-  // Entidades às quais a LRSJ é filiada (rodapé institucional)
+  // Rodapé institucional
   const rodapeLinhas: string[] = [
-    'Entidades filiadas: Liga Nacional de Judô • Confederação Sul-Americana de Judô',
+    'Entidade oficial, reconhecida pela Lei Geral do Esportes e filiada a Liga Nacional de Judô • Confederação Sul-Americana de Judô',
     'União Panamericana de Judô • Federação Mundial de Judô',
-    'Documento gerado eletronicamente pela plataforma SMAART.',
   ].filter((linha): linha is string => Boolean(linha))
 
   let rodapeY = 257
