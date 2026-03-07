@@ -130,7 +130,8 @@ export default function AcademiasFedaracaoPage() {
       const response = await fetch(`/api/academias/${academiaId}/certificado`)
       
       if (!response.ok) {
-        throw new Error('Erro ao gerar certificado')
+        const errorData = await response.json().catch(() => ({ error: 'Erro ao gerar certificado' }))
+        throw new Error(errorData.error || 'Erro ao gerar certificado')
       }
 
       const blob = await response.blob()
@@ -144,7 +145,7 @@ export default function AcademiasFedaracaoPage() {
       document.body.removeChild(a)
     } catch (error) {
       console.error('Error downloading certificate:', error)
-      alert('❌ Erro ao baixar certificado')
+      alert(`❌ ${error instanceof Error ? error.message : 'Erro ao baixar certificado'}`)
     } finally {
       setDownloadingCertificado(null)
     }

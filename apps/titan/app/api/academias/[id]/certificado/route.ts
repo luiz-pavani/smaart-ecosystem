@@ -44,25 +44,27 @@ export async function GET(
       .single()
 
     if (academiaError || !academia) {
-      console.error('❌ Academia not found:', academiaError)
+      console.error('❌ Academia query error:', academiaError)
+      const isNotFound = academiaError?.code === 'PGRST116'
       return NextResponse.json(
-        { error: 'Academia não encontrada' },
-        { status: 404 }
+        { error: isNotFound ? 'Academia não encontrada' : `Erro ao buscar academia: ${academiaError?.message || 'desconhecido'}` },
+        { status: isNotFound ? 404 : 500 }
       )
     }
 
     // Buscar federação separadamente
     const { data: federacao, error: federacaoError } = await supabase
       .from('federacoes')
-      .select('nome_completo, sigla, cnpj')
+      .select('nome, sigla, cnpj')
       .eq('id', academia.federacao_id)
       .single()
 
     if (federacaoError || !federacao) {
-      console.error('❌ Federação not found:', federacaoError)
+      console.error('❌ Federação query error:', federacaoError)
+      const isNotFound = federacaoError?.code === 'PGRST116'
       return NextResponse.json(
-        { error: 'Federação não encontrada para esta academia' },
-        { status: 404 }
+        { error: isNotFound ? 'Federação não encontrada para esta academia' : `Erro ao buscar federação: ${federacaoError?.message || 'desconhecido'}` },
+        { status: isNotFound ? 404 : 500 }
       )
     }
 
@@ -84,7 +86,7 @@ export async function GET(
         responsavel_nome: academia.responsavel_nome,
       },
       federacao: {
-        nome_completo: federacao.nome_completo,
+        nome_completo: federacao.nome,
         sigla: federacao.sigla,
         cnpj: federacao.cnpj,
       },
