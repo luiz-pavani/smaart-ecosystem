@@ -149,12 +149,12 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
     federacao.site ? `Site: ${federacao.site}` : null,
   ].filter(Boolean).join(' • ')
 
-  const rodapeLinhas = [
+  const rodapeLinhas: string[] = [
     linhaCnpj,
     enderecoFederacao || null,
     linhaContato || null,
     'Documento gerado eletronicamente pela plataforma SMAART.',
-  ].filter(Boolean)
+  ].filter((linha): linha is string => Boolean(linha))
 
   let rodapeY = 257
   rodapeLinhas.forEach((linha) => {
