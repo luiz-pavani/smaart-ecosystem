@@ -177,12 +177,12 @@ export default function AcademiasPage() {
   }
 
   const getStatusIconConfig = (academia: Academia) => {
-    if (!academia.ativo) {
-      return { color: 'bg-gray-400', label: 'Inativa' }
-    }
-
     if (academia.anualidade_status === 'cancelada') {
       return { color: 'bg-red-500', label: 'Cancelada' }
+    }
+
+    if (!academia.ativo) {
+      return { color: 'bg-gray-400', label: 'Inativa' }
     }
 
     if (academia.anualidade_status === 'paga') {
