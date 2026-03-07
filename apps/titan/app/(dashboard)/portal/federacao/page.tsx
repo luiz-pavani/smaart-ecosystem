@@ -148,62 +148,6 @@ export default function PortalFederacaoPage() {
         </button>
       </div>
 
-      {loading ? (
-        <div className="text-center py-12 text-slate-400">Carregando dados...</div>
-      ) : data ? (
-        <>
-          {/* Metrics Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard
-              title="Total de Academias"
-              value={data.totalAcademias}
-              icon={Building2}
-              color="blue"
-            />
-            <MetricCard
-              title="Atletas Filiados"
-              value={data.totalAtletas}
-              icon={Users}
-              color="green"
-            />
-            <MetricCard
-              title="Academias Ativas"
-              value={data.academiasAtivas}
-              icon={Trophy}
-              color="purple"
-            />
-            <MetricCard
-              title="Crescimento Mensal"
-              value={`+${data.crescimentoMensal}`}
-              icon={TrendingUp}
-              color="orange"
-              trend={{ value: data.crescimentoMensal, label: 'novas academias' }}
-            />
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Distribuição por cidade */}
-            {data.atletasPorCidade.length > 0 && (
-              <PieChart
-                title="Atletas por Cidade (Top 5)"
-                data={data.atletasPorCidade}
-                height={300}
-              />
-            )}
-
-            {/* Top Academias */}
-            {data.topAcademias.length > 0 && (
-              <TopList
-                title="Academias com Mais Atletas"
-                items={data.topAcademias}
-                valueLabel="atletas"
-              />
-            )}
-          </div>
-        </>
-      ) : null}
-
       {/* Quick Access Grid */}
       <div className="pt-4">
         <h2 className="text-xl font-semibold text-white mb-4">Acesso Rápido</h2>
@@ -266,6 +210,62 @@ export default function PortalFederacaoPage() {
           </button>
         </div>
       </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-slate-400">Carregando dados...</div>
+      ) : data ? (
+        <>
+          {/* Metrics Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard
+              title="Total de Academias"
+              value={data.totalAcademias}
+              icon={Building2}
+              color="blue"
+            />
+            <MetricCard
+              title="Atletas Filiados"
+              value={data.totalAtletas}
+              icon={Users}
+              color="green"
+            />
+            <MetricCard
+              title="Academias Ativas"
+              value={data.academiasAtivas}
+              icon={Trophy}
+              color="purple"
+            />
+            <MetricCard
+              title="Crescimento Mensal"
+              value={`+${data.crescimentoMensal}`}
+              icon={TrendingUp}
+              color="orange"
+              trend={{ value: data.crescimentoMensal, label: 'novas academias' }}
+            />
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Distribuição por cidade */}
+            {data.atletasPorCidade.length > 0 && (
+              <PieChart
+                title="Atletas por Cidade (Top 5)"
+                data={data.atletasPorCidade}
+                height={300}
+              />
+            )}
+
+            {/* Top Academias */}
+            {data.topAcademias.length > 0 && (
+              <TopList
+                title="Academias com Mais Atletas"
+                items={data.topAcademias}
+                valueLabel="atletas"
+              />
+            )}
+          </div>
+        </>
+      ) : null}
     </div>
   )
 }
