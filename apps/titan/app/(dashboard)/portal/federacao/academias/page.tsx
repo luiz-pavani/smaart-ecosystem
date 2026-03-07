@@ -15,6 +15,8 @@ interface AcademiaRow {
   nome: string
   sigla: string | null
   cidade: string | null
+  ativo: boolean
+  anualidade_status: string | null
   status?: string | null
   atletas: number
 }
@@ -111,6 +113,8 @@ export default function AcademiasFedaracaoPage() {
           nome: a.nome,
           sigla: a.sigla,
           cidade: a.endereco_cidade,
+          ativo: a.ativo === true,
+          anualidade_status: a.anualidade_status || null,
           status: a.ativo ? 'Ativa' : 'Inativa',
           atletas: atletasCounts.get(a.id) || 0,
         }))
@@ -124,6 +128,22 @@ export default function AcademiasFedaracaoPage() {
 
     load()
   }, [supabase, page, filterStatus, filterCidade])
+
+  const getAnuidadeBadge = (anualidadeStatus: string | null) => {
+    if (anualidadeStatus === 'paga') {
+      return { label: 'Em dia', className: 'bg-green-500/20 border-green-500/50 text-green-300' }
+    }
+
+    if (anualidadeStatus === 'pendente') {
+      return { label: 'Pendente', className: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' }
+    }
+
+    if (anualidadeStatus === 'cancelada') {
+      return { label: 'Cancelada', className: 'bg-red-500/20 border-red-500/50 text-red-300' }
+    }
+
+    return { label: 'Não informada', className: 'bg-gray-500/20 border-gray-500/50 text-gray-300' }
+  }
 
   const handleDownloadCertificado = async (academiaId: string, nome: string) => {
     try {
@@ -247,9 +267,14 @@ export default function AcademiasFedaracaoPage() {
                       <p className="text-gray-400 text-sm">{academia.sigla || '—'}</p>
                     </div>
                   </div>
-                  <span className="px-3 py-1 bg-green-500/20 border border-green-500/50 rounded-full text-green-400 text-xs font-semibold">
-                    {academia.status || 'Ativa'}
-                  </span>
+                  <div className="flex flex-col gap-2 items-end">
+                    <span className={`px-3 py-1 border rounded-full text-xs font-semibold ${academia.ativo ? 'bg-green-500/20 border-green-500/50 text-green-300' : 'bg-gray-500/20 border-gray-500/50 text-gray-300'}`}>
+                      Status: {academia.status || 'Ativa'}
+                    </span>
+                    <span className={`px-3 py-1 border rounded-full text-xs font-semibold ${getAnuidadeBadge(academia.anualidade_status).className}`}>
+                      Anuidade: {getAnuidadeBadge(academia.anualidade_status).label}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="space-y-2 text-sm mb-4">
@@ -257,6 +282,9 @@ export default function AcademiasFedaracaoPage() {
                   <p className="text-gray-400"><span className="text-gray-300 font-semibold">{academia.atletas}</span> atletas</p>
                 </div>
 
+                {(() => {
+                  const certificadoDisponivel = academia.ativo && academia.anualidade_status === 'paga'
+                  return (
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => router.push(`/academias/${academia.id}/editar`)}
@@ -266,7 +294,8 @@ export default function AcademiasFedaracaoPage() {
                   </button>
                   <button
                     onClick={() => handleDownloadCertificado(academia.id, academia.nome)}
-                    disabled={downloadingCertificado === academia.id}
+                    disabled={downloadingCertificado === academia.id || !certificadoDisponivel}
+                    title={certificadoDisponivel ? 'Baixar certificado' : 'Disponível apenas para academias Ativas com Anuidade em dia'}
                     className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {downloadingCertificado === academia.id ? (
@@ -277,11 +306,13 @@ export default function AcademiasFedaracaoPage() {
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        <span className="hidden sm:inline">Certificado</span>
+                        <span className="hidden sm:inline">{certificadoDisponivel ? 'Certificado' : 'Indisponível'}</span>
                       </>
                     )}
                   </button>
                 </div>
+                  )
+                })()}
               </div>
             ))}
           </div>

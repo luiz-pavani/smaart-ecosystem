@@ -28,6 +28,8 @@ export async function GET(
         nome,
         sigla,
         cnpj,
+        ativo,
+        anualidade_status,
         anualidade_vencimento,
         endereco_rua,
         endereco_numero,
@@ -50,6 +52,14 @@ export async function GET(
       )
     }
 
+    const academiaElegivelCertificado = academia.ativo === true && academia.anualidade_status === 'paga'
+    if (!academiaElegivelCertificado) {
+      return NextResponse.json(
+        { error: 'Certificado disponível apenas para academias Ativas com Anuidade Paga (em dia).' },
+        { status: 403 }
+      )
+    }
+
     // Buscar federação separadamente
     const { data: federacao, error: federacaoError } = await supabase
       .from('federacoes')
@@ -65,6 +75,15 @@ export async function GET(
         { status: isNotFound ? 404 : 500 }
       )
     }
+
+    const isLrsj =
+      federacao.sigla === 'LRSJ' ||
+      federacao.nome?.toLowerCase().includes('liga riograndense de judô')
+
+    const cnpjCertificado = isLrsj ? '05.503.443/0001-19' : federacao.cnpj
+    const dataFundacaoCertificado = isLrsj
+      ? new Date('2001-10-06').toISOString()
+      : federacao.created_at
 
     // Gerar número de registro único
     const numeroRegistro = `${federacao.sigla || 'FED'}-${academia.id.substring(0, 8).toUpperCase()}-${new Date().getFullYear()}`
@@ -86,8 +105,8 @@ export async function GET(
       federacao: {
         nome_completo: federacao.nome,
         sigla: federacao.sigla,
-        cnpj: federacao.cnpj,
-        data_fundacao: federacao.created_at,
+        cnpj: cnpjCertificado,
+        data_fundacao: dataFundacaoCertificado,
         email: federacao.email,
         telefone: federacao.telefone,
         site: federacao.site,
