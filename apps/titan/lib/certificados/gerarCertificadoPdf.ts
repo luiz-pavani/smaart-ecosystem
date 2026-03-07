@@ -253,14 +253,23 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   // Validade - texto com validade em negrito
   doc.setFontSize(10)
   const textoValidade = doc.splitTextToSize(texto5, 155) as string[]
+  let ultimaLinha = ''
   textoValidade.forEach((linha: string, idx: number) => {
-    doc.text(linha, 27, y)
-    y += 6
+    if (idx === textoValidade.length - 1) {
+      ultimaLinha = linha
+    } else {
+      doc.text(linha, 27, y)
+      y += 6
+    }
   })
-  doc.setFont('helvetica', 'bold')
-  doc.text(validadeFormatada, 27, y - 6)
-  doc.setFont('helvetica', 'normal')
+  // Colocar a última linha do texto de validade
+  doc.text(ultimaLinha, 27, y)
   y += 6
+  // Colocar a data em negrito em uma nova linha
+  doc.setFont('helvetica', 'bold')
+  doc.text(validadeFormatada, 27, y)
+  doc.setFont('helvetica', 'normal')
+  y += 8
   
   // Emitido em
   doc.setFontSize(10)
