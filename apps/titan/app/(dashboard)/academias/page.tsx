@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Eye, Edit, Trash2, CheckCircle, Clock, Calendar, AlertCircle } from 'lucide-react'
+import { Eye, Edit, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 
 
 interface Academia {
@@ -16,6 +16,7 @@ interface Academia {
   anualidade_status: string
   anualidade_vencimento: string | null
   logo_url: string | null
+  responsavel_nome: string | null
   responsavel_email: string | null
   responsavel_telefone: string | null
   endereco_cidade: string | null
@@ -23,10 +24,15 @@ interface Academia {
   federacao_id: string
 }
 
+type SortKey = 'nome' | 'localizacao' | 'responsavel' | 'status'
+type SortDirection = 'asc' | 'desc'
+
 export default function AcademiasPage() {
   const [academias, setAcademias] = useState<Academia[]>([])
   const [loading, setLoading] = useState(true)
   const [perfil, setPerfil] = useState<any>(null)
+  const [sortKey, setSortKey] = useState<SortKey>('status')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
   const supabase = createClient()
 
   useEffect(() => {
@@ -159,28 +165,92 @@ export default function AcademiasPage() {
   const emDia = academias.filter(a => a.anualidade_status === 'paga').length
   const vencidas = academias.filter(a => a.anualidade_status === 'vencida').length
 
-  const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      paga: 'bg-green-100 text-green-800',
-      pendente: 'bg-yellow-100 text-yellow-800',
-      vencida: 'bg-red-100 text-red-800',
+  const getStatusOrder = (status: string) => {
+    const order: Record<string, number> = {
+      paga: 0,
+      pendente: 1,
+      cancelada: 2,
+      vencida: 3,
     }
-    const labels: Record<string, string> = {
-      paga: 'Em dia',
-      pendente: 'Pendente',
-      vencida: 'Vencida',
-    }
-    return { color: colors[status] || 'bg-gray-100 text-gray-800', label: labels[status] || status }
+
+    return order[status] ?? 4
   }
 
-  const formatDate = (date: string | null) => {
-    if (!date) return '-'
-    return new Date(date).toLocaleDateString('pt-BR')
+  const getStatusIconConfig = (academia: Academia) => {
+    if (!academia.ativo) {
+      return { color: 'bg-gray-400', label: 'Inativa' }
+    }
+
+    if (academia.anualidade_status === 'cancelada') {
+      return { color: 'bg-red-500', label: 'Cancelada' }
+    }
+
+    if (academia.anualidade_status === 'paga') {
+      return { color: 'bg-green-500', label: 'Em dia' }
+    }
+
+    if (academia.anualidade_status === 'pendente') {
+      return { color: 'bg-yellow-400', label: 'Pendente' }
+    }
+
+    return { color: 'bg-yellow-400', label: 'Ativa' }
   }
 
-  const isVencida = (vencimento: string | null) => {
-    if (!vencimento) return false
-    return new Date(vencimento) < new Date()
+  const compareText = (a: string | null | undefined, b: string | null | undefined) => {
+    return (a || '').localeCompare((b || ''), 'pt-BR', { sensitivity: 'base' })
+  }
+
+  const sortedAcademias = useMemo(() => {
+    const items = [...academias]
+
+    items.sort((a, b) => {
+      if (sortKey === 'status') {
+        const statusDiff = getStatusOrder(a.anualidade_status) - getStatusOrder(b.anualidade_status)
+        if (statusDiff !== 0) {
+          return sortDirection === 'asc' ? statusDiff : -statusDiff
+        }
+
+        const nomeDiff = compareText(a.nome, b.nome)
+        return sortDirection === 'asc' ? nomeDiff : -nomeDiff
+      }
+
+      if (sortKey === 'nome') {
+        const nomeDiff = compareText(a.nome, b.nome)
+        return sortDirection === 'asc' ? nomeDiff : -nomeDiff
+      }
+
+      if (sortKey === 'responsavel') {
+        const responsavelDiff = compareText(a.responsavel_nome, b.responsavel_nome)
+        return sortDirection === 'asc' ? responsavelDiff : -responsavelDiff
+      }
+
+      const localA = `${a.endereco_cidade || ''} ${a.endereco_estado || ''}`.trim()
+      const localB = `${b.endereco_cidade || ''} ${b.endereco_estado || ''}`.trim()
+      const localDiff = compareText(localA, localB)
+      return sortDirection === 'asc' ? localDiff : -localDiff
+    })
+
+    return items
+  }, [academias, sortDirection, sortKey])
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+      return
+    }
+
+    setSortKey(key)
+    setSortDirection('asc')
+  }
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return <ArrowUpDown className="w-3.5 h-3.5" />
+    }
+
+    return sortDirection === 'asc'
+      ? <ArrowUp className="w-3.5 h-3.5" />
+      : <ArrowDown className="w-3.5 h-3.5" />
   }
 
   return (
@@ -237,7 +307,7 @@ export default function AcademiasPage() {
           </div>
           <input
             type="text"
-            placeholder="Nome ou CNPJ..."
+            placeholder="Nome ou Responsável..."
             className="w-full rounded border border-input bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </div>
@@ -272,19 +342,36 @@ export default function AcademiasPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left p-4 font-medium text-muted-foreground">Academia</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">CNPJ</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Localização</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Responsável</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Anuidade</th>
-                    <th className="text-center p-4 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">
+                      <button onClick={() => handleSort('nome')} className="inline-flex items-center gap-2 hover:text-foreground transition-colors">
+                        Academia
+                        {renderSortIcon('nome')}
+                      </button>
+                    </th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">
+                      <button onClick={() => handleSort('localizacao')} className="inline-flex items-center gap-2 hover:text-foreground transition-colors">
+                        Localização
+                        {renderSortIcon('localizacao')}
+                      </button>
+                    </th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">
+                      <button onClick={() => handleSort('responsavel')} className="inline-flex items-center gap-2 hover:text-foreground transition-colors">
+                        Responsável
+                        {renderSortIcon('responsavel')}
+                      </button>
+                    </th>
+                    <th className="text-center p-4 font-medium text-muted-foreground">
+                      <button onClick={() => handleSort('status')} className="inline-flex items-center gap-2 hover:text-foreground transition-colors">
+                        Status
+                        {renderSortIcon('status')}
+                      </button>
+                    </th>
                     <th className="text-right p-4 font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {academias.map((academia) => {
-                    const paymentStatus = getStatusBadge(academia.anualidade_status)
-                    const vencida = isVencida(academia.anualidade_vencimento)
+                  {sortedAcademias.map((academia) => {
+                    const statusIcon = getStatusIconConfig(academia)
                     
                     return (
                       <tr key={academia.id} className="border-b border-border hover:bg-muted">
@@ -296,49 +383,19 @@ export default function AcademiasPage() {
                             </div>
                           </Link>
                         </td>
-                        <td className="p-4">
-                          <code className="text-xs bg-muted text-foreground px-2 py-1 rounded">
-                            {academia.cnpj ? academia.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : '-'}
-                          </code>
-                        </td>
                         <td className="p-4 text-sm text-foreground">
                           {academia.endereco_cidade && academia.endereco_estado 
                             ? `${academia.endereco_cidade}, ${academia.endereco_estado}` 
                             : '-'}
                         </td>
                         <td className="p-4 text-sm text-foreground">
-                          <div className="max-w-xs truncate">{academia.responsavel_email || '-'}</div>
+                          <div className="max-w-xs truncate">{academia.responsavel_nome || '-'}</div>
                         </td>
                         <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <div>
-                              <div className={`text-xs font-medium px-2 py-1 rounded ${paymentStatus.color}`}>
-                                {paymentStatus.label}
-                              </div>
-                              {vencida && (
-                                <div className="text-xs text-red-600 mt-1">
-                                  Vencida em {formatDate(academia.anualidade_vencimento)}
-                                </div>
-                              )}
-                              {!vencida && academia.anualidade_vencimento && (
-                                <div className="text-xs text-gray-600 mt-1">
-                                  Vence em {formatDate(academia.anualidade_vencimento)}
-                                </div>
-                              )}
+                          <div className="flex items-center justify-center">
+                            <div className="flex items-center gap-2" title={statusIcon.label}>
+                              <span className={`w-3 h-3 rounded-full ${statusIcon.color}`} />
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-center gap-2">
-                            {academia.ativo ? (
-                              <div title="Ativa"><CheckCircle className="w-4 h-4 text-green-600" /></div>
-                            ) : (
-                              <div title="Inativa"><Clock className="w-4 h-4 text-gray-400" /></div>
-                            )}
-                            {vencida && (
-                              <div title="Anuidade vencida"><AlertCircle className="w-4 h-4 text-red-600" /></div>
-                            )}
                           </div>
                         </td>
                         <td className="p-4 text-right">
