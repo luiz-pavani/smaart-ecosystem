@@ -53,7 +53,7 @@ export async function GET(
     // Buscar federação separadamente
     const { data: federacao, error: federacaoError } = await supabase
       .from('federacoes')
-      .select('nome, sigla, cnpj')
+      .select('nome, sigla, cnpj, email, telefone, site, logo_url, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado, endereco_cep')
       .eq('id', academia.federacao_id)
       .single()
 
@@ -87,6 +87,16 @@ export async function GET(
         nome_completo: federacao.nome,
         sigla: federacao.sigla,
         cnpj: federacao.cnpj,
+        email: federacao.email,
+        telefone: federacao.telefone,
+        site: federacao.site,
+        logo_url: federacao.logo_url,
+        endereco_rua: federacao.endereco_rua,
+        endereco_numero: federacao.endereco_numero,
+        endereco_bairro: federacao.endereco_bairro,
+        endereco_cidade: federacao.endereco_cidade,
+        endereco_estado: federacao.endereco_estado,
+        endereco_cep: federacao.endereco_cep,
       },
       validade: academia.anualidade_vencimento,
       dataEmissao: new Date().toISOString(),

@@ -140,7 +140,7 @@ export default function AcademiasFedaracaoPage() {
         throw new Error('Dados do certificado não encontrados')
       }
 
-      gerarCertificadoPdf(result.certificadoData)
+      await gerarCertificadoPdf(result.certificadoData)
     } catch (error) {
       console.error('Error downloading certificate:', error)
       alert(`❌ ${error instanceof Error ? error.message : 'Erro ao baixar certificado'}`)
