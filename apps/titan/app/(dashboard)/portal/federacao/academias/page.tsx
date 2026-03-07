@@ -30,7 +30,7 @@ export default function AcademiasFedaracaoPage() {
   const [showModal, setShowModal] = useState(false)
   const [federacaoId, setFederacaoId] = useState<string | null>(null)
   const [downloadingCertificado, setDownloadingCertificado] = useState<string | null>(null)
-  const pageSize = 12
+  const pageSize = 50
 
   useEffect(() => {
     const load = async () => {
@@ -259,7 +259,10 @@ export default function AcademiasFedaracaoPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <button className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-semibold rounded-lg border border-white/10 transition-all">
+                  <button 
+                    onClick={() => router.push(`/academias/${academia.id}/editar`)}
+                    className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-semibold rounded-lg border border-white/10 transition-all"
+                  >
                     Editar
                   </button>
                   <button

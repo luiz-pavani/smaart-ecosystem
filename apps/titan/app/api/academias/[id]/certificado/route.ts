@@ -38,12 +38,7 @@ export async function GET(
         endereco_estado,
         endereco_cep,
         responsavel_nome,
-        federacao_id,
-        federacoes (
-          nome_completo,
-          sigla,
-          cnpj
-        )
+        federacao_id
       `)
       .eq('id', id)
       .single()
@@ -56,12 +51,15 @@ export async function GET(
       )
     }
 
-    // Verificar se federacoes é array e pegar o primeiro
-    const federacao = Array.isArray(academia.federacoes) 
-      ? academia.federacoes[0] 
-      : academia.federacoes
+    // Buscar federação separadamente
+    const { data: federacao, error: federacaoError } = await supabase
+      .from('federacoes')
+      .select('nome_completo, sigla, cnpj')
+      .eq('id', academia.federacao_id)
+      .single()
 
-    if (!federacao) {
+    if (federacaoError || !federacao) {
+      console.error('❌ Federação not found:', federacaoError)
       return NextResponse.json(
         { error: 'Federação não encontrada para esta academia' },
         { status: 404 }

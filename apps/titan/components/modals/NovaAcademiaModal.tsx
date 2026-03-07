@@ -12,9 +12,9 @@ import { createClient } from '@/lib/supabase/client'
 const academiaSchema = z.object({
   nome: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   sigla: z.string().min(2, 'Sigla deve ter no mínimo 2 caracteres').optional().or(z.literal('')),
-  cidade: z.string().min(2, 'Cidade deve ter no mínimo 2 caracteres'),
-  estado: z.string().length(2, 'Estado deve ter 2 caracteres'),
-  status: z.string(),
+  endereco_cidade: z.string().min(2, 'Cidade deve ter no mínimo 2 caracteres'),
+  endereco_estado: z.string().length(2, 'Estado deve ter 2 caracteres'),
+  ativo: z.boolean(),
 })
 
 type AcademiaFormData = z.infer<typeof academiaSchema>
@@ -47,9 +47,9 @@ export function NovaAcademiaModal({ isOpen, onClose, federacaoId, onSuccess }: N
       const { error } = await supabase.from('academias').insert({
         nome: data.nome,
         sigla: data.sigla || null,
-        cidade: data.cidade,
-        estado: data.estado,
-        status: data.status,
+        endereco_cidade: data.endereco_cidade,
+        endereco_estado: data.endereco_estado,
+        ativo: data.ativo,
         federacao_id: federacaoId,
       })
 
@@ -107,13 +107,13 @@ export function NovaAcademiaModal({ isOpen, onClose, federacaoId, onSuccess }: N
               Cidade *
             </label>
             <input
-              {...register('cidade')}
+              {...register('endereco_cidade')}
               type="text"
               className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
               placeholder="Porto Alegre"
             />
-            {errors.cidade && (
-              <p className="text-red-400 text-xs mt-1">{errors.cidade.message}</p>
+            {errors.endereco_cidade && (
+              <p className="text-red-400 text-xs mt-1">{errors.endereco_cidade.message}</p>
             )}
           </div>
           <div>
@@ -121,14 +121,14 @@ export function NovaAcademiaModal({ isOpen, onClose, federacaoId, onSuccess }: N
               Estado *
             </label>
             <input
-              {...register('estado')}
+              {...register('endereco_estado')}
               type="text"
               maxLength={2}
               className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors uppercase"
               placeholder="RS"
             />
-            {errors.estado && (
-              <p className="text-red-400 text-xs mt-1">{errors.estado.message}</p>
+            {errors.endereco_estado && (
+              <p className="text-red-400 text-xs mt-1">{errors.endereco_estado.message}</p>
             )}
           </div>
         </div>
@@ -137,13 +137,14 @@ export function NovaAcademiaModal({ isOpen, onClose, federacaoId, onSuccess }: N
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
           <select
-            {...register('status')}
-            defaultValue="Ativa"
+            {...register('ativo', { 
+              setValueAs: (v) => v === 'true' 
+            })}
+            defaultValue="true"
             className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
           >
-            <option value="Ativa">Ativa</option>
-            <option value="Inativa">Inativa</option>
-            <option value="Suspensa">Suspensa</option>
+            <option value="true">Ativa</option>
+            <option value="false">Inativa</option>
           </select>
         </div>
 
