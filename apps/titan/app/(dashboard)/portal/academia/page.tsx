@@ -8,6 +8,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { PieChart } from '@/components/dashboard/PieChart'
 import { TopList } from '@/components/dashboard/TopList'
+import { gerarCertificadoPdf } from '@/lib/certificados/gerarCertificadoPdf'
 
 interface DashboardData {
   totalAtletas: number
@@ -175,15 +176,12 @@ export default function PortalAcademiaPage() {
         throw new Error(errorData.error || 'Erro ao gerar certificado')
       }
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Certificado_Filiacao.pdf`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      const result = await response.json()
+      if (!result?.certificadoData) {
+        throw new Error('Dados do certificado não encontrados')
+      }
+
+      gerarCertificadoPdf(result.certificadoData)
     } catch (error) {
       console.error('Error downloading certificate:', error)
       alert(`❌ ${error instanceof Error ? error.message : 'Erro ao baixar certificado'}`)

@@ -1,8 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { renderToStream } from '@react-pdf/renderer'
-import { CertificadoFiliacao } from '@/components/certificates/CertificadoFiliacao'
-import React from 'react'
 
 export async function GET(
   request: NextRequest,
@@ -94,42 +91,13 @@ export async function GET(
       numeroRegistro,
     }
 
-    console.log('📄 Gerando certificado para:', academia.nome)
-
-    // Gerar PDF - usando type assertion para resolver incompatibilidade de tipos
-    const stream = await renderToStream(
-      React.createElement(CertificadoFiliacao, certificadoData) as any
+    return NextResponse.json(
+      {
+        success: true,
+        certificadoData,
+      },
+      { status: 200 }
     )
-
-    // Converter stream para buffer usando Readable
-    const chunks: Buffer[] = []
-    
-    // Cast para any para compatibilidade com tipos
-    const nodeStream = stream as any
-    
-    return new Promise<NextResponse>((resolve, reject) => {
-      nodeStream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk)
-      })
-      
-      nodeStream.on('end', () => {
-        const buffer = Buffer.concat(chunks)
-        const fileName = `Certificado_Filiacao_${academia.nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
-
-        resolve(new NextResponse(buffer, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename="${fileName}"`,
-            'Cache-Control': 'no-cache',
-          },
-        }))
-      })
-      
-      nodeStream.on('error', (error: Error) => {
-        reject(error)
-      })
-    })
   } catch (error) {
     console.error('❌ Error generating certificate:', error)
     return NextResponse.json(

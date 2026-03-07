@@ -8,6 +8,7 @@ import { NovaAcademiaModal } from '@/components/modals/NovaAcademiaModal'
 import { exportAcademiasToPDF } from '@/lib/export/pdf'
 import { exportAcademiasToExcel } from '@/lib/export/excel'
 import { SearchShortcut } from '@/components/command-palette/SearchShortcut'
+import { gerarCertificadoPdf } from '@/lib/certificados/gerarCertificadoPdf'
 
 interface AcademiaRow {
   id: string
@@ -134,15 +135,12 @@ export default function AcademiasFedaracaoPage() {
         throw new Error(errorData.error || 'Erro ao gerar certificado')
       }
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `Certificado_Filiacao_${nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+      const result = await response.json()
+      if (!result?.certificadoData) {
+        throw new Error('Dados do certificado não encontrados')
+      }
+
+      gerarCertificadoPdf(result.certificadoData)
     } catch (error) {
       console.error('Error downloading certificate:', error)
       alert(`❌ ${error instanceof Error ? error.message : 'Erro ao baixar certificado'}`)
