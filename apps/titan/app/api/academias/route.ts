@@ -16,6 +16,11 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(url, key)
     const body = await request.json()
 
+    // Convert empty date strings to null for optional date fields
+    if (body.anualidade_vencimento === '' || body.anualidade_vencimento === null) {
+      body.anualidade_vencimento = null
+    }
+
     console.log(`📝 Creating new academia:`, body.nome)
 
     const { data, error } = await supabase

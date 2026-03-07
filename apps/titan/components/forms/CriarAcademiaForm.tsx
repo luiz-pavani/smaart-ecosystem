@@ -45,10 +45,16 @@ export default function CriarAcademiaForm() {
     setSaving(true)
 
     try {
+      // Convert empty date strings to null for optional date fields
+      const dataToSubmit = {
+        ...formData,
+        anualidade_vencimento: formData.anualidade_vencimento ? formData.anualidade_vencimento : null,
+      }
+
       const response = await fetch('/api/academias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(dataToSubmit),
       })
 
       if (!response.ok) {
@@ -273,7 +279,7 @@ export default function CriarAcademiaForm() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Vencimento</label>
+              <label className="block text-sm font-medium text-foreground mb-2">Vencimento (Opcional)</label>
               <input
                 type="date"
                 value={formData.anualidade_vencimento}

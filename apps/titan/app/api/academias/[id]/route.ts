@@ -21,6 +21,11 @@ export async function PUT(
     const supabase = createClient(url, key)
     const body = await request.json()
 
+    // Convert empty date strings to null for optional date fields
+    if (body.anualidade_vencimento === '' || body.anualidade_vencimento === null) {
+      body.anualidade_vencimento = null
+    }
+
     console.log(`📝 Updating academia ${id}:`, body)
 
     const { data, error } = await supabase
