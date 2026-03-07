@@ -197,10 +197,10 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   doc.setFontSize(11)
 
   const texto1 = `A ${federacao.nome_completo}, no uso de suas atribuições legais e estatutárias, CERTIFICA que a academia abaixo descrita encontra-se devidamente filiada e autorizada a funcionar e a promover a prática do judô.`
-  const texto2 = `Academia: ${academia.nome}${academia.sigla ? ` (${academia.sigla})` : ''}`
-  const texto3 = `Responsável: ${academia.responsavel_nome || 'Não informado'}`
+  const texto2 = academia.nome
+  const texto3 = academia.responsavel_nome || 'Não informado'
   const texto4 = `Localidade: ${localidade || 'Não informada'}`
-  const texto5 = `Este certificado atesta a regularidade cadastral e estatutária da academia perante esta entidade oficial de regulação do esporte e possui validade até ${validadeFormatada}.`
+  const texto5 = `Este certificado atesta a regularidade cadastral e estatutária da academia perante esta entidade oficial de regulação do esporte e possui validade até `
   const texto6 = `Emitido em ${dataFormatada}.`
 
   const bloco = [texto1, '', '', texto3, '', texto4, '', texto5, '', texto6].filter(Boolean)
@@ -220,6 +220,31 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(11)
       y += 16
+      
+      // Registro logo abaixo do box
+      doc.setFontSize(9)
+      doc.text(`Registro: ${numeroRegistro}`, 105, y, { align: 'center' })
+      y += 8
+      return
+    }
+
+    // Responsável em negrito
+    if (index === 3) {
+      doc.setFont('helvetica', 'bold')
+      doc.text(`Responsável: ${linha}`, 27, y)
+      doc.setFont('helvetica', 'normal')
+      y += 6
+      return
+    }
+
+    // Validade em negrito
+    if (index === 7) {
+      const linhas = doc.splitTextToSize(linha, 155)
+      doc.text(linhas, 27, y)
+      y += linhas.length * 6
+      doc.setFont('helvetica', 'bold')
+      doc.text(validadeFormatada, 27, y - 6 + linhas.length * 6)
+      doc.setFont('helvetica', 'normal')
       return
     }
 
@@ -228,27 +253,24 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
     y += linhas.length * 6
   })
 
-  doc.setDrawColor(0, 0, 0)
-  doc.line(70, 238, 140, 238)
-  doc.setTextColor(0, 0, 0)
-  doc.setFontSize(10)
-  doc.text(federacao.nome_completo, 105, 244, { align: 'center' })
-
-  doc.setFontSize(9)
-  doc.setTextColor(0, 0, 0)
-  doc.text(`Registro: ${numeroRegistro}`, 105, 250, { align: 'center' })
+  // Linha antes do rodapé
+  doc.setDrawColor(150, 150, 150)
+  doc.setLineWidth(0.3)
+  doc.line(25, 250, 185, 250)
 
   // Rodapé institucional
+  doc.setFontSize(8.5)
+  doc.setTextColor(0, 0, 0)
   const rodapeLinhas: string[] = [
-    'Entidade oficial, reconhecida pela Lei Geral do Esportes e filiada a Liga Nacional de Judô • Confederação Sul-Americana de Judô',
+    'Entidade oficial, reconhecida pela Lei Geral do Esportes e filiada a',
+    'Liga Nacional de Judô • Confederação Sul-Americana de Judô',
     'União Panamericana de Judô • Federação Mundial de Judô',
   ].filter((linha): linha is string => Boolean(linha))
 
   let rodapeY = 257
   rodapeLinhas.forEach((linha) => {
-    const partes = doc.splitTextToSize(linha, 170)
-    doc.text(partes, 105, rodapeY, { align: 'center' })
-    rodapeY += partes.length * 4.5
+    doc.text(linha, 105, rodapeY, { align: 'center' })
+    rodapeY += 4.5
   })
 
   const nomeArquivo = `Certificado_Filiacao_${academia.nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
