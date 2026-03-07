@@ -17,6 +17,7 @@ interface CertificadoData {
     nome_completo: string
     sigla: string | null
     cnpj: string | null
+    data_fundacao: string | null
     email: string | null
     telefone: string | null
     site: string | null
@@ -56,11 +57,10 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   const { academia, federacao, validade, dataEmissao, numeroRegistro } = certificadoData
 
   const localidade = [academia.endereco_cidade, academia.endereco_estado].filter(Boolean).join(', ')
-  const enderecoFederacao = [
+  const enderecoFederacaoSemCidade = [
     federacao.endereco_rua,
     federacao.endereco_numero,
     federacao.endereco_bairro,
-    federacao.endereco_cidade,
     federacao.endereco_estado,
     federacao.endereco_cep,
   ].filter(Boolean).join(', ')
@@ -75,6 +75,13 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
     ? new Date(validade).toLocaleDateString('pt-BR')
     : 'Não informada'
 
+  const fundacaoFormatada = federacao.data_fundacao
+    ? new Date(federacao.data_fundacao).toLocaleDateString('pt-BR')
+    : 'Não informada'
+
+  const LRSJ_LOGO_URL = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/academias-logos/LRSJ.png'
+  const logoUrlFinal = federacao.logo_url || LRSJ_LOGO_URL
+
   doc.setFillColor(248, 250, 252)
   doc.rect(10, 10, 190, 277, 'F')
 
@@ -83,13 +90,13 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   doc.rect(15, 15, 180, 267)
 
   // Logo da federação no topo, centralizado horizontalmente
-  if (federacao.logo_url) {
-    const logoDataUrl = await carregarImagemComoDataURL(federacao.logo_url)
+  if (logoUrlFinal) {
+    const logoDataUrl = await carregarImagemComoDataURL(logoUrlFinal)
     if (logoDataUrl) {
-      const logoWidth = 24
-      const logoHeight = 24
+      const logoWidth = 26
+      const logoHeight = 26
       const logoX = (210 - logoWidth) / 2
-      const logoY = 20
+      const logoY = 18
       const format = logoDataUrl.includes('image/png') ? 'PNG' : 'JPEG'
       doc.addImage(logoDataUrl, format, logoX, logoY, logoWidth, logoHeight)
     }
@@ -98,10 +105,7 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(30, 64, 175)
   doc.setFontSize(18)
-  const tituloFederacao = federacao.sigla
-    ? `${federacao.nome_completo} (${federacao.sigla})`
-    : federacao.nome_completo
-  doc.text(tituloFederacao, 105, 52, { align: 'center' })
+  doc.text(federacao.nome_completo, 105, 52, { align: 'center' })
 
   doc.setDrawColor(30, 64, 175)
   doc.setLineWidth(0.4)
@@ -109,8 +113,9 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
 
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(15, 23, 42)
-  doc.setFontSize(19)
-  doc.text('CERTIFICADO DE FILIAÇÃO E AUTORIZAÇÃO DE FUNCIONAMENTO', 105, 72, { align: 'center' })
+  doc.setFontSize(18)
+  doc.text('CERTIFICADO DE FILIAÇÃO', 105, 70, { align: 'center' })
+  doc.text('E AUTORIZAÇÃO DE FUNCIONAMENTO', 105, 78, { align: 'center' })
 
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(51, 65, 85)
@@ -125,7 +130,7 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
 
   const bloco = [texto1, '', texto2, '', texto3, '', texto4, '', texto5, '', texto6].filter(Boolean)
 
-  let y = 88
+  let y = 94
   bloco.forEach((linha) => {
     const linhas = doc.splitTextToSize(linha, 155)
     doc.text(linhas, 27, y)
@@ -142,17 +147,14 @@ export async function gerarCertificadoPdf(certificadoData: CertificadoData) {
   doc.text(`Registro: ${numeroRegistro}`, 105, 250, { align: 'center' })
 
   // Dados cadastrais da federação no rodapé
-  const linhaCnpj = federacao.cnpj ? `CNPJ: ${federacao.cnpj}` : null
-  const linhaContato = [
-    federacao.telefone ? `Tel: ${federacao.telefone}` : null,
-    federacao.email ? `E-mail: ${federacao.email}` : null,
-    federacao.site ? `Site: ${federacao.site}` : null,
-  ].filter(Boolean).join(' • ')
+  const linhaCnpj = federacao.cnpj ? `CNPJ: ${federacao.cnpj}` : 'CNPJ: Não informado'
+  const linhaFundacao = `Data de Fundação: ${fundacaoFormatada}`
+  const linhaEndereco = enderecoFederacaoSemCidade ? `Endereço: ${enderecoFederacaoSemCidade}` : 'Endereço: Não informado'
 
   const rodapeLinhas: string[] = [
     linhaCnpj,
-    enderecoFederacao || null,
-    linhaContato || null,
+    linhaFundacao,
+    linhaEndereco,
     'Documento gerado eletronicamente pela plataforma SMAART.',
   ].filter((linha): linha is string => Boolean(linha))
 
