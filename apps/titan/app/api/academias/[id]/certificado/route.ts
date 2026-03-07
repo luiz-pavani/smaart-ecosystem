@@ -28,6 +28,7 @@ export async function GET(
         nome,
         sigla,
         cnpj,
+        anualidade_vencimento,
         endereco_rua,
         endereco_numero,
         endereco_bairro,
@@ -87,6 +88,7 @@ export async function GET(
         sigla: federacao.sigla,
         cnpj: federacao.cnpj,
       },
+      validade: academia.anualidade_vencimento,
       dataEmissao: new Date().toISOString(),
       numeroRegistro,
     }
