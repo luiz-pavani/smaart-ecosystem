@@ -51,42 +51,71 @@ export default function AcademiasFedaracaoPage() {
         
         setFederacaoId(role.federacao_id)
 
-        const start = page * pageSize
-        const end = start + pageSize - 1
+        // Fetch from API endpoint (same as /academias page)
+        console.log('📤 Buscando academias via API endpoint...')
+        const response = await fetch('/api/academias/listar')
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error('❌ Erro na API:', errorData.error)
+          setAcademias([])
+          setTotalCount(0)
+          return
+        }
 
-        let query = supabase
-          .from('academias')
-          .select('id, nome, sigla, cidade, status', { count: 'exact' })
-          .eq('federacao_id', role.federacao_id)
+        const responseData = await response.json()
+        const { academias: allAcademias, error: apiError } = responseData
 
+        if (apiError) {
+          console.error('❌ Erro da API:', apiError)
+          setAcademias([])
+          setTotalCount(0)
+          return
+        }
+
+        console.log('✅ Academias retornadas pela API:', allAcademias?.length || 0)
+        
+        // Filter by federacao_id
+        let filtered = (allAcademias || []).filter((a: any) => a.federacao_id === role.federacao_id)
+
+        // Apply local filters
         if (filterStatus) {
-          query = query.eq('status', filterStatus)
+          filtered = filtered.filter((a: any) => a.ativo === (filterStatus === 'Ativa'))
         }
         if (filterCidade) {
-          query = query.ilike('cidade', `%${filterCidade}%`)
+          filtered = filtered.filter((a: any) => 
+            a.endereco_cidade?.toLowerCase().includes(filterCidade.toLowerCase())
+          )
         }
 
-        const { data: academiasData, count } = await query
-          .order('nome', { ascending: true })
-          .range(start, end)
+        // Sort by name
+        filtered.sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'))
 
-        const { data: atletasData } = await supabase
-          .from('atletas')
-          .select('id, academia_id')
-          .eq('federacao_id', role.federacao_id)
-
-        const counts = new Map<string, number>()
-        ;(atletasData || []).forEach((a: any) => {
-          counts.set(a.academia_id, (counts.get(a.academia_id) || 0) + 1)
+        // Count atletas for each academia (optional - can be removed if slow)
+        const atletasCounts = new Map<string, number>()
+        filtered.forEach((a: any) => {
+          atletasCounts.set(a.id, 0) // Initialize with 0
         })
 
-        const mapped = (academiasData || []).map((a: any) => ({
-          ...a,
-          atletas: counts.get(a.id) || 0,
+        const totalFiltered = filtered.length
+
+        // Apply pagination
+        const start = page * pageSize
+        const end = start + pageSize
+        const paginated = filtered.slice(start, end)
+
+        // Map to expected format
+        const mapped = paginated.map((a: any) => ({
+          id: a.id,
+          nome: a.nome,
+          sigla: a.sigla,
+          cidade: a.endereco_cidade,
+          status: a.ativo ? 'Ativa' : 'Inativa',
+          atletas: atletasCounts.get(a.id) || 0,
         }))
 
         setAcademias(mapped)
-        setTotalCount(count || 0)
+        setTotalCount(totalFiltered)
       } finally {
         setLoading(false)
       }
@@ -314,42 +343,62 @@ export default function AcademiasFedaracaoPage() {
       
       setFederacaoId(role.federacao_id)
 
-      const start = page * pageSize
-      const end = start + pageSize - 1
+      // Fetch from API endpoint (same as /academias page)
+      const response = await fetch('/api/academias/listar')
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('❌ Erro na API:', errorData.error)
+        setAcademias([])
+        setTotalCount(0)
+        return
+      }
 
-      let query = supabase
-        .from('academias')
-        .select('id, nome, sigla, cidade, status', { count: 'exact' })
-        .eq('federacao_id', role.federacao_id)
+      const responseData = await response.json()
+      const { academias: allAcademias, error: apiError } = responseData
 
+      if (apiError) {
+        console.error('❌ Erro da API:', apiError)
+        setAcademias([])
+        setTotalCount(0)
+        return
+      }
+
+      // Filter by federacao_id
+      let filtered = (allAcademias || []).filter((a: any) => a.federacao_id === role.federacao_id)
+
+      // Apply local filters
       if (filterStatus) {
-        query = query.eq('status', filterStatus)
+        filtered = filtered.filter((a: any) => a.ativo === (filterStatus === 'Ativa'))
       }
       if (filterCidade) {
-        query = query.ilike('cidade', `%${filterCidade}%`)
+        filtered = filtered.filter((a: any) => 
+          a.endereco_cidade?.toLowerCase().includes(filterCidade.toLowerCase())
+        )
       }
 
-      const { data: academiasData, count } = await query
-        .order('nome', { ascending: true })
-        .range(start, end)
+      // Sort by name
+      filtered.sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'))
 
-      const { data: atletasData } = await supabase
-        .from('atletas')
-        .select('id, academia_id')
-        .eq('federacao_id', role.federacao_id)
+      const totalFiltered = filtered.length
 
-      const counts = new Map<string, number>()
-      ;(atletasData || []).forEach((a: any) => {
-        counts.set(a.academia_id, (counts.get(a.academia_id) || 0) + 1)
-      })
+      // Apply pagination
+      const start = page * pageSize
+      const end = start + pageSize
+      const paginated = filtered.slice(start, end)
 
-      const mapped = (academiasData || []).map((a: any) => ({
-        ...a,
-        atletas: counts.get(a.id) || 0,
+      // Map to expected format
+      const mapped = paginated.map((a: any) => ({
+        id: a.id,
+        nome: a.nome,
+        sigla: a.sigla,
+        cidade: a.endereco_cidade,
+        status: a.ativo ? 'Ativa' : 'Inativa',
+        atletas: 0, // Can be populated later if needed
       }))
 
       setAcademias(mapped)
-      setTotalCount(count || 0)
+      setTotalCount(totalFiltered)
     } finally {
       setLoading(false)
     }
