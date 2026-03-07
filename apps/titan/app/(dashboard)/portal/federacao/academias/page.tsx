@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Plus, Building2, Loader2, FileText, FileSpreadsheet } from 'lucide-react'
+import { ArrowLeft, Plus, Building2, Loader2, FileText, FileSpreadsheet, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { NovaAcademiaModal } from '@/components/modals/NovaAcademiaModal'
@@ -29,6 +29,7 @@ export default function AcademiasFedaracaoPage() {
   const [filterCidade, setFilterCidade] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [federacaoId, setFederacaoId] = useState<string | null>(null)
+  const [downloadingCertificado, setDownloadingCertificado] = useState<string | null>(null)
   const pageSize = 12
 
   useEffect(() => {
@@ -93,6 +94,32 @@ export default function AcademiasFedaracaoPage() {
 
     load()
   }, [supabase, page, filterStatus, filterCidade])
+
+  const handleDownloadCertificado = async (academiaId: string, nome: string) => {
+    try {
+      setDownloadingCertificado(academiaId)
+      const response = await fetch(`/api/academias/${academiaId}/certificado`)
+      
+      if (!response.ok) {
+        throw new Error('Erro ao gerar certificado')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Certificado_Filiacao_${nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error downloading certificate:', error)
+      alert('❌ Erro ao baixar certificado')
+    } finally {
+      setDownloadingCertificado(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -202,9 +229,28 @@ export default function AcademiasFedaracaoPage() {
                   <p className="text-gray-400"><span className="text-gray-300 font-semibold">{academia.atletas}</span> atletas</p>
                 </div>
 
-                <button className="w-full px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-semibold rounded-lg border border-white/10 transition-all">
-                  Editar
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 text-sm font-semibold rounded-lg border border-white/10 transition-all">
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDownloadCertificado(academia.id, academia.nome)}
+                    disabled={downloadingCertificado === academia.id}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {downloadingCertificado === academia.id ? (
+                      <>
+                        <div className="w-3 h-3 border-2 border-blue-300/30 border-t-blue-300 rounded-full animate-spin" />
+                        <span className="hidden sm:inline">Gerando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span className="hidden sm:inline">Certificado</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

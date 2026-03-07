@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -24,6 +24,8 @@ export default function PortalAcademiaPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<DashboardData | null>(null)
+  const [academiaId, setAcademiaId] = useState<string | null>(null)
+  const [downloadingCertificado, setDownloadingCertificado] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
@@ -43,6 +45,8 @@ export default function PortalAcademiaPage() {
         .single()
 
       if (!role?.academia_id) return
+
+      setAcademiaId(role.academia_id)
 
       // Total atletas
       const { count: totalAtletas } = await supabase
@@ -153,6 +157,37 @@ export default function PortalAcademiaPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDownloadCertificado = async () => {
+    if (!academiaId) {
+      alert('❌ ID da academia não encontrado')
+      return
+    }
+
+    try {
+      setDownloadingCertificado(true)
+      const response = await fetch(`/api/academias/${academiaId}/certificado`)
+      
+      if (!response.ok) {
+        throw new Error('Erro ao gerar certificado')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Certificado_Filiacao.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error downloading certificate:', error)
+      alert('❌ Erro ao baixar certificado')
+    } finally {
+      setDownloadingCertificado(false)
     }
   }
 
@@ -283,6 +318,41 @@ export default function PortalAcademiaPage() {
                       <p className="font-semibold text-white text-sm">{item.title}</p>
                     </button>
                   ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Certificado de Filiação */}
+            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 backdrop-blur border border-blue-500/20 rounded-lg p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">Certificado de Filiação</h3>
+                    <p className="text-sm text-gray-400 mb-3">
+                      Documento oficial de autorização de funcionamento pela federação
+                    </p>
+                    <button
+                      onClick={handleDownloadCertificado}
+                      disabled={downloadingCertificado}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 
+                               text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {downloadingCertificado ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Gerando...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          Baixar Certificado (PDF)
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
