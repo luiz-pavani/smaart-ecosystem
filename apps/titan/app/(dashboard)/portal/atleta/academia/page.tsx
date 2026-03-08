@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, MapPin, Users, Clock, Award } from 'lucide-react'
+import { ArrowLeft, MapPin, Users, Clock, Award, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -49,13 +49,14 @@ export default function AcademiaAtletaPage() {
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-4xl mx-auto px-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/portal/atleta')}
             className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
           <h1 className="text-3xl font-bold text-white">Minha Academia</h1>
+          <p className="text-gray-400 mt-1">Informações institucionais e de contato</p>
         </div>
       </div>
 
@@ -63,7 +64,7 @@ export default function AcademiaAtletaPage() {
       <div className="max-w-4xl mx-auto px-4 py-12">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="text-gray-400">Carregando...</div>
+            <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
           </div>
         ) : academia ? (
           <div className="space-y-6">

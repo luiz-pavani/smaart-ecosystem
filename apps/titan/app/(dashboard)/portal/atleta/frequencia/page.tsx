@@ -55,13 +55,14 @@ export default function FrequenciaAtletaPage() {
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-4xl mx-auto px-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/portal/atleta')}
             className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
           <h1 className="text-3xl font-bold text-white">Frequencia</h1>
+          <p className="text-gray-400 mt-1">Seu histórico de presença nos últimos 30 dias</p>
         </div>
       </div>
 
@@ -74,7 +75,13 @@ export default function FrequenciaAtletaPage() {
         ) : error ? (
           <div className="bg-red-500/10 border border-red-500 rounded-lg p-6 text-center">
             <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
-            <p className="text-red-200">{error}</p>
+            <p className="text-red-200 mb-3">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : (
           <>

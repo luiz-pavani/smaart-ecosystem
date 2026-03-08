@@ -32,6 +32,7 @@ export default function AulasAcademiaPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [aulas, setAulas] = useState<AulaItem[]>([])
   const [showModal, setShowModal] = useState(false)
   const [academiaId, setAcademiaId] = useState<string | null>(null)
@@ -40,8 +41,12 @@ export default function AulasAcademiaPage() {
     const load = async () => {
       try {
         setLoading(true)
+        setError(null)
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        if (!user) {
+          setError('Usuário não autenticado')
+          return
+        }
 
         const { data: role } = await supabase
           .from('user_roles')
@@ -51,7 +56,10 @@ export default function AulasAcademiaPage() {
           .limit(1)
           .single()
 
-        if (!role?.academia_id) return
+        if (!role?.academia_id) {
+          setError('Academia não encontrada para este usuário')
+          return
+        }
         
         setAcademiaId(role.academia_id)
 
@@ -72,6 +80,9 @@ export default function AulasAcademiaPage() {
         }))
 
         setAulas(mapped)
+      } catch (err) {
+        console.error('Erro ao carregar aulas:', err)
+        setError('Não foi possível carregar as aulas da academia')
       } finally {
         setLoading(false)
       }
@@ -101,13 +112,14 @@ export default function AulasAcademiaPage() {
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-6xl mx-auto px-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/portal/academia')}
             className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
           <h1 className="text-3xl font-bold text-white">Aulas & Horarios</h1>
+          <p className="text-gray-400 mt-1">Organize turmas, horários e capacidade</p>
         </div>
       </div>
 
@@ -148,8 +160,27 @@ export default function AulasAcademiaPage() {
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-white" />
           </div>
+        ) : error ? (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 text-center">
+            <p className="text-red-200 font-medium mb-3">{error}</p>
+            <button
+              onClick={() => load()}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              Tentar novamente
+            </button>
+          </div>
         ) : diasOrdenados.length === 0 ? (
-          <div className="text-gray-400">Nenhuma aula cadastrada.</div>
+          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-12 text-center">
+            <h3 className="text-white text-lg font-semibold mb-2">Nenhuma aula cadastrada</h3>
+            <p className="text-gray-400 mb-4">Crie a primeira aula para começar a organizar a academia.</p>
+            <button
+              onClick={() => setShowModal(true)}
+              className="px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium"
+            >
+              Nova Aula
+            </button>
+          </div>
         ) : (
           <div className="space-y-6">
             {diasOrdenados.map((dia) => (

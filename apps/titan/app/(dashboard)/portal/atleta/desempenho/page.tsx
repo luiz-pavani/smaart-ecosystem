@@ -12,13 +12,14 @@ export default function DesempenhoAtletaPage() {
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-4xl mx-auto px-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/portal/atleta')}
             className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
           <h1 className="text-3xl font-bold text-white">Desempenho</h1>
+          <p className="text-gray-400 mt-1">Indicadores da sua evolução técnica e competitiva</p>
         </div>
       </div>
 

@@ -18,6 +18,7 @@ export default function FrequenciaAcademiaPage() {
   const [rows, setRows] = useState<Row[]>([])
   const [allRows, setAllRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [totalCount, setTotalCount] = useState(0)
   const [filterPercentual, setFilterPercentual] = useState('')
 
@@ -25,8 +26,12 @@ export default function FrequenciaAcademiaPage() {
     const load = async () => {
       try {
         setLoading(true)
+        setError(null)
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        if (!user) {
+          setError('Usuário não autenticado')
+          return
+        }
 
         const { data: role } = await supabase
           .from('user_roles')
@@ -36,7 +41,10 @@ export default function FrequenciaAcademiaPage() {
           .limit(1)
           .single()
 
-        if (!role?.academia_id) return
+        if (!role?.academia_id) {
+          setError('Academia não encontrada para este usuário')
+          return
+        }
 
         const startDate = new Date()
         startDate.setDate(startDate.getDate() - 30)
@@ -66,6 +74,9 @@ export default function FrequenciaAcademiaPage() {
         setAllRows(computed)
         setRows(computed)
         setTotalCount(computed.length)
+      } catch (err) {
+        console.error('Erro ao carregar frequência:', err)
+        setError('Não foi possível carregar os dados de frequência')
       } finally {
         setLoading(false)
       }
@@ -93,13 +104,14 @@ export default function FrequenciaAcademiaPage() {
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-6xl mx-auto px-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/portal/academia')}
             className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
           <h1 className="text-3xl font-bold text-white">Frequencia</h1>
+          <p className="text-gray-400 mt-1">Acompanhe presença e percentual dos atletas</p>
         </div>
       </div>
 
@@ -129,6 +141,16 @@ export default function FrequenciaAcademiaPage() {
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-white" />
+          </div>
+        ) : error ? (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 text-center">
+            <p className="text-red-200 font-medium mb-3">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : totalCount === 0 ? (
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-12 text-center">
