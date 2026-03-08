@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Trophy, Calendar, TrendingUp, Target } from 'lucide-react'
+import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2 } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { TopList } from '@/components/dashboard/TopList'
@@ -22,6 +22,7 @@ export default function PortalAtletaPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<DashboardData | null>(null)
 
   useEffect(() => {
@@ -30,8 +31,12 @@ export default function PortalAtletaPage() {
 
   async function loadDashboardData() {
     try {
+      setError(null)
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        setError('Usuário não autenticado')
+        return
+      }
 
       const { data: role } = await supabase
         .from('user_roles')
@@ -41,7 +46,10 @@ export default function PortalAtletaPage() {
         .limit(1)
         .single()
 
-      if (!role?.atleta_id) return
+      if (!role?.atleta_id) {
+        setError('Atleta vinculado não encontrado para este usuário')
+        return
+      }
 
       // Buscar dados do atleta
       let atleta = null
@@ -115,6 +123,9 @@ export default function PortalAtletaPage() {
         historicoLast7Days,
         proximosEventos
       })
+    } catch (err) {
+      console.error('Erro ao carregar portal do atleta:', err)
+      setError('Não foi possível carregar os dados do portal do atleta')
     } finally {
       setLoading(false)
     }
@@ -141,7 +152,20 @@ export default function PortalAtletaPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-slate-400">Carregando dados...</div>
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-6 h-6 mr-2 animate-spin text-slate-400" />
+          <span className="text-slate-400">Carregando dados...</span>
+        </div>
+      ) : error ? (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-6 text-center">
+          <p className="text-red-200 font-medium mb-3">{error}</p>
+          <button
+            onClick={loadDashboardData}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
       ) : data ? (
         <>
           {/* Metrics Row */}
@@ -233,7 +257,7 @@ export default function PortalAtletaPage() {
       {/* Quick Access Grid */}
       <div className="pt-4">
         <h2 className="text-xl font-semibold text-white mb-4">Acesso Rápido</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Frequência */}
           <button
             onClick={() => router.push('/portal/atleta/frequencia')}
@@ -288,6 +312,25 @@ export default function PortalAtletaPage() {
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Eventos</h3>
               <p className="text-sm text-slate-400">Competições e treinos</p>
+            </div>
+          </button>
+
+          {/* Minha Academia */}
+          <button
+            onClick={() => router.push('/portal/atleta/academia')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-purple-500/10 to-purple-600/5 
+                     hover:from-purple-500/20 hover:to-purple-600/10 border border-purple-500/20 hover:border-purple-500/40 
+                     transition-all duration-300 text-left"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-600/0 
+                          group-hover:from-purple-500/10 group-hover:to-purple-600/5 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4 
+                            group-hover:scale-110 transition-transform">
+                <Building2 className="w-6 h-6 text-purple-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Minha Academia</h3>
+              <p className="text-sm text-slate-400">Informações da academia</p>
             </div>
           </button>
         </div>

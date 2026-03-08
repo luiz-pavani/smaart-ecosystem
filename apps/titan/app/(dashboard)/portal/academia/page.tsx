@@ -25,6 +25,7 @@ export default function PortalAcademiaPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<DashboardData | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [academiaId, setAcademiaId] = useState<string | null>(null)
   const [downloadingCertificado, setDownloadingCertificado] = useState(false)
 
@@ -34,8 +35,12 @@ export default function PortalAcademiaPage() {
 
   async function loadDashboardData() {
     try {
+      setError(null)
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        setError('Usuário não autenticado')
+        return
+      }
 
       const { data: role } = await supabase
         .from('user_roles')
@@ -45,7 +50,10 @@ export default function PortalAcademiaPage() {
         .limit(1)
         .single()
 
-      if (!role?.academia_id) return
+      if (!role?.academia_id) {
+        setError('Academia vinculada não encontrada para este usuário')
+        return
+      }
 
       setAcademiaId(role.academia_id)
 
@@ -156,6 +164,9 @@ export default function PortalAcademiaPage() {
         graduacaoDistribution,
         topAtletas
       })
+    } catch (err) {
+      console.error('Erro ao carregar dashboard da academia:', err)
+      setError('Não foi possível carregar os dados do portal da academia')
     } finally {
       setLoading(false)
     }
@@ -219,6 +230,20 @@ export default function PortalAcademiaPage() {
       href: '/portal/academia/configuracoes',
       color: 'from-gray-500 to-gray-600'
     },
+    {
+      title: 'Eventos',
+      description: 'Calendário e inscrições',
+      icon: <FileText className="w-6 h-6" />,
+      href: '/portal/academia/eventos',
+      color: 'from-yellow-500 to-yellow-600'
+    },
+    {
+      title: 'Desempenho',
+      description: 'Análise de evolução',
+      icon: <TrendingUp className="w-6 h-6" />,
+      href: '/portal/academia/desempenho',
+      color: 'from-emerald-500 to-emerald-600'
+    },
   ]
 
   return (
@@ -243,6 +268,16 @@ export default function PortalAcademiaPage() {
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-white">Carregando...</div>
+          </div>
+        ) : error ? (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+            <p className="text-red-200 font-medium mb-3">{error}</p>
+            <button
+              onClick={loadDashboardData}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : data ? (
           <>
@@ -315,6 +350,7 @@ export default function PortalAcademiaPage() {
                         {item.icon}
                       </div>
                       <p className="font-semibold text-white text-sm">{item.title}</p>
+                      <p className="text-[11px] text-white/80 mt-1 leading-snug">{item.description}</p>
                     </button>
                   ))}
                 </div>
