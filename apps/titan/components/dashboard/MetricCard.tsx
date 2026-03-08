@@ -27,24 +27,26 @@ export function MetricCard({ title, value, icon: Icon, trend, color = 'blue', on
 
   return (
     <Wrapper
-      className={`bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6 transition-all ${
-        isClickable ? 'hover:border-white/30 hover:bg-white/10 cursor-pointer text-left' : 'hover:border-white/20'
+      className={`group bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6 transition-all duration-300 ${
+        isClickable ? 'hover:border-white/30 hover:bg-white/10 hover:shadow-lg hover:shadow-black/20 hover:scale-[1.02] cursor-pointer text-left active:scale-[0.98]' : 'hover:border-white/20'
       }`}
       onClick={onClick}
       {...(isClickable ? { type: 'button' } : {})}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-12 h-12 rounded-lg ${colorClasses[color]} border flex items-center justify-center`}>
+        <div className={`w-12 h-12 rounded-xl ${colorClasses[color]} border flex items-center justify-center transition-transform duration-300 ${
+          isClickable ? 'group-hover:scale-110' : ''
+        }`}>
           <Icon className="w-6 h-6" />
         </div>
         {trend && (
-          <div className={`text-xs px-2 py-1 rounded-full ${trend.value >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-            {trend.value >= 0 ? '+' : ''}{trend.value}% {trend.label}
+          <div className={`text-xs px-2.5 py-1 rounded-full font-medium ${trend.value >= 0 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+            {trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value)}%
           </div>
         )}
       </div>
-      <h3 className="text-gray-400 text-sm mb-1">{title}</h3>
-      <p className="text-3xl font-bold text-white">{value}</p>
+      <h3 className="text-gray-400 text-sm mb-1 font-medium">{title}</h3>
+      <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
     </Wrapper>
   )
 }

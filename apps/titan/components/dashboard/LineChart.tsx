@@ -16,7 +16,7 @@ interface LineChartProps {
 
 export function LineChart({ data, title, color = '#3b82f6', height = 300 }: LineChartProps) {
   return (
-    <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6">
+    <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6 hover:border-white/20 transition-all duration-300">
       <h3 className="text-lg font-semibold text-white mb-6">{title}</h3>
       <ResponsiveContainer width="100%" height={height}>
         <RechartsLineChart data={data}>
