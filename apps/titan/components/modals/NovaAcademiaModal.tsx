@@ -44,6 +44,9 @@ export function NovaAcademiaModal({ isOpen, onClose, federacaoId, onSuccess }: N
     try {
       setLoading(true)
 
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado')
+
       const { error } = await supabase.from('academias').insert({
         nome: data.nome,
         sigla: data.sigla || null,
@@ -51,6 +54,7 @@ export function NovaAcademiaModal({ isOpen, onClose, federacaoId, onSuccess }: N
         endereco_estado: data.endereco_estado,
         ativo: data.ativo,
         federacao_id: federacaoId,
+        stakeholder_id: user.id,
       })
 
       if (error) throw error

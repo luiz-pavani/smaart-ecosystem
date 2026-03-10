@@ -14,6 +14,89 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    const resolveStakeholderId = async (email: string | null, fallbackUserId: string) => {
+      const normalizedEmail = String(email || '').trim().toLowerCase()
+      if (!normalizedEmail) return fallbackUserId
+
+      const { data: stakeholders } = await supabase
+        .from('stakeholders')
+        .select('id')
+        .eq('email', normalizedEmail)
+        .limit(1)
+
+      if (!stakeholders || stakeholders.length === 0) return fallbackUserId
+      return stakeholders[0].id as string
+    }
+
+    const resolveKyuDanId = async (params: {
+      kyuDanIdRaw: unknown
+      graduacaoRaw: unknown
+      danNivelRaw: unknown
+    }) => {
+      const kyuDanIdCandidate = Number(params.kyuDanIdRaw)
+      if (Number.isInteger(kyuDanIdCandidate) && kyuDanIdCandidate > 0) {
+        return kyuDanIdCandidate
+      }
+
+      const graduacao = String(params.graduacaoRaw || '').trim()
+      const danNivel = String(params.danNivelRaw || '').trim()
+      if (!graduacao && !danNivel) return null
+
+      const { data, error } = await supabase.rpc('resolve_kyu_dan_id', {
+        graduacao_text: graduacao || null,
+        dan_numeric: null,
+        dan_nivel_text: danNivel || null,
+      })
+
+      if (error || !data) return null
+      return Number(data)
+    }
+
+    const contentType = request.headers.get('content-type') || ''
+
+    if (contentType.includes('application/json')) {
+      const body = await request.json()
+      const stakeholderId = body.stakeholder_id || await resolveStakeholderId(body.email || null, user.id)
+      const kyuDanId = await resolveKyuDanId({
+        kyuDanIdRaw: body.kyu_dan_id,
+        graduacaoRaw: body.graduacao,
+        danNivelRaw: body.dan_nivel,
+      })
+
+      const { data: atleta, error: insertError } = await supabase
+        .from('atletas')
+        .insert({
+          user_id: user.id,
+          stakeholder_id: stakeholderId,
+          kyu_dan_id: kyuDanId,
+          federacao_id: body.federacao_id,
+          academia_id: body.academia_id,
+          nome_completo: body.nome_completo,
+          cpf: body.cpf,
+          data_nascimento: body.data_nascimento,
+          genero: body.genero || null,
+          email: body.email || null,
+          celular: body.celular || null,
+          graduacao: body.graduacao,
+          status: body.status || 'ativo',
+          created_by: user.id,
+        })
+        .select()
+        .single()
+
+      if (insertError) {
+        return NextResponse.json(
+          { error: insertError.message },
+          { status: 400 }
+        )
+      }
+
+      return NextResponse.json({
+        success: true,
+        atleta,
+      }, { status: 201 })
+    }
+
     // Get form data
     const formData = await request.formData()
 
@@ -24,7 +107,16 @@ export async function POST(request: NextRequest) {
     const certificadoDan = formData.get('certificado_dan') as File | null
 
     // Extract other fields
+    const resolvedKyuDanId = await resolveKyuDanId({
+      kyuDanIdRaw: formData.get('kyu_dan_id'),
+      graduacaoRaw: formData.get('graduacao'),
+      danNivelRaw: formData.get('dan_nivel'),
+    })
+
     const atletaData = {
+      user_id: user.id,
+      stakeholder_id: await resolveStakeholderId(formData.get('email') as string || null, user.id),
+      kyu_dan_id: resolvedKyuDanId,
       federacao_id: formData.get('federacao_id') as string,
       academia_id: formData.get('academia_id') as string,
       nome_completo: formData.get('nome_completo') as string,

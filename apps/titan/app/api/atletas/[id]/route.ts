@@ -155,6 +155,30 @@ export async function PUT(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    const resolveKyuDanId = async (params: {
+      kyuDanIdRaw: unknown
+      graduacaoRaw: unknown
+      danNivelRaw: unknown
+    }) => {
+      const kyuDanIdCandidate = Number(params.kyuDanIdRaw)
+      if (Number.isInteger(kyuDanIdCandidate) && kyuDanIdCandidate > 0) {
+        return kyuDanIdCandidate
+      }
+
+      const graduacao = String(params.graduacaoRaw || '').trim()
+      const danNivel = String(params.danNivelRaw || '').trim()
+      if (!graduacao && !danNivel) return null
+
+      const { data, error } = await supabase.rpc('resolve_kyu_dan_id', {
+        graduacao_text: graduacao || null,
+        dan_numeric: null,
+        dan_nivel_text: danNivel || null,
+      })
+
+      if (error || !data) return null
+      return Number(data)
+    }
+
     // Get form data
     const formData = await request.formData()
 
@@ -176,6 +200,12 @@ export async function PUT(
     }
 
     // Prepare update data
+    const resolvedKyuDanId = await resolveKyuDanId({
+      kyuDanIdRaw: formData.get('kyu_dan_id'),
+      graduacaoRaw: formData.get('graduacao'),
+      danNivelRaw: formData.get('dan_nivel'),
+    })
+
     const atletaData: any = {
       nome_completo: formData.get('nome_completo') as string,
       cpf: formData.get('cpf') as string,
@@ -193,6 +223,7 @@ export async function PUT(
       cidade: formData.get('cidade') as string || null,
       estado: formData.get('estado') as string || null,
       graduacao: formData.get('graduacao') as string,
+      kyu_dan_id: resolvedKyuDanId,
       dan_nivel: formData.get('dan_nivel') as string || null,
       data_graduacao: formData.get('data_graduacao') as string || null,
       nivel_arbitragem: formData.get('nivel_arbitragem') as string || null,

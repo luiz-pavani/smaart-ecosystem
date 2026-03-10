@@ -43,7 +43,7 @@ export default function PortalPage() {
       // Get current user
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
-        router.push('/login')
+        router.push('/acesso')
         return
       }
       // Get user roles
@@ -228,7 +228,7 @@ export default function PortalPage() {
         <button
           onClick={() => {
             supabase.auth.signOut()
-            router.push('/login')
+            router.push('/acesso')
           }}
           className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm"
         >

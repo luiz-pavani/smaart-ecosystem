@@ -23,7 +23,7 @@ export async function GET(
     const { data: atleta, error: atletaError } = await supabase
       .from('user_fed_lrsj')
       .select(`
-        id,
+        stakeholder_id,
         nome_completo,
         academias,
         data_nascimento,
@@ -37,7 +37,7 @@ export async function GET(
           icones
         )
       `)
-      .eq('id', id)
+      .eq('stakeholder_id', id)
       .single()
 
     if (atletaError) {
@@ -83,7 +83,7 @@ export async function GET(
     
     const documentData = {
       atleta: {
-        id: atleta.id,
+        id: atleta.stakeholder_id,
         nome: atleta.nome_completo,
         academia: atleta.academias || '—',
         dataNascimento: atleta.data_nascimento ? 

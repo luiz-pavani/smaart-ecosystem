@@ -40,6 +40,28 @@ export default function NovaAcademiaForm() {
     tecnico_email: '',
   })
 
+  const resolveStakeholderIdByEmail = async (email: string, fallbackUserId: string) => {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail) return fallbackUserId
+
+    const { data, error } = await supabase
+      .from('stakeholders')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .limit(1)
+
+    if (error || !data || data.length === 0) return fallbackUserId
+    return data[0].id as string
+  }
+
+  const normalizeSigla = (value: string) => {
+    const cleaned = value.trim().toUpperCase()
+    if (cleaned.length > 3) {
+      throw new Error('Sigla deve ter no máximo 3 caracteres.')
+    }
+    return cleaned
+  }
+
   const searchCEP = async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, '')
     if (cleanCep.length !== 8) return
@@ -78,13 +100,20 @@ export default function NovaAcademiaForm() {
 
       if (!perfil?.federacao_id) throw new Error('Federação não identificada')
 
+      const stakeholderId = await resolveStakeholderIdByEmail(formData.responsavel_email, user.id)
+      const sigla = normalizeSigla(formData.sigla)
+
+      const payload = {
+        federacao_id: perfil.federacao_id,
+        stakeholder_id: stakeholderId,
+        ...formData,
+        sigla,
+        ativo: true,
+      }
+
       const { error } = await supabase
         .from('academias')
-        .insert([{
-          federacao_id: perfil.federacao_id,
-          ...formData,
-          ativo: true,
-        }])
+        .insert([payload])
 
       if (error) throw error
 
@@ -112,13 +141,42 @@ export default function NovaAcademiaForm() {
 
       if (!perfil?.federacao_id) throw new Error('Federação não identificada')
 
+      const emailSet = Array.from(
+        new Set(
+          rows
+            .map((row) => (row.responsavel_email || '').trim().toLowerCase())
+            .filter((email) => email.length > 0)
+        )
+      )
+
+      let stakeholderByEmail: Record<string, string> = {}
+      if (emailSet.length > 0) {
+        const { data: stakeholders } = await supabase
+          .from('stakeholders')
+          .select('id, email')
+          .in('email', emailSet)
+
+        stakeholderByEmail = (stakeholders || []).reduce((acc, stakeholder) => {
+          if (stakeholder.email) {
+            acc[String(stakeholder.email).toLowerCase()] = String(stakeholder.id)
+          }
+          return acc
+        }, {} as Record<string, string>)
+      }
+
       const { error } = await supabase
         .from('academias')
-        .insert(rows.map(row => ({
-          federacao_id: perfil.federacao_id,
-          ...row,
-          ativo: true,
-        })))
+        .insert(rows.map((row) => {
+          const sigla = normalizeSigla(String(row.sigla || ''))
+
+          return {
+            federacao_id: perfil.federacao_id,
+            stakeholder_id: stakeholderByEmail[(row.responsavel_email || '').trim().toLowerCase()] || user.id,
+            ...row,
+            sigla,
+            ativo: true,
+          }
+        }))
 
       if (error) throw error
 
@@ -225,7 +283,7 @@ export default function NovaAcademiaForm() {
                     type="text"
                     required
                     value={formData.sigla}
-                    onChange={(e) => setFormData({ ...formData, sigla: e.target.value.toUpperCase() })}
+                    onChange={(e) => setFormData({ ...formData, sigla: e.target.value.toUpperCase().slice(0, 3) })}
                     className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     maxLength={3}
                     placeholder="AFM"

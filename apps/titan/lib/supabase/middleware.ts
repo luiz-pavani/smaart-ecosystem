@@ -40,10 +40,12 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/signup') &&
+    !request.nextUrl.pathname.startsWith('/acesso') &&
+    !request.nextUrl.pathname.startsWith('/auth/callback') &&
     !request.nextUrl.pathname.startsWith('/api/')
   ) {
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = '/acesso'
     return NextResponse.redirect(url)
   }
 
@@ -54,7 +56,7 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/signup'))
   ) {
     const url = request.nextUrl.clone()
-    url.pathname = '/portais'
+    url.pathname = '/portal'
     return NextResponse.redirect(url)
   }
 

@@ -37,7 +37,7 @@ export default function TopNav({ user, mobile = false }: TopNavProps) {
   const handleLogout = async () => {
     const supabase = await createClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push('/acesso')
     router.refresh()
   }
 
@@ -55,7 +55,7 @@ export default function TopNav({ user, mobile = false }: TopNavProps) {
                 <Menu className="w-6 h-6 text-foreground" />
               </button>
               <button
-                onClick={() => router.push('/portais')}
+                onClick={() => router.push('/portal')}
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">

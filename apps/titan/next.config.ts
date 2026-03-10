@@ -13,6 +13,12 @@ const supabaseHostname = (() => {
 })()
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    // Fix: path contains spaces ("MASTER ESPORTES", "SMAART PRO"), causing Turbopack
+    // to misdetect the workspace root from the monorepo lockfile.
+    // Setting root explicitly to this app's directory prevents the issue.
+    root: __dirname,
+  },
   images: {
     remotePatterns: [
       {

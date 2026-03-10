@@ -96,6 +96,16 @@ export default function EditarAcademiaForm({ academia }: EditarAcademiaFormProps
         </div>
       </div>
 
+      <div className="bg-card rounded-lg shadow border border-border p-4 max-w-4xl">
+        <label className="block text-sm font-medium text-foreground mb-2">ID Universal (stakeholder_id)</label>
+        <input
+          type="text"
+          value={academia.stakeholder_id || 'Não vinculado'}
+          readOnly
+          className="w-full px-3 py-2 border border-input rounded-lg bg-muted text-foreground"
+        />
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
         {/* Informações Básicas */}
         <div className="bg-card rounded-lg shadow border border-border p-6">

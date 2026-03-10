@@ -6,8 +6,7 @@ import { ArrowLeft, Loader2, User, Mail, Award, Building2, FileText, CreditCard,
 import AtletaDocumentos from "@/components/AtletaDocumentos";
 
 type AthleteRecord = {
-  id: number;
-  numero_membro?: string | null;
+  stakeholder_id: string;
   nome_completo?: string | null;
   nome_patch?: string | null;
   genero?: string | null;
@@ -18,9 +17,8 @@ type AthleteRecord = {
   telefone?: string | null;
   cidade?: string | null;
   estado?: string | null;
-  endereco_residencia?: string | null;
-  graduacao?: string | null;
-  dan?: number | string | null;
+  pais?: string | null;
+  kyu_dan_id?: number | string | null;
   nivel_arbitragem?: string | null;
   academia_id?: string | null;
   academias?: string | null;
@@ -129,11 +127,6 @@ const computeAgeByBirthYear = (dataNascimento?: string | null) => {
   return new Date().getFullYear() - anoNascimento;
 };
 
-const normalizeGraduacaoPipeSpacing = (value?: string | null) => {
-  if (!value) return value ?? null;
-  return String(value).replace(/\s*\|\s*/g, " | ").trim();
-};
-
 export default function AtletaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const supabase = createClient();
@@ -189,38 +182,17 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           .order("id");
         setGraduacoes((graduacoesData || []) as Graduacao[]);
         
-        // Regex para detectar UUID
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const isUUID = uuidRegex.test(id);
-        
-        let data = null;
-        let error = null;
-        
-        if (isUUID) {
-          // Se parece UUID, busca por id
-          const result = await supabase
-            .from("user_fed_lrsj")
-            .select("*")
-            .eq("id", id)
-            .maybeSingle();
-          data = result.data;
-          error = result.error;
-        } else {
-          // Senão, busca por numero_membro (sempre como string)
-          const result = await supabase
-            .from("user_fed_lrsj")
-            .select("*")
-            .eq("numero_membro", String(id))
-            .maybeSingle();
-          data = result.data;
-          error = result.error;
-        }
+        const { data, error } = await supabase
+          .from("user_fed_lrsj")
+          .select("*")
+          .eq("stakeholder_id", id)
+          .maybeSingle();
         
         if (error) {
           console.error("Erro ao buscar atleta:", error);
         }
         if (!data) {
-          console.log("Atleta não encontrado para ID/numero_membro:", id);
+          console.log("Atleta não encontrado para stakeholder_id:", id);
         } else {
           console.log("Atleta carregado:", data.nome_completo);
         }
@@ -318,8 +290,11 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         telefone: formData.telefone ?? null,
         cidade: formData.cidade ?? null,
         estado: formData.estado ?? null,
-        endereco_residencia: formData.endereco_residencia ?? null,
-        graduacao: normalizeGraduacaoPipeSpacing(formData.graduacao ?? null),
+        pais: formData.pais ?? null,
+        kyu_dan_id:
+          formData.kyu_dan_id === undefined || formData.kyu_dan_id === null || String(formData.kyu_dan_id).trim() === ""
+            ? null
+            : Number(formData.kyu_dan_id),
         nivel_arbitragem: formData.nivel_arbitragem ?? "Sem nível",
         academia_id: formData.academia_id ?? null,
         academias: formData.academia_id
@@ -338,7 +313,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
       const { data, error } = await supabase
         .from("user_fed_lrsj")
         .update(payload)
-        .eq("id", atleta.id)
+        .eq("stakeholder_id", atleta.stakeholder_id)
         .select("*")
         .single();
 
@@ -366,7 +341,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           validado_em: new Date().toISOString(),
           validado_por: currentUserId,
         })
-        .eq("id", atleta.id)
+        .eq("stakeholder_id", atleta.stakeholder_id)
         .select("*")
         .single();
 
@@ -581,19 +556,18 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         );
       }
       
-      // Dropdown para graduação
-      if (field === "graduacao") {
+      if (field === "kyu_dan_id") {
         return (
           <div className="flex flex-col gap-1">
             <span className="text-gray-400 text-sm">{label}</span>
             <select
-              value={normalizeGraduacaoPipeSpacing(String(formData[field] ?? "")) ?? ""}
+              value={String(formData[field] ?? "")}
               onChange={(e) => setField(field, e.target.value)}
               className="w-full rounded-lg bg-white/10 border border-white/20 px-3 py-2 text-sm text-white"
             >
               <option value="">Selecione uma graduação</option>
               {graduacoes.map((grad) => (
-                <option key={grad.id} value={`${grad.cor_faixa} | ${grad.kyu_dan}`}>
+                <option key={grad.id} value={String(grad.id)}>
                   {grad.cor_faixa} | {grad.kyu_dan}
                 </option>
               ))}
@@ -620,7 +594,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
     }
 
     const rawValue = type === "date" ? normalizeDate(formData[field] ?? atleta?.[field]) : formData[field] ?? atleta?.[field];
-    const value = field === "graduacao" ? normalizeGraduacaoPipeSpacing(String(rawValue ?? "")) : rawValue;
+    const value = rawValue;
     
     // Display friendly name for academia_id
     if (field === "academia_id" && value) {
@@ -631,6 +605,12 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
     if (field === "academias") {
       const academia = academias.find((a) => a.id === (formData.academia_id ?? atleta?.academia_id));
       return <InfoRow label={label} value={academia?.nome || value} />;
+    }
+
+    if (field === "kyu_dan_id") {
+      const selectedKyuDanId = Number(formData.kyu_dan_id ?? atleta?.kyu_dan_id);
+      const graduacao = graduacoes.find((g) => g.id === selectedKyuDanId);
+      return <InfoRow label={label} value={graduacao ? `${graduacao.cor_faixa} | ${graduacao.kyu_dan}` : "—"} />;
     }
     
     return <InfoRow label={label} value={value} />;
@@ -694,11 +674,15 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
                 <p className="text-lg text-gray-400 mb-4">"{atleta.nome_patch}"</p>
               )}
               <div className="flex flex-wrap gap-3 mb-4">
-                {atleta.graduacao && (
-                  <div className="bg-blue-500/20 text-blue-300 px-4 py-2 rounded-lg border border-blue-500/30 font-semibold">
-                    {normalizeGraduacaoPipeSpacing(atleta.graduacao)}
-                  </div>
-                )}
+                {(() => {
+                  const kyuDanAtual = graduacoes.find((g) => g.id === Number(atleta.kyu_dan_id));
+                  if (!kyuDanAtual) return null;
+                  return (
+                    <div className="bg-blue-500/20 text-blue-300 px-4 py-2 rounded-lg border border-blue-500/30 font-semibold">
+                      {kyuDanAtual.cor_faixa} | {kyuDanAtual.kyu_dan}
+                    </div>
+                  );
+                })()}
                 {atleta.academia_id && (() => {
                   const academia = academias.find(a => a.id === atleta.academia_id);
                   return academia ? (
@@ -766,7 +750,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Dados Pessoais */}
           <InfoCard title="Dados Pessoais" icon={User}>
-            <EditableRow label="Número de Membro" field="numero_membro" readOnly />
+            <EditableRow label="Stakeholder ID" field="stakeholder_id" readOnly />
             <EditableRow label="Gênero" field="genero" type="select" />
             <EditableRow label="Data de Nascimento" field="data_nascimento" type="date" />
             <EditableRow label="Idade" field="idade" type="number" readOnly />
@@ -779,12 +763,12 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
             <EditableRow label="Telefone" field="telefone" />
             <EditableRow label="Cidade" field="cidade" />
             <EditableRow label="Estado" field="estado" />
-            <EditableRow label="Residência" field="endereco_residencia" />
+            <EditableRow label="País" field="pais" />
           </InfoCard>
 
           {/* Graduação e Arbitragem */}
           <InfoCard title="Graduação e Arbitragem" icon={Award}>
-            <EditableRow label="Graduação" field="graduacao" type="select" />
+            <EditableRow label="Graduação (Kyu/Dan)" field="kyu_dan_id" type="select" />
             <EditableRow label="Nível de Arbitragem" field="nivel_arbitragem" type="select" />
             <EditableRow label="Tamanho do Patch" field="tamanho_patch" type="select" />
             <EditableRow label="Nome no Patch" field="nome_patch" />
@@ -847,7 +831,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         {/* Documentos Gerados Automaticamente */}
         <div className="mt-6 bg-white/5 backdrop-blur rounded-xl p-6 border border-white/10">
           <AtletaDocumentos 
-            atletaId={atleta.id} 
+            atletaId={atleta.stakeholder_id} 
             showIdentidade={true} 
             showCertificado={true} 
           />

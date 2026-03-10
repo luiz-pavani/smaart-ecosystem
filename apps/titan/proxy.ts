@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request)
 }
 
@@ -18,5 +18,4 @@ export const config = {
   ],
 }
 
-// Force Node.js runtime instead of Edge for Supabase compatibility
-export const runtime = 'nodejs'
+// Note: In Next.js 16 "proxy" convention, runtime is always Node.js — no config needed.

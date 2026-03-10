@@ -13,7 +13,7 @@ const atletaSchema = z.object({
   nome: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   cpf: z.string().regex(/^\d{11}$/, 'CPF deve ter 11 dígitos').optional().or(z.literal('')),
   data_nascimento: z.string().min(1, 'Data de nascimento é obrigatória'),
-  graduacao: z.string().min(1, 'Graduação é obrigatória'),
+  kyu_dan_id: z.string().min(1, 'Graduação é obrigatória'),
   status: z.string(),
 })
 
@@ -78,10 +78,15 @@ export function NovoAtletaModal({ isOpen, onClose, academiaId, onSuccess }: Novo
         .single()
 
       const { error } = await supabase.from('atletas').insert({
+        user_id: user.id,
+        stakeholder_id: user.id,
         nome: data.nome,
         cpf: data.cpf || null,
         data_nascimento: data.data_nascimento,
-        graduacao: data.graduacao,
+        kyu_dan_id: Number(data.kyu_dan_id),
+        graduacao: graduacoes.find((g) => g.id === Number(data.kyu_dan_id))
+          ? `${graduacoes.find((g) => g.id === Number(data.kyu_dan_id))?.cor_faixa}|${graduacoes.find((g) => g.id === Number(data.kyu_dan_id))?.kyu_dan}`
+          : null,
         status: data.status,
         academia_id: academiaId,
         federacao_id: role?.federacao_id || null,
@@ -155,21 +160,21 @@ export function NovoAtletaModal({ isOpen, onClose, academiaId, onSuccess }: Novo
             Graduação *
           </label>
           <select
-            {...register('graduacao')}
+            {...register('kyu_dan_id')}
             className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
           >
             <option value="">Selecione...</option>
             {graduacoes.map((graduacao) => (
               <option
                 key={graduacao.id}
-                value={`${graduacao.cor_faixa}|${graduacao.kyu_dan}`}
+                value={String(graduacao.id)}
               >
                 {graduacao.cor_faixa} | {graduacao.kyu_dan}
               </option>
             ))}
           </select>
-          {errors.graduacao && (
-            <p className="text-red-400 text-xs mt-1">{errors.graduacao.message}</p>
+          {errors.kyu_dan_id && (
+            <p className="text-red-400 text-xs mt-1">{errors.kyu_dan_id.message}</p>
           )}
         </div>
 

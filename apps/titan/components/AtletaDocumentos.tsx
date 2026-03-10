@@ -7,7 +7,7 @@ import { Download, FileText, IdCard, Loader2 } from 'lucide-react'
 const BETA_VERSION = '21'
 
 interface AtletaDocumentosProps {
-  atletaId: number
+  atletaId: string
   showIdentidade?: boolean
   showCertificado?: boolean
 }

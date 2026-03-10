@@ -4,9 +4,11 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function CriarAcademiaForm() {
   const router = useRouter()
+  const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     nome: '',
@@ -40,15 +42,70 @@ export default function CriarAcademiaForm() {
     ativo: true,
   })
 
+  const normalizeSigla = (value: string) => {
+    const cleaned = value.trim().toUpperCase()
+    if (cleaned.length > 3) {
+      throw new Error('Sigla deve ter no máximo 3 caracteres.')
+    }
+    return cleaned
+  }
+
+  const resolveFederacaoId = async (userId: string, stakeholderId: string) => {
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('federacao_id, created_at')
+      .eq('user_id', userId)
+      .not('federacao_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const byRole = roles?.[0]?.federacao_id
+    if (byRole) return byRole as string
+
+    const { data: federacoes } = await supabase
+      .from('federacoes')
+      .select('id, created_at')
+      .eq('stakeholder_id', stakeholderId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    const byStakeholder = federacoes?.[0]?.id
+    if (byStakeholder) return byStakeholder as string
+
+    throw new Error('Nenhuma federação vinculada ao usuário atual. Crie/vincule uma federação antes de cadastrar academia.')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
 
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado')
+
+      let stakeholderId = user.id
+      const candidateEmail = formData.responsavel_email.trim().toLowerCase()
+      if (candidateEmail) {
+        const { data: stakeholders } = await supabase
+          .from('stakeholders')
+          .select('id')
+          .eq('email', candidateEmail)
+          .limit(1)
+
+        if (stakeholders && stakeholders.length > 0) {
+          stakeholderId = stakeholders[0].id
+        }
+      }
+
+      const federacaoId = await resolveFederacaoId(user.id, stakeholderId)
+
       // Convert empty date strings to null for optional date fields
       const dataToSubmit = {
         ...formData,
+        federacao_id: federacaoId,
+        sigla: normalizeSigla(formData.sigla),
         anualidade_vencimento: formData.anualidade_vencimento ? formData.anualidade_vencimento : null,
+        stakeholder_id: stakeholderId,
       }
 
       const response = await fetch('/api/academias', {
@@ -112,8 +169,8 @@ export default function CriarAcademiaForm() {
               <input
                 type="text"
                 value={formData.sigla}
-                onChange={(e) => updateField('sigla', e.target.value.toUpperCase())}
-                maxLength={10}
+                onChange={(e) => updateField('sigla', e.target.value.toUpperCase().slice(0, 3))}
+                maxLength={3}
                 className="w-full px-3 py-2 border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               />
             </div>

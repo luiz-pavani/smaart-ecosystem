@@ -28,19 +28,60 @@ export default function NovaFederacaoForm() {
     logo_url: '',
   })
 
+  const emptyToNull = (value: string) => {
+    const trimmed = value.trim()
+    return trimmed === '' ? null : trimmed
+  }
+
+  const resolveStakeholderId = async (email: string, fallbackUserId: string) => {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail) return fallbackUserId
+
+    const { data, error } = await supabase
+      .from('stakeholders')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .limit(1)
+
+    if (error || !data || data.length === 0) return fallbackUserId
+    return data[0].id as string
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado')
+
+      const normalizedEmail = formData.email.trim().toLowerCase()
+      const stakeholderId = await resolveStakeholderId(normalizedEmail, user.id)
+
+      const payload = {
+        nome: formData.nome.trim(),
+        sigla: formData.sigla.trim().toUpperCase(),
+        cnpj: emptyToNull(formData.cnpj),
+        email: emptyToNull(normalizedEmail),
+        telefone: emptyToNull(formData.telefone),
+        site: emptyToNull(formData.site),
+        endereco_cep: emptyToNull(formData.endereco_cep),
+        endereco_rua: emptyToNull(formData.endereco_rua),
+        endereco_numero: emptyToNull(formData.endereco_numero),
+        endereco_complemento: emptyToNull(formData.endereco_complemento),
+        endereco_bairro: emptyToNull(formData.endereco_bairro),
+        endereco_cidade: emptyToNull(formData.endereco_cidade),
+        endereco_estado: emptyToNull(formData.endereco_estado)?.toUpperCase() ?? null,
+        cor_primaria: emptyToNull(formData.cor_primaria) ?? '#16A34A',
+        cor_secundaria: emptyToNull(formData.cor_secundaria) ?? '#DC2626',
+        logo_url: emptyToNull(formData.logo_url),
+        ativo: true,
+        stakeholder_id: stakeholderId,
+      }
+
       const { error } = await supabase
         .from('federacoes')
-        .insert([
-          {
-            ...formData,
-            ativo: true,
-          },
-        ])
+        .insert([payload])
 
       if (error) throw error
 
@@ -49,7 +90,13 @@ export default function NovaFederacaoForm() {
       router.refresh()
     } catch (err) {
       console.error('Error:', err)
-      alert(err instanceof Error ? err.message : 'Erro ao cadastrar federação')
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as { message: unknown }).message)
+            : 'Erro ao cadastrar federação'
+      alert(message)
     } finally {
       setLoading(false)
     }

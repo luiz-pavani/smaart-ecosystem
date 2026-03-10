@@ -14,7 +14,6 @@ interface KyuDanOption {
 
 interface AtletaRow {
   id: string
-  numero_membro?: string
   nome: string
   graduacao: string | null
   kyuDanIcones?: string | null
@@ -86,7 +85,7 @@ export default function AtletasFedaracaoPage() {
         if (isLrsjFederacao) {
           query = supabase
             .from('user_fed_lrsj')
-            .select('id, numero_membro, nome_completo, graduacao, academias, academia_id, status_plano, status_membro, data_expiracao, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
+            .select('stakeholder_id, nome_completo, academias, academia_id, status_plano, status_membro, data_expiracao, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' });
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -131,10 +130,9 @@ export default function AtletasFedaracaoPage() {
           }
 
           mapped = (res.data || []).map((item: any) => ({
-            id: item.id,
-            numero_membro: item.numero_membro,
+            id: item.stakeholder_id,
             nome: item.nome_completo ?? '',
-            graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
+            graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : '',
             kyuDanIcones: item.kyu_dan?.icones || null,
             kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
             academia: academiaSiglaById[item.academia_id] ? { nome: academiaSiglaById[item.academia_id] } : (item.academias ? { nome: item.academias } : null),
@@ -221,8 +219,8 @@ export default function AtletasFedaracaoPage() {
         query = supabase
           .from('user_fed_lrsj')
           .select(`
-            id, numero_membro, nome_completo, nome_patch, genero, data_nascimento, idade, 
-            nacionalidade, email, telefone, cidade, estado, endereco_residencia, graduacao, dan, 
+            stakeholder_id, nome_completo, nome_patch, genero, data_nascimento, idade, 
+            nacionalidade, email, telefone, cidade, estado, pais,
             nivel_arbitragem, academias, academia_id, academia:academia_id(sigla), status_membro, data_adesao, plano_tipo, status_plano, 
             data_expiracao, url_foto, url_documento_id, url_certificado_dan, tamanho_patch,
             lote_id, observacoes, validado_em, validado_por, updated_at,
@@ -251,9 +249,9 @@ export default function AtletasFedaracaoPage() {
 
         // Headers com todos os campos
         const headers = [
-          'ID', 'Número Membro', 'Nome Completo', 'Nome Patch', 'Gênero', 'Data Nascimento', 
-          'Idade', 'Nacionalidade', 'Email', 'Telefone', 'Cidade', 'Estado', 'Endereço', 
-          'Graduação', 'Cor Faixa', 'Kyu/Dan', 'Dan', 'Nível Arbitragem', 'Academia', 'Status Membro', 'Data Adesão', 
+          'Stakeholder ID', 'Nome Completo', 'Nome Patch', 'Gênero', 'Data Nascimento', 
+          'Idade', 'Nacionalidade', 'Email', 'Telefone', 'Cidade', 'Estado', 'País', 
+          'Cor Faixa', 'Kyu/Dan', 'Nível Arbitragem', 'Academia', 'Status Membro', 'Data Adesão', 
           'Plano', 'Status Plano', 'Data Expiração', 'URL Foto', 'URL Documento ID', 
           'URL Certificado Dan', 'Tamanho Patch', 'Lote ID', 'Observações', 'Validado Em', 'Validado Por', 'Atualizado Em'
         ]
@@ -261,8 +259,7 @@ export default function AtletasFedaracaoPage() {
         const csvContent = [
           headers.join(','),
           ...data.map((item: any) => [
-            item.id || '',
-            `"${(item.numero_membro || '').replace(/"/g, '""')}"`,
+            item.stakeholder_id || '',
             `"${(item.nome_completo || '').replace(/"/g, '""')}"`,
             `"${(item.nome_patch || '').replace(/"/g, '""')}"`,
             `"${(item.genero || '').replace(/"/g, '""')}"`,
@@ -273,11 +270,9 @@ export default function AtletasFedaracaoPage() {
             item.telefone || '',
             `"${(item.cidade || '').replace(/"/g, '""')}"`,
             item.estado || '',
-            `"${(item.endereco_residencia || '').replace(/"/g, '""')}"`,
-            `"${(item.graduacao || '').replace(/"/g, '""')}"`,
+            `"${(item.pais || '').replace(/"/g, '""')}"`,
             `"${(item.kyu_dan?.cor_faixa || '').replace(/"/g, '""')}"`,
             `"${(item.kyu_dan?.kyu_dan || '').replace(/"/g, '""')}"`,
-            item.dan || '',
             `"${(item.nivel_arbitragem || '').replace(/"/g, '""')}"`,
             `"${(item.academias || '').replace(/"/g, '""')}"`,
             `"${(item.status_membro || '').replace(/"/g, '""')}"`,
@@ -461,7 +456,7 @@ export default function AtletasFedaracaoPage() {
                   }).map((atleta) => (
                     <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-gray-300">
-                        <a href={`/portal/federacao/atletas/${atleta.numero_membro || atleta.id}`} className="underline hover:text-blue-400 transition-colors">
+                        <a href={`/portal/federacao/atletas/${atleta.id}`} className="underline hover:text-blue-400 transition-colors">
                           {atleta.nome}
                         </a>
                       </td>

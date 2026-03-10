@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser()
 
   if (!user) {
-    redirect('/login')
+    redirect('/acesso')
   }
 
   // TODO: Fetch user roles from user_roles table

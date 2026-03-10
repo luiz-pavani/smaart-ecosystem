@@ -6,6 +6,7 @@ import { DAN_NIVEIS, GRADUACOES_DB } from '@/lib/utils/graduacao'
 
 interface Atleta {
   id: string
+  stakeholder_id?: string | null
   nome_completo: string
   cpf: string
   rg?: string | null
@@ -108,6 +109,19 @@ export default function EditarAtletaForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
+      <div>
+        <label htmlFor="stakeholder_id" className="block text-sm font-medium mb-2">
+          ID Universal (stakeholder_id)
+        </label>
+        <input
+          type="text"
+          id="stakeholder_id"
+          value={atleta.stakeholder_id || 'Não vinculado'}
+          readOnly
+          className="w-full px-4 py-2 border rounded-lg bg-gray-100"
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <label htmlFor="foto_perfil" className="block text-sm font-medium mb-2">

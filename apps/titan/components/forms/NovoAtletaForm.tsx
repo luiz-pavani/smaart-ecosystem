@@ -144,6 +144,20 @@ export default function NovoAtletaForm({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
+  const resolveStakeholderIdByEmail = async (email: string, fallbackUserId: string) => {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail) return fallbackUserId
+
+    const { data, error } = await supabase
+      .from('stakeholders')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .limit(1)
+
+    if (error || !data || data.length === 0) return fallbackUserId
+    return data[0].id as string
+  }
+
   const handleFileSelect = async (file: File) => {
     setPhotoLoading(true)
 
@@ -166,6 +180,9 @@ export default function NovoAtletaForm({
     setLoading(true)
 
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado')
+
       let photoUrl: string | null = null
 
       // Upload photo if selected
@@ -212,10 +229,14 @@ export default function NovoAtletaForm({
         throw new Error('Academia não selecionada')
       }
 
+      const stakeholderId = await resolveStakeholderIdByEmail(formData.email, user.id)
+
       // Create athlete record
       const { error } = await supabase
         .from('atletas')
         .insert([{
+          user_id: user.id,
+          stakeholder_id: stakeholderId,
           federacao_id: usedFederacaoId,
           academia_id: usedAcademiaId,
           nome_completo: formData.nome_completo,
@@ -252,6 +273,32 @@ export default function NovoAtletaForm({
 
   const handleCSVImport = async (rows: Array<Record<string, string>>) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado')
+
+      const emailSet = Array.from(
+        new Set(
+          rows
+            .map((row) => (row.email || '').trim().toLowerCase())
+            .filter((email) => email.length > 0)
+        )
+      )
+
+      let stakeholderByEmail: Record<string, string> = {}
+      if (emailSet.length > 0) {
+        const { data: stakeholders } = await supabase
+          .from('stakeholders')
+          .select('id, email')
+          .in('email', emailSet)
+
+        stakeholderByEmail = (stakeholders || []).reduce((acc, stakeholder) => {
+          if (stakeholder.email) {
+            acc[String(stakeholder.email).toLowerCase()] = String(stakeholder.id)
+          }
+          return acc
+        }, {} as Record<string, string>)
+      }
+
       // Processar rows para buscar academia_id pela sigla se necessário
       const processedRows = rows.map(row => {
         let academiaIdParaUsar = academiaId
@@ -267,6 +314,8 @@ export default function NovoAtletaForm({
         }
 
         return {
+          user_id: user.id,
+          stakeholder_id: stakeholderByEmail[(row.email || '').trim().toLowerCase()] || user.id,
           federacao_id: federacaoId,
           academia_id: academiaIdParaUsar || row.academia_id,
           nome_completo: row.nome_completo,
