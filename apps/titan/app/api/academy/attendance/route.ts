@@ -17,12 +17,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is academy admin or professor
+    // Check if user is academy admin or professor via stakeholders
     const { data: userRole } = await supabase
-      .from("user_roles")
+      .from("stakeholders")
       .select("academia_id, role")
-      .eq("user_id", user.id)
-      .in("role", ["academia_admin", "professor"])
+      .eq("id", user.id)
+      .in("role", ["academia_admin", "academia_gestor", "professor"])
       .single();
 
     if (!userRole) {
@@ -122,10 +122,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: userRole } = await supabase
-      .from("user_roles")
+      .from("stakeholders")
       .select("academia_id")
-      .eq("user_id", user.id)
-      .in("role", ["academia_admin", "professor"])
+      .eq("id", user.id)
+      .in("role", ["academia_admin", "academia_gestor", "professor"])
       .single();
 
     if (!userRole) {
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
       .from("attendance_records")
       .select(`
         *,
-        athlete:atletas(nome, email),
+        athlete:stakeholders(nome_completo, email),
         class:classes(nome),
         instructor:instructors(nome)
       `)

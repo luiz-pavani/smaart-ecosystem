@@ -6,15 +6,11 @@ import { Users, Search, Filter, Download, Trash2, Eye, AlertCircle, CheckCircle2
 
 interface Atleta {
   id: string;
-  nome: string;
-  cpf: string;
+  nome_completo: string;
   email: string;
   federacao_id: string;
   academia_id: string;
-  status: string;
-  status_pagamento: string;
-  graduacao: string;
-  data_criacao: string;
+  role: string;
   academia?: {
     id: string;
     nome: string;
@@ -28,7 +24,7 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
   const [atletas, setAtletas] = useState<Atleta[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'todos' | 'ativo' | 'inativo' | 'pendente'>('todos');
+  const [filterStatus, setFilterStatus] = useState<'todos' | 'ativo'>('todos');
   const [selectedAtleta, setSelectedAtleta] = useState<Atleta | null>(null);
 
   useEffect(() => {
@@ -46,22 +42,20 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
         // Get athletes for this federation
         if (fed) {
           let query = supabase
-            .from('atletas')
+            .from('stakeholders')
             .select(`
-              *,
-              academia:academias!atletas_academia_id_fkey (
+              id, nome_completo, email, academia_id, federacao_id, role,
+              academia:academia_id (
                 id,
                 nome,
                 sigla
               )
             `)
             .eq('federacao_id', fed.id)
-            .order('created_at', { ascending: false });
+            .eq('role', 'atleta')
+            .order('nome_completo', { ascending: false });
 
-          // Apply status filter
-          if (filterStatus !== 'todos') {
-            query = query.eq('status', filterStatus);
-          }
+          // filterStatus: stakeholders não tem campo status; ignorar filtro por ora
 
           const { data, error } = await query;
 
@@ -81,8 +75,7 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
   // Filter by search term
   const filteredAtletas = atletas.filter(
     (a) =>
-      a.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.cpf.includes(searchTerm) ||
+      a.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -90,9 +83,10 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
     if (!confirm('Tem certeza que deseja remover este atleta?')) return;
 
     try {
+      // Rebaixar para atleta sem vínculo de federação (remover da federação)
       const { error } = await supabase
-        .from('atletas')
-        .delete()
+        .from('stakeholders')
+        .update({ federacao_id: null, academia_id: null, role: 'atleta' })
         .eq('id', atletaId);
 
       if (error) throw error;
@@ -105,16 +99,12 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
 
   const exportToCSV = () => {
     const csv = [
-      ['Nome', 'CPF', 'Email', 'Academia', 'Graduação', 'Status', 'Status Pagamento', 'Data Criação'],
+      ['Nome', 'Email', 'Academia', 'Permão'],
       ...filteredAtletas.map((a) => [
-        a.nome,
-        a.cpf,
+        a.nome_completo,
         a.email,
         a.academia?.nome || 'N/A',
-        a.graduacao || 'N/A',
-        a.status,
-        a.status_pagamento,
-        new Date(a.data_criacao).toLocaleDateString('pt-BR'),
+        a.role,
       ]),
     ]
       .map((row) => row.map((cell) => `"${cell}"`).join(','))
@@ -162,25 +152,25 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-blue-50 rounded-lg p-4">
-          <p className="text-sm text-gray-600">Total de Atletas</p>
+          <p className="text-sm text-gray-600">Total de Membros</p>
           <p className="text-2xl font-bold text-blue-600">{atletas.length}</p>
         </div>
         <div className="bg-green-50 rounded-lg p-4">
-          <p className="text-sm text-gray-600">Ativos</p>
+          <p className="text-sm text-gray-600">Com Permissão Atleta</p>
           <p className="text-2xl font-bold text-green-600">
-            {atletas.filter((a) => a.status === 'ativo').length}
+            {atletas.filter((a) => a.role === 'atleta').length}
           </p>
         </div>
         <div className="bg-yellow-50 rounded-lg p-4">
-          <p className="text-sm text-gray-600">Pagamento Pendente</p>
+          <p className="text-sm text-gray-600">Com Academia</p>
           <p className="text-2xl font-bold text-yellow-600">
-            {atletas.filter((a) => a.status_pagamento === 'pendente').length}
+            {atletas.filter((a) => a.academia_id).length}
           </p>
         </div>
         <div className="bg-purple-50 rounded-lg p-4">
-          <p className="text-sm text-gray-600">Pagamento Atrasado</p>
+          <p className="text-sm text-gray-600">Sem Academia</p>
           <p className="text-2xl font-bold text-purple-600">
-            {atletas.filter((a) => a.status_pagamento === 'atrasado').length}
+            {atletas.filter((a) => !a.academia_id).length}
           </p>
         </div>
       </div>
@@ -191,23 +181,11 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
           <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por nome, CPF ou email..."
+            placeholder="Buscar por nome ou email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-        </div>
-        <div className="flex gap-2">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
-            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="todos">Todos os Status</option>
-            <option value="ativo">Ativos</option>
-            <option value="inativo">Inativos</option>
-            <option value="pendente">Pendentes</option>
-          </select>
         </div>
       </div>
 
@@ -216,7 +194,7 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
         {filteredAtletas.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed rounded-lg">
             <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500">Nenhum atleta encontrado</p>
+            <p className="text-gray-500">Nenhum membro encontrado</p>
           </div>
         ) : (
           <table className="w-full">
@@ -225,43 +203,21 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">E-mail</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Academia</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Graduação</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Pagamento</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Permissão</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filteredAtletas.map((atleta) => (
                 <tr key={atleta.id} className="border-b hover:bg-gray-50 transition">
-                  <td className="px-6 py-3 text-sm font-medium text-gray-900">{atleta.nome}</td>
+                  <td className="px-6 py-3 text-sm font-medium text-gray-900">{atleta.nome_completo}</td>
                   <td className="px-6 py-3 text-sm text-gray-600">{atleta.email}</td>
                   <td className="px-6 py-3 text-sm text-gray-600">
                     {atleta.academia?.sigla || 'N/A'}
                   </td>
-                  <td className="px-6 py-3 text-sm text-gray-600">{atleta.graduacao || '-'}</td>
                   <td className="px-6 py-3 text-sm">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        atleta.status === 'ativo'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {atleta.status === 'ativo' ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3 text-sm">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        atleta.status_pagamento === 'pago'
-                          ? 'bg-green-100 text-green-800'
-                          : atleta.status_pagamento === 'pendente'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {atleta.status_pagamento}
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      {atleta.role}
                     </span>
                   </td>
                   <td className="px-6 py-3 text-sm space-x-2">
@@ -289,31 +245,19 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
       {selectedAtleta && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">{selectedAtleta.nome}</h2>
+            <h2 className="text-xl font-bold mb-4">{selectedAtleta.nome_completo}</h2>
             <div className="space-y-3 text-sm">
               <div>
                 <p className="text-gray-600">Email</p>
                 <p className="font-medium">{selectedAtleta.email}</p>
               </div>
               <div>
-                <p className="text-gray-600">CPF</p>
-                <p className="font-medium">{selectedAtleta.cpf}</p>
-              </div>
-              <div>
                 <p className="text-gray-600">Academia</p>
                 <p className="font-medium">{selectedAtleta.academia?.nome || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-gray-600">Graduação</p>
-                <p className="font-medium">{selectedAtleta.graduacao || '-'}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Status</p>
-                <p className="font-medium capitalize">{selectedAtleta.status}</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Status Pagamento</p>
-                <p className="font-medium capitalize">{selectedAtleta.status_pagamento}</p>
+                <p className="text-gray-600">Permissão</p>
+                <p className="font-medium capitalize">{selectedAtleta.role}</p>
               </div>
             </div>
             <button

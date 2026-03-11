@@ -63,23 +63,29 @@ export async function POST(request: NextRequest) {
         danNivelRaw: body.dan_nivel,
       })
 
+      // Atualizar stakeholders com role e vínculos
+      await supabase.from('stakeholders').update({
+        role: 'atleta',
+        federacao_id: body.federacao_id,
+        academia_id: body.academia_id,
+      }).eq('id', stakeholderId || user.id)
+
+      // Inserir dados esportivos em user_fed_lrsj
       const { data: atleta, error: insertError } = await supabase
-        .from('atletas')
+        .from('user_fed_lrsj')
         .insert({
-          user_id: user.id,
-          stakeholder_id: stakeholderId,
+          stakeholder_id: stakeholderId || user.id,
           kyu_dan_id: kyuDanId,
-          federacao_id: body.federacao_id,
           academia_id: body.academia_id,
           nome_completo: body.nome_completo,
           cpf: body.cpf,
-          data_nascimento: body.data_nascimento,
+          data_nascimento: body.data_nascimento || null,
           genero: body.genero || null,
           email: body.email || null,
           celular: body.celular || null,
           graduacao: body.graduacao,
-          status: body.status || 'ativo',
-          created_by: user.id,
+          status_membro: body.status || 'ativo',
+          pais: 'Brasil',
         })
         .select()
         .single()
@@ -209,14 +215,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert athlete record
+    // Inserir dados esportivos em user_fed_lrsj
     const { data: atleta, error: insertError } = await supabase
-      .from('atletas')
+      .from('user_fed_lrsj')
       .insert({
-        ...atletaData,
+        stakeholder_id: atletaData.stakeholder_id,
+        kyu_dan_id: resolvedKyuDanId,
+        academia_id: atletaData.academia_id,
+        nome_completo: atletaData.nome_completo,
+        cpf: atletaData.cpf,
+        data_nascimento: atletaData.data_nascimento || null,
+        genero: atletaData.genero || null,
+        email: atletaData.email || null,
+        celular: atletaData.celular || null,
+        graduacao: atletaData.graduacao,
         foto_perfil_url: fotoPerfilUrl,
         foto_documento_url: fotoDocumentoUrl,
         certificado_arbitragem_url: certificadoArbitragemUrl,
         certificado_dan_url: certificadoDanUrl,
+        status_membro: 'ativo',
+        pais: atletaData.pais || 'Brasil',
       })
       .select()
       .single()
@@ -256,10 +274,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: atletas, error } = await supabase
-      .from('atletas')
+      .from('user_fed_lrsj')
       .select(`
         *,
-        academia:academias!atletas_academia_id_fkey (
+        academia:academia_id (
           id,
           nome
         )

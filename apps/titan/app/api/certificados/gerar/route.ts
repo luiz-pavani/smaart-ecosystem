@@ -16,11 +16,11 @@ export async function POST(request: Request) {
       )
     }
 
-    // 2. Buscar role do usuário
+    // 2. Buscar role do usuário via stakeholders
     const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role, federacao_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (roleError || !roleData || roleData.role !== 'federacao_admin') {

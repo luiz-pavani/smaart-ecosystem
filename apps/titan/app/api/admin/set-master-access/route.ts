@@ -81,27 +81,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Delete existing master_access role for this user
+    // Atribuir role master_access diretamente em stakeholders
     const { error: delError } = await supabase
-      .from('user_roles')
-      .delete()
-      .eq('user_id', userId)
+      .from('stakeholders')
+      .update({ role: 'atleta' })
+      .eq('id', userId)
 
     if (delError) {
-      console.log('⚠️ Could not delete old roles:', delError.message)
+      console.log('⚠️ Could not reset role:', delError.message)
     }
 
-    // Insert master_access role
+    // Atualizar para master_access
     const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
-      .insert([
-        {
-          user_id: userId,
-          role: 'master_access',
-          federacao_id: null,
-          academia_id: null,
-        },
-      ])
+      .from('stakeholders')
+      .update({
+        role: 'master_access',
+        federacao_id: null,
+        academia_id: null,
+      })
+      .eq('id', userId)
+      .select()
 
     if (roleError) {
       console.error('❌ Role assignment error:', roleError)

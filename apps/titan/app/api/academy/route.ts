@@ -19,12 +19,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user's roles and access levels
-    const { data: userRoles, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role, academia_id, federacao_id, nivel")
-      .eq("user_id", user.id)
-      .limit(10);
+    // Get user's roles and access levels from stakeholders
+    const { data: userRolesData, error: roleError } = await supabase
+      .from("stakeholders")
+      .select("role, academia_id, federacao_id")
+      .eq("id", user.id)
+      .limit(1);
+
+    const userRoles = userRolesData
 
     if (roleError || !userRoles || userRoles.length === 0) {
       return NextResponse.json(
@@ -222,11 +224,11 @@ async function handleCreateModality(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify academy admin
+    // Verify academy admin via stakeholders
     const { data: userRole } = await supabase
-      .from("user_roles")
+      .from("stakeholders")
       .select("academia_id")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .eq("role", "academia_admin")
       .single();
 
@@ -289,9 +291,9 @@ async function handleCreateClass(request: NextRequest) {
     }
 
     const { data: userRole } = await supabase
-      .from("user_roles")
+      .from("stakeholders")
       .select("academia_id")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .eq("role", "academia_admin")
       .single();
 
@@ -395,9 +397,9 @@ async function handleCreateInstructor(request: NextRequest) {
     }
 
     const { data: userRole } = await supabase
-      .from("user_roles")
+      .from("stakeholders")
       .select("academia_id")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .eq("role", "academia_admin")
       .single();
 

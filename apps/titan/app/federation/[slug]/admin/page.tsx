@@ -44,23 +44,25 @@ export default function FederationAdminDashboard({ params }: { params: { slug: s
         if (fed) {
           // Load all stats in parallel
           const [
-            { data: atletas },
+            { data: atletasData },
             { data: academias },
             { data: plans },
             { data: userRoles },
           ] = await Promise.all([
-            supabase.from('atletas').select('id, status').eq('federacao_id', fed.id),
+            supabase.from('stakeholders').select('id').eq('federacao_id', fed.id).eq('role', 'atleta'),
             supabase.from('academias').select('id, ativo').eq('federacao_id', fed.id),
             supabase.from('plans').select('id, is_active').eq('federacao_id', fed.id),
-            supabase.from('user_roles').select('id').eq('federacao_id', fed.id),
+            supabase.from('stakeholders').select('id').eq('federacao_id', fed.id),
           ]);
+
+          const atletas = atletasData
 
           setStats({
             totalAtletas: atletas?.length || 0,
             totalAcademias: academias?.length || 0,
             totalPlans: plans?.length || 0,
             totalUsers: userRoles?.length || 0,
-            atletasAtivos: atletas?.filter((a: any) => a.status === 'ativo').length || 0,
+            atletasAtivos: atletas?.length || 0,
             academiasAtivas: academias?.filter((a: any) => a.ativo).length || 0,
             plansAtivos: plans?.filter((p: any) => p.is_active).length || 0,
           });

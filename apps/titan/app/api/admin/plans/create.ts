@@ -28,12 +28,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Check if user is admin (has academy_admin role)
+    // 2. Check if user is admin (has academia_admin role) via stakeholders
     const { data: userRole } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'academy_admin')
+      .eq('id', user.id)
+      .eq('role', 'academia_admin')
       .single();
 
     if (!userRole) {

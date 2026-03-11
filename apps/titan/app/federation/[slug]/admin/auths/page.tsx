@@ -2,46 +2,44 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Shield, Plus, Trash2, Edit2, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { Shield, Plus, Trash2, Edit2, AlertCircle, X } from 'lucide-react';
 
-interface UserRole {
+interface StakeholderAccess {
   id: string;
-  user_id: string;
-  user_email: string;
+  nome_completo: string | null;
+  email: string | null;
   role: string;
-  status: string;
-  created_at: string;
 }
 
 const roleDescriptions: Record<string, string> = {
+  master_access: 'Super Admin - Acesso total ao sistema',
   federacao_admin: 'Administrador da Federação - Acesso completo',
-  federacao_staff: 'Staff da Federação - Acesso moderado',
-  federacao_viewer: 'Visualizador - Apenas leitura',
-  academia_admin: 'Administrador da Academia',
-  academia_staff: 'Staff da Academia',
+  federacao_gestor: 'Gestor da Federação - Acesso moderado',
+  academia_admin: 'Administrador da Academia - Acesso completo',
+  academia_gestor: 'Gestor da Academia - Acesso moderado',
   professor: 'Professor/Instrutor',
-  atleta: 'Atleta',
+  atleta: 'Atleta - Acesso básico',
 };
 
 const roleColors: Record<string, string> = {
+  master_access: 'bg-purple-100 text-purple-800',
   federacao_admin: 'bg-red-100 text-red-800',
-  federacao_staff: 'bg-orange-100 text-orange-800',
-  federacao_viewer: 'bg-yellow-100 text-yellow-800',
+  federacao_gestor: 'bg-orange-100 text-orange-800',
   academia_admin: 'bg-blue-100 text-blue-800',
-  academia_staff: 'bg-cyan-100 text-cyan-800',
-  professor: 'bg-purple-100 text-purple-800',
+  academia_gestor: 'bg-cyan-100 text-cyan-800',
+  professor: 'bg-yellow-100 text-yellow-800',
   atleta: 'bg-green-100 text-green-800',
 };
 
 export default function FederationAuthsPage({ params }: { params: { slug: string } }) {
   const supabase = createClient();
   const [federation, setFederation] = useState<any>(null);
-  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [userRoles, setUserRoles] = useState<StakeholderAccess[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState('federacao_staff');
-  const [editingRole, setEditingRole] = useState<UserRole | null>(null);
+  const [newUserRole, setNewUserRole] = useState('federacao_gestor');
+  const [editingRole, setEditingRole] = useState<StakeholderAccess | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -59,10 +57,11 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
         // Get user roles for this federation
         if (fed) {
           const { data, error } = await supabase
-            .from('user_roles')
-            .select('*')
+            .from('stakeholders')
+            .select('id, nome_completo, email, role')
             .eq('federacao_id', fed.id)
-            .order('created_at', { ascending: false });
+            .neq('role', 'atleta')
+            .order('role', { ascending: true });
 
           if (error) throw error;
           setUserRoles(data || []);
@@ -79,7 +78,8 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
 
   const filteredRoles = userRoles.filter(
     (r) =>
-      r.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (r.nome_completo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -92,26 +92,35 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
     }
 
     try {
-      // In production, you'd create the user via an API route
-      // For now, we'll add the role assuming user exists
-      const { error } = await supabase.from('user_roles').insert({
-        federacao_id: federation.id,
-        user_email: newUserEmail,
-        role: newUserRole,
-        status: 'active',
-      });
+      // Find stakeholder by email
+      const { data: stakeholder, error: findError } = await supabase
+        .from('stakeholders')
+        .select('id')
+        .eq('email', newUserEmail)
+        .single();
+
+      if (findError || !stakeholder) {
+        alert(`Usuário não encontrado com o email: ${newUserEmail}.\nO usuário precisa ter uma conta no sistema.`);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('stakeholders')
+        .update({ role: newUserRole, federacao_id: federation.id })
+        .eq('id', stakeholder.id);
 
       if (error) throw error;
 
       setNewUserEmail('');
-      setNewUserRole('federacao_staff');
+      setNewUserRole('federacao_gestor');
       setShowAddModal(false);
 
       // Reload data
       const { data } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('federacao_id', federation.id);
+        .from('stakeholders')
+        .select('id, nome_completo, email, role')
+        .eq('federacao_id', federation.id)
+        .neq('role', 'atleta');
       setUserRoles(data || []);
     } catch (error: any) {
       alert(`Erro ao adicionar usuário: ${error.message}`);
@@ -122,7 +131,10 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
     if (!confirm('Tem certeza que deseja remover este acesso?')) return;
 
     try {
-      const { error } = await supabase.from('user_roles').delete().eq('id', roleId);
+      const { error } = await supabase
+        .from('stakeholders')
+        .update({ role: 'atleta', federacao_id: null })
+        .eq('id', roleId);
 
       if (error) throw error;
 
@@ -135,7 +147,7 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
   async function handleUpdateRole(roleId: string, newRole: string) {
     try {
       const { error } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .update({ role: newRole })
         .eq('id', roleId);
 
@@ -195,7 +207,7 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-blue-50 rounded-lg p-4">
-          <p className="text-sm text-gray-600">Total de Acessos</p>
+          <p className="text-sm text-gray-600">Total de Membros</p>
           <p className="text-2xl font-bold text-blue-600">{userRoles.length}</p>
         </div>
         <div className="bg-red-50 rounded-lg p-4">
@@ -204,10 +216,10 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
             {userRoles.filter((r) => r.role === 'federacao_admin').length}
           </p>
         </div>
-        <div className="bg-green-50 rounded-lg p-4">
-          <p className="text-sm text-gray-600">Ativos</p>
-          <p className="text-2xl font-bold text-green-600">
-            {userRoles.filter((r) => r.status === 'active').length}
+        <div className="bg-yellow-50 rounded-lg p-4">
+          <p className="text-sm text-gray-600">Gestores</p>
+          <p className="text-2xl font-bold text-yellow-600">
+            {userRoles.filter((r) => r.role === 'federacao_gestor').length}
           </p>
         </div>
       </div>
@@ -235,6 +247,8 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
             <thead>
               <tr className="border-b bg-gray-50">
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
+                                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Função</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Descrição</th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
@@ -244,7 +258,8 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
             <tbody>
               {filteredRoles.map((userRole) => (
                 <tr key={userRole.id} className="border-b hover:bg-gray-50 transition">
-                  <td className="px-6 py-3 text-sm font-medium text-gray-900">{userRole.user_email}</td>
+                  <td className="px-6 py-3 text-sm font-medium text-gray-900">{userRole.nome_completo || '-'}</td>
+                  <td className="px-6 py-3 text-sm text-gray-600">{userRole.email || '-'}</td>
                   <td className="px-6 py-3 text-sm">
                     {editingRole?.id === userRole.id ? (
                       <select
@@ -272,18 +287,6 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
                   </td>
                   <td className="px-6 py-3 text-sm text-gray-600">
                     {roleDescriptions[userRole.role] || 'Sem descrição'}
-                  </td>
-                  <td className="px-6 py-3 text-sm">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        userRole.status === 'active'
-                          ? 'bg-green-100 text-green-800 flex items-center gap-1 w-fit'
-                          : 'bg-gray-100 text-gray-800 flex items-center gap-1 w-fit'
-                      }`}
-                    >
-                      <CheckCircle2 className="h-3 w-3" />
-                      {userRole.status === 'active' ? 'Ativo' : 'Inativo'}
-                    </span>
                   </td>
                   <td className="px-6 py-3 text-sm space-x-2">
                     {editingRole?.id === userRole.id ? (
@@ -356,7 +359,7 @@ export default function FederationAuthsPage({ params }: { params: { slug: string
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {Object.entries(roleDescriptions).map(([role, desc]) => (
-                    <option key={role} value={role}>
+                    <option key={role} value={role} disabled={role === 'master_access' || role === 'atleta'}>
                       {role} - {desc}
                     </option>
                   ))}

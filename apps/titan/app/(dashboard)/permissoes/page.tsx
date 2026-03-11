@@ -12,7 +12,9 @@ interface RoleInfo {
 }
 
 interface Usuario {
-  user_id: string
+  id: string
+  nome_completo?: string
+  email?: string
   role: string
   nivel_hierarquico: number
   federacao_id: string | null
@@ -113,7 +115,7 @@ export default function PermissoesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: editingUser.user_id,
+          stakeholder_id: editingUser.id,
           role: selectedRole,
           federacao_id: editingUser.federacao_id,
           academia_id: editingUser.academia_id,
@@ -138,12 +140,12 @@ export default function PermissoesPage() {
   }
 
   const handleRemovePermission = async (usuario: Usuario) => {
-    if (!confirm(`Deseja remover as permissões administrativas de ${usuario.user_id}?\n\nO usuário será rebaixado para "Atleta".`)) {
+    if (!confirm(`Deseja remover as permissões administrativas de ${usuario.nome_completo || usuario.email || usuario.id}?\n\nO usuário será rebaixado para "Atleta".`)) {
       return
     }
 
     try {
-      const response = await fetch(`/api/permissoes?user_id=${usuario.user_id}`, {
+      const response = await fetch(`/api/permissoes?stakeholder_id=${usuario.id}`, {
         method: 'DELETE',
       })
 
@@ -295,10 +297,10 @@ export default function PermissoesPage() {
                 usuarios.map((usuario) => {
                   const roleInfo = getRoleInfo(usuario.role)
                   return (
-                    <tr key={usuario.user_id} className="hover:bg-muted/50">
+                    <tr key={usuario.id} className="hover:bg-muted/50">
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-foreground">
-                          {usuario.user_id.substring(0, 8)}...
+                          {usuario.nome_completo || usuario.email || `${usuario.id.substring(0, 8)}...`}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -360,7 +362,7 @@ export default function PermissoesPage() {
                   Usuário
                 </label>
                 <p className="text-sm text-muted-foreground">
-                  {editingUser.user_id.substring(0, 16)}...
+                  {editingUser.nome_completo || editingUser.email || `${editingUser.id.substring(0, 16)}...`}
                 </p>
               </div>
 

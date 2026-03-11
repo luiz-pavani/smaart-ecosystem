@@ -97,9 +97,11 @@ export default function RegistroAtetaPage() {
 
     try {
       // 1. Registrar atleta
-      const { data: novoAtleta, error: atleteError } = await supabase
-        .from('atletas')
-        .insert({
+      // 1. Registrar atleta via API (cria auth user + stakeholder + registro esportivo)
+      const response = await fetch('/api/registro-academia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           academia_id: Academia?.id,
           federacao_id: Academia && 'federacao' in Academia ? (Academia.federacao as any).id : null,
           nome_completo: formData.nome_completo,
@@ -108,19 +110,20 @@ export default function RegistroAtetaPage() {
           graduacao: formData.graduacao,
           data_nascimento: formData.data_nascimento || null,
           celular: formData.celular || null,
-          status: 'ativo',
-          status_pagamento: 'pendente',
           metadata: {
             registro_via: 'self_service',
             data_registro: new Date().toISOString(),
             fonte: 'link_compartilhado'
           }
         })
-        .select()
-        .single()
+      })
 
-      if (atleteError) throw atleteError
+      if (!response.ok) {
+        const errData = await response.json()
+        throw new Error(errData.error || 'Erro ao registrar atleta')
+      }
 
+      const novoAtleta = await response.json()
       setAtletaId(novoAtleta.id)
       setStep('sucesso')
     } catch (err: any) {

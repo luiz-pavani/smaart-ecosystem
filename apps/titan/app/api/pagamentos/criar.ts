@@ -40,11 +40,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 2. Verificar se atleta existe
+    // 2. Verificar se atleta existe via stakeholders
     const { data: atleta } = await supabase
-      .from('atletas')
-      .select('atleta_id')
-      .eq('atleta_id', atleta_id)
+      .from('stakeholders')
+      .select('id')
+      .eq('id', atleta_id)
       .single()
 
     if (!atleta) {

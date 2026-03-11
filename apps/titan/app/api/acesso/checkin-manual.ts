@@ -35,11 +35,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ erro: 'Não autenticado' }, { status: 401 })
     }
 
-    // Verificar se usuário é gestor da academia
+    // Verificar se usuário é gestor da academia via stakeholders
     const { data: role, error: erroRole } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .eq('academia_id', academia_id)
       .in('role', ['academia_admin', 'academia_gestor'])
       .single()
@@ -54,10 +54,10 @@ export async function POST(request: NextRequest) {
     // Definir data (padrão: hoje)
     const dataRegistro = data || new Date().toISOString().split('T')[0]
 
-    // Validar se atleta existe
+    // Validar se atleta existe via stakeholders
     const { data: atleta, error: erroAtleta } = await supabase
-      .from('atletas')
-      .select('id, nome')
+      .from('stakeholders')
+      .select('id, nome_completo')
       .eq('id', atleta_id)
       .single()
 

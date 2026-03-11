@@ -71,9 +71,9 @@ async function handleSubscriptionCreated(payload: Safe2PayPayload) {
 
   // Se pagamento foi confirmado (status 3 = Pago)
   if (status === 3) {
-    // Atualizar perfil do atleta
+    // Atualizar perfil do atleta via stakeholders
     const { data: athlete, error: findError } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .select('id, email, academia_id')
       .eq('email', email)
       .single()

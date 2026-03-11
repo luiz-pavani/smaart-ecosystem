@@ -18,10 +18,11 @@ export async function GET(request: Request) {
     }
 
     const { data: atletas, error } = await supabase
-      .from('atletas')
-      .select('id, nome, cpf')
+      .from('stakeholders')
+      .select('id, nome_completo')
       .eq('academia_id', academia_id)
-      .order('nome', { ascending: true })
+      .eq('role', 'atleta')
+      .order('nome_completo', { ascending: true })
 
     if (error) {
       console.error('Erro na query:', error)

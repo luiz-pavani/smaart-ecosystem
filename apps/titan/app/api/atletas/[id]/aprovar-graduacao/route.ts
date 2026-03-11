@@ -20,9 +20,9 @@ export async function POST(
 
     // Get user role
     const { data: perfil } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role, federacao_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!perfil) {
@@ -98,9 +98,9 @@ export async function DELETE(
 
     // Get user role
     const { data: perfil } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role, federacao_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!perfil) {

@@ -51,11 +51,11 @@ export default function PlansPage({
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        // Get academies for user
+        // Get academies for user via stakeholders
         const { data: academies } = await supabase
-          .from('atletas')
-          .select('academy_id, federation_id')
-          .eq('user_id', user.id);
+          .from('stakeholders')
+          .select('academia_id, federacao_id')
+          .eq('id', user.id);
 
         if (!academies || academies.length === 0) {
           setLoading(false);
