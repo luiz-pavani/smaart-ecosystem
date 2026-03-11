@@ -42,22 +42,24 @@ export default function AcademiasFedaracaoPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const { data: role } = await supabase
+        const { data: perfilArr } = await supabase
           .from('stakeholders')
-          .select('federacao_id')
+          .select('role, federacao_id')
           .eq('id', user.id)
-          .not('federacao_id', 'is', null)
           .limit(1)
-          .single()
 
-        if (!role?.federacao_id) return
-        
-        setFederacaoId(role.federacao_id)
+        const perfil = perfilArr?.[0]
+        if (!perfil) return
+
+        const isMaster = perfil.role === 'master_access'
+        if (!isMaster && !perfil.federacao_id) return
+
+        setFederacaoId(perfil.federacao_id)
 
         // Fetch from API endpoint (same as /academias page)
         console.log('📤 Buscando academias via API endpoint...')
         const response = await fetch('/api/academias/listar')
-        
+
         if (!response.ok) {
           const errorData = await response.json()
           console.error('❌ Erro na API:', errorData.error)
@@ -77,9 +79,11 @@ export default function AcademiasFedaracaoPage() {
         }
 
         console.log('✅ Academias retornadas pela API:', allAcademias?.length || 0)
-        
-        // Filter by federacao_id
-        let filtered = (allAcademias || []).filter((a: any) => a.federacao_id === role.federacao_id)
+
+        // master_access sees all academias; others filtered by their federation
+        let filtered = isMaster
+          ? (allAcademias || [])
+          : (allAcademias || []).filter((a: any) => a.federacao_id === perfil.federacao_id)
 
         // Apply local filters
         if (filterStatus) {
@@ -364,21 +368,23 @@ export default function AcademiasFedaracaoPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: role } = await supabase
+      const { data: perfilArr } = await supabase
         .from('stakeholders')
-        .select('federacao_id')
+        .select('role, federacao_id')
         .eq('id', user.id)
-        .not('federacao_id', 'is', null)
         .limit(1)
-        .single()
 
-      if (!role?.federacao_id) return
+      const perfil = perfilArr?.[0]
+      if (!perfil) return
 
-      setFederacaoId(role.federacao_id)
+      const isMaster = perfil.role === 'master_access'
+      if (!isMaster && !perfil.federacao_id) return
+
+      setFederacaoId(perfil.federacao_id)
 
       // Fetch from API endpoint (same as /academias page)
       const response = await fetch('/api/academias/listar')
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         console.error('❌ Erro na API:', errorData.error)
@@ -397,8 +403,10 @@ export default function AcademiasFedaracaoPage() {
         return
       }
 
-      // Filter by federacao_id
-      let filtered = (allAcademias || []).filter((a: any) => a.federacao_id === role.federacao_id)
+      // master_access sees all academias; others filtered by their federation
+      let filtered = isMaster
+        ? (allAcademias || [])
+        : (allAcademias || []).filter((a: any) => a.federacao_id === perfil.federacao_id)
 
       // Apply local filters
       if (filterStatus) {

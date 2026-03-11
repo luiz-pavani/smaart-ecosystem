@@ -32,47 +32,57 @@ export default function PortalFederacaoPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: role } = await supabase
+      const { data: perfilArr } = await supabase
         .from('stakeholders')
-        .select('federacao_id')
+        .select('role, federacao_id')
         .eq('id', user.id)
-        .not('federacao_id', 'is', null)
         .limit(1)
-        .single()
 
-      if (!role?.federacao_id) return
+      const perfil = perfilArr?.[0]
+      if (!perfil) return
+
+      const isMaster = perfil.role === 'master_access'
+      if (!isMaster && !perfil.federacao_id) return
 
       // Total academias
-      const { count: totalAcademias } = await supabase
+      const academiasQuery = supabase
         .from('academias')
         .select('*', { count: 'exact', head: true })
-        .eq('federacao_id', role.federacao_id)
+      const { count: totalAcademias } = isMaster
+        ? await academiasQuery
+        : await academiasQuery.eq('federacao_id', perfil.federacao_id)
 
       // Academias ativas
-      const { count: academiasAtivas } = await supabase
+      const academiasAtivasQuery = supabase
         .from('academias')
         .select('*', { count: 'exact', head: true })
-        .eq('federacao_id', role.federacao_id)
         .eq('status', 'Ativa')
+      const { count: academiasAtivas } = isMaster
+        ? await academiasAtivasQuery
+        : await academiasAtivasQuery.eq('federacao_id', perfil.federacao_id)
 
       // Total atletas
-      const { count: totalAtletas } = await supabase
+      const atletasQuery = supabase
         .from('stakeholders')
         .select('*', { count: 'exact', head: true })
-        .eq('federacao_id', role.federacao_id)
         .eq('role', 'atleta')
+      const { count: totalAtletas } = isMaster
+        ? await atletasQuery
+        : await atletasQuery.eq('federacao_id', perfil.federacao_id)
 
       // Atletas por cidade (top 5)
-      const { data: academiasData } = await supabase
-        .from('academias')
-        .select('id, cidade')
-        .eq('federacao_id', role.federacao_id)
+      const academiasDataQuery = supabase.from('academias').select('id, cidade')
+      const { data: academiasData } = isMaster
+        ? await academiasDataQuery
+        : await academiasDataQuery.eq('federacao_id', perfil.federacao_id)
 
-      const { data: atletasData } = await supabase
+      const atletasDataQuery = supabase
         .from('stakeholders')
         .select('academia_id')
-        .eq('federacao_id', role.federacao_id)
         .eq('role', 'atleta')
+      const { data: atletasData } = isMaster
+        ? await atletasDataQuery
+        : await atletasDataQuery.eq('federacao_id', perfil.federacao_id)
 
       const cidadeMap = new Map<string, number>()
       const academiaIdToCidade = new Map<string, string>()
@@ -93,10 +103,10 @@ export default function PortalFederacaoPage() {
       // Top academias por número de atletas
       const atletasPorAcademia = new Map<string, { nome: string; cidade: string; count: number }>()
       
-      const { data: academiasFullData } = await supabase
-        .from('academias')
-        .select('id, nome, cidade')
-        .eq('federacao_id', role.federacao_id)
+      const academiasFullQuery = supabase.from('academias').select('id, nome, cidade')
+      const { data: academiasFullData } = isMaster
+        ? await academiasFullQuery
+        : await academiasFullQuery.eq('federacao_id', perfil.federacao_id)
 
       academiasFullData?.forEach(a => {
         const count = atletasData?.filter(at => at.academia_id === a.id).length || 0

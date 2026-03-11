@@ -64,15 +64,20 @@ export default function AtletasFedaracaoPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const { data: role } = await supabase
+        const { data: perfilArr } = await supabase
           .from('stakeholders')
-          .select('federacao_id')
+          .select('role, federacao_id')
           .eq('id', user.id)
-          .not('federacao_id', 'is', null)
           .limit(1)
-          .single()
 
-        if (!role?.federacao_id) return
+        const perfil = perfilArr?.[0]
+        if (!perfil) return
+
+        const isMaster = perfil.role === 'master_access'
+        if (!isMaster && !perfil.federacao_id) return
+
+        // Alias for downstream compatibility
+        const role = perfil
 
         const start = page * pageSize
         const end = start + pageSize - 1
@@ -80,8 +85,9 @@ export default function AtletasFedaracaoPage() {
         let query, mapped, count;
         // LRSJ federation identifiers (UUID atual + legado numérico)
         const LRSJ_FED_ID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d';
-        const roleFederacaoId = String(role.federacao_id ?? '').trim();
-        const isLrsjFederacao = roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1';
+        const roleFederacaoId = String(perfil.federacao_id ?? '').trim();
+        // master_access never routes to LRSJ-specific view
+        const isLrsjFederacao = !isMaster && (roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1');
         if (isLrsjFederacao) {
           query = supabase
             .from('user_fed_lrsj')
@@ -146,8 +152,10 @@ export default function AtletasFedaracaoPage() {
           query = supabase
             .from('stakeholders')
             .select('id, nome_completo, graduacao, status_plano, status_membro, data_expiracao, academia:academias(sigla), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
-            .eq('federacao_id', role.federacao_id)
-            .eq('role', 'atleta');
+            .eq('role', 'atleta')
+          if (!isMaster && perfil.federacao_id) {
+            query = query.eq('federacao_id', perfil.federacao_id)
+          }
           if (search) {
             query = query.ilike('nome_completo', `%${search}%`);
           }
@@ -197,23 +205,31 @@ export default function AtletasFedaracaoPage() {
         return
       }
 
-      const { data: role } = await supabase
+      const { data: perfilArr2 } = await supabase
         .from('stakeholders')
-        .select('federacao_id')
+        .select('role, federacao_id')
         .eq('id', user.id)
-        .not('federacao_id', 'is', null)
         .limit(1)
-        .single()
 
-      if (!role?.federacao_id) {
+      const perfil2 = perfilArr2?.[0]
+      if (!perfil2) {
+        alert('Erro: Perfil não encontrado')
+        return
+      }
+
+      const isMaster2 = perfil2.role === 'master_access'
+      if (!isMaster2 && !perfil2.federacao_id) {
         alert('Erro: Federação não encontrada')
         return
       }
 
+      // Alias for downstream compatibility
+      const role = perfil2
+
       let query
       const LRSJ_FED_ID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d'
-      const roleFederacaoId = String(role.federacao_id ?? '').trim()
-      const isLrsjFederacao = roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1'
+      const roleFederacaoId = String(perfil2.federacao_id ?? '').trim()
+      const isLrsjFederacao = !isMaster2 && (roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1')
       
       if (isLrsjFederacao) {
         // Query com todos os campos da tabela
@@ -235,6 +251,17 @@ export default function AtletasFedaracaoPage() {
         if (filterStatusMembro) {
           query = query.eq('status_membro', filterStatusMembro)
         }
+      } else {
+        // Non-LRSJ / master_access: export from stakeholders
+        query = supabase
+          .from('stakeholders')
+          .select('id, nome_completo, email, role, academia_id, federacao_id')
+          .eq('role', 'atleta')
+        if (!isMaster2 && perfil2.federacao_id) {
+          query = query.eq('federacao_id', perfil2.federacao_id)
+        }
+        if (search) query = query.ilike('nome_completo', `%${search}%`)
+      }
 
         const { data, error } = await query.order('nome_completo', { ascending: true })
         
@@ -302,7 +329,6 @@ export default function AtletasFedaracaoPage() {
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-      }
     } catch (error) {
       console.error('Erro ao baixar CSV:', error)
       alert('Erro ao baixar CSV. Verifique o console.')
