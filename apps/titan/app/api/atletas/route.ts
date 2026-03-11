@@ -147,6 +147,7 @@ export async function POST(request: NextRequest) {
       numero_diploma_dan: formData.get('numero_diploma_dan') as string || null,
       lote: formData.get('lote') as string || null,
       observacoes: formData.get('observacoes') as string || null,
+      pais: formData.get('pais') as string || null,
       created_by: user.id,
     }
 
