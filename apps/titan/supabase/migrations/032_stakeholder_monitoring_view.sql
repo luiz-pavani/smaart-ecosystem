@@ -210,51 +210,12 @@ $$;
 -- ================================================================
 -- INSTRUÇÕES DE USO
 -- ================================================================
-/*
-
-QUERIES ÚTEIS PARA MONITORAMENTO:
-
-1. Ver status geral em tempo real:
-   SELECT * FROM public.v_stakeholder_integrity_status;
-
-2. Ver todos os 6 healthchecks:
-   SELECT check_name, valor, checked_at 
-   FROM public.v_stakeholder_integrity_healthcheck
-   ORDER BY check_name;
-
-3. Capturar novo snapshot (para histórico):
-   SELECT * FROM public.fn_capture_stakeholder_healthcheck_snapshot();
-
-4. Ver histórico de snapshots:
-   SELECT check_name, valor, checked_at, created_at
-   FROM public.stakeholder_healthcheck_log
-   ORDER BY created_at DESC
-   LIMIT 50;
-
-5. Detectar anomalias:
-   SELECT * FROM public.fn_check_stakeholder_integrity_anomalies();
-
-6. Ver alertas registrados:
-   SELECT check_name, threshold_value, actual_value, alert_level, message, created_at
-   FROM public.stakeholder_integrity_alerts
-   WHERE resolved_at IS NULL
-   ORDER BY created_at DESC;
-
-AUTOMAÇÃO COM pg_cron (se disponível no seu Supabase):
-
--- Executar snapshot a cada 6 horas:
-SELECT cron.schedule('capture_stakeholder_healthcheck', '0 */6 * * *', 
-  'SELECT public.fn_capture_stakeholder_healthcheck_snapshot();');
-
--- Verificar anomalias a cada 12 horas:
-SELECT cron.schedule('check_stakeholder_anomalies', '0 */12 * * *',
-  'SELECT public.fn_check_stakeholder_integrity_anomalies();');
-
-DASHBOARD SUGERIDO:
-
-Para criar um dashboard em tempo real, consulte estas views:
-- public.v_stakeholder_integrity_status (status geral)
-- public.stakeholder_healthcheck_log (histórico)
-- public.stakeholder_integrity_alerts (alertas)
-
-*/
+-- QUERIES ÚTEIS PARA MONITORAMENTO:
+-- 1. SELECT * FROM public.v_stakeholder_integrity_status;
+-- 2. SELECT check_name, valor FROM public.v_stakeholder_integrity_healthcheck;
+-- 3. SELECT * FROM public.fn_capture_stakeholder_healthcheck_snapshot();
+-- 4. SELECT * FROM public.fn_check_stakeholder_integrity_anomalies();
+-- 5. SELECT * FROM public.stakeholder_integrity_alerts WHERE resolved_at IS NULL;
+-- pg_cron (se disponivel):
+-- SELECT cron.schedule('capture_stakeholder_healthcheck', '0 */6 * * *',
+--   'SELECT public.fn_capture_stakeholder_healthcheck_snapshot()');

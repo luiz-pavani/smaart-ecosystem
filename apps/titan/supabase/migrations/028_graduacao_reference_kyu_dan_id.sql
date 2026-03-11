@@ -218,13 +218,23 @@ BEGIN
 
     CREATE INDEX IF NOT EXISTS idx_user_fed_lrsj_kyu_dan_id ON public.user_fed_lrsj (kyu_dan_id);
 
-    UPDATE public.user_fed_lrsj
-    SET kyu_dan_id = public.resolve_kyu_dan_id(
-      graduacao,
-      NULLIF(regexp_replace(COALESCE(dan::TEXT, ''), '[^0-9]', '', 'g'), '')::INT,
-      NULL
-    )
-    WHERE kyu_dan_id IS NULL;
+    -- Only backfill kyu_dan_id if graduacao column exists (added by migration 031)
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'user_fed_lrsj'
+        AND column_name = 'graduacao'
+    ) THEN
+      UPDATE public.user_fed_lrsj
+      SET kyu_dan_id = public.resolve_kyu_dan_id(
+        graduacao,
+        NULLIF(regexp_replace(COALESCE(dan::TEXT, ''), '[^0-9]', '', 'g'), '')::INT,
+        NULL
+      )
+      WHERE kyu_dan_id IS NULL;
+    ELSE
+      RAISE NOTICE '[028] user_fed_lrsj.graduacao column not found, skipping kyu_dan_id backfill. Will be applied by migration 031.';
+    END IF;
   END IF;
 END;
 $$;
@@ -279,14 +289,20 @@ BEGIN
     LEFT JOIN public.kyu_dan k ON k.id = u.kyu_dan_id
     WHERE u.kyu_dan_id IS NOT NULL AND k.id IS NULL;
 
-    SELECT COUNT(*) INTO user_fed_unresolved
-    FROM public.user_fed_lrsj
-    WHERE COALESCE(trim(graduacao), '') <> ''
-      AND public.resolve_kyu_dan_id(
-        graduacao,
-        NULLIF(regexp_replace(COALESCE(dan::TEXT, ''), '[^0-9]', '', 'g'), '')::INT,
-        NULL
+    -- Only validate unresolved if graduacao column exists
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'user_fed_lrsj' AND column_name = 'graduacao'
+    ) THEN
+      SELECT COUNT(*) INTO user_fed_unresolved
+      FROM public.user_fed_lrsj
+      WHERE COALESCE(trim(graduacao), '') <> ''
+        AND public.resolve_kyu_dan_id(
+          graduacao,
+          NULLIF(regexp_replace(COALESCE(dan::TEXT, ''), '[^0-9]', '', 'g'), '')::INT,
+          NULL
       ) IS NULL;
+    END IF;
 
     RAISE NOTICE '[028] user_fed_lrsj total=%, sem_kyu_dan_id=%, fk_invalido=%, unresolved_graduacao=%',
       user_fed_total, user_fed_sem_kyu_dan_id, user_fed_fk_invalido, user_fed_unresolved;

@@ -4,6 +4,12 @@
 -- 2) Garantir vínculo por stakeholder_id nas 3 tabelas
 -- 3) Refletir alterações em stakeholders automaticamente nas tabelas vinculadas
 
+-- Drop legacy triggers that reference non-existent tables (e.g., generated_documents)
+DROP TRIGGER IF EXISTS invalidate_athlete_documents ON public.user_fed_lrsj;
+DROP TRIGGER IF EXISTS invalidate_athlete_documents ON public.atletas;
+-- Drop the function itself (CASCADE removes all triggers using it)
+DROP FUNCTION IF EXISTS invalidate_athlete_documents() CASCADE;
+
 DO $$
 BEGIN
   IF to_regclass('public.stakeholders') IS NULL THEN
@@ -404,7 +410,7 @@ BEGIN
       NULL
     FROM public.user_fed_lrsj u
     WHERE u.stakeholder_id IS NOT NULL
-    ORDER BY u.stakeholder_id, u.id DESC
+    ORDER BY u.stakeholder_id
     ON CONFLICT (id) DO UPDATE
     SET
       funcao = CASE
