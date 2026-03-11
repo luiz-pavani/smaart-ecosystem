@@ -113,10 +113,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         sucesso: true,
-        mensagem: `Entrada de ${atleta.nome} registrada com sucesso`,
+        mensagem: `Entrada de ${atleta.nome_completo} registrada com sucesso`,
         frequencia: {
           id: novaFrequencia.id,
-          atleta_nome: atleta.nome,
+          atleta_nome: atleta.nome_completo,
           academia_nome: academia.nome,
           data: dataRegistro,
           hora_entrada,
