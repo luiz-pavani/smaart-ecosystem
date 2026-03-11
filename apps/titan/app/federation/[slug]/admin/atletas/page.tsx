@@ -11,11 +11,7 @@ interface Atleta {
   federacao_id: string;
   academia_id: string;
   role: string;
-  academia?: {
-    id: string;
-    nome: string;
-    sigla: string;
-  };
+  academia?: { id: string; nome: string; sigla: string; } | null;
 }
 
 export default function FederationAthletesPage({ params }: { params: { slug: string } }) {
@@ -60,7 +56,11 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
           const { data, error } = await query;
 
           if (error) throw error;
-          setAtletas(data || []);
+          const normalized = (data || []).map((item: any) => ({
+            ...item,
+            academia: Array.isArray(item.academia) ? item.academia[0] || null : item.academia,
+          }));
+          setAtletas(normalized);
         }
       } catch (error) {
         console.error('Error loading athletes:', error);
