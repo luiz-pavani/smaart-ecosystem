@@ -86,8 +86,8 @@ export default function AtletasFedaracaoPage() {
         // LRSJ federation identifiers (UUID atual + legado numérico)
         const LRSJ_FED_ID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d';
         const roleFederacaoId = String(perfil.federacao_id ?? '').trim();
-        // master_access never routes to LRSJ-specific view
-        const isLrsjFederacao = !isMaster && (roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1');
+        // master_access always uses LRSJ view (all athletes live in user_fed_lrsj)
+        const isLrsjFederacao = isMaster || roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1';
         if (isLrsjFederacao) {
           query = supabase
             .from('user_fed_lrsj')
@@ -229,7 +229,8 @@ export default function AtletasFedaracaoPage() {
       let query
       const LRSJ_FED_ID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d'
       const roleFederacaoId = String(perfil2.federacao_id ?? '').trim()
-      const isLrsjFederacao = !isMaster2 && (roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1')
+      // master_access always uses LRSJ view (all athletes live in user_fed_lrsj)
+      const isLrsjFederacao = isMaster2 || roleFederacaoId === LRSJ_FED_ID || roleFederacaoId === '1'
       
       if (isLrsjFederacao) {
         // Query com todos os campos da tabela
