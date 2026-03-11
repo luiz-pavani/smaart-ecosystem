@@ -63,8 +63,8 @@ export default function PlansPage({
         }
 
         const academy = academies[0];
-        const academyId = params.academyId || academy.academy_id;
-        const federation = academy.federation_id;
+        const academyId = params.academyId || academy.academia_id;
+        const federation = academy.federacao_id;
 
         // Load available plans
         let query = supabase
