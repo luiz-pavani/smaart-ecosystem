@@ -64,23 +64,24 @@ export async function GET(request: NextRequest) {
       }
       accessLevel = "master_access";
     } else {
-      // Check for regular academia access or nivel 4/5
+      // Check for regular academia access (academia_admin = nivel 4, academia_gestor = nivel 5)
       const academiaAdminRole = userRoles.find(r => r.role === "academia_admin");
-      const nivelAccess = userRoles.find(r => r.nivel === 4 || r.nivel === 5);
+      const academiaGestorRole = userRoles.find(r => r.role === "academia_gestor");
+      const gestorRole = academiaAdminRole || academiaGestorRole;
       
       if (academiaAdminRole && academiaAdminRole.academia_id) {
         academyId = academiaAdminRole.academia_id;
         accessLevel = "academia_admin";
-      } else if (nivelAccess && nivelAccess.academia_id) {
-        // Validate that nivel 4/5 can only access their own academy
-        if (requestedAcademyId && requestedAcademyId !== nivelAccess.academia_id) {
+      } else if (gestorRole && gestorRole.academia_id) {
+        // Validate that gestor can only access their own academy
+        if (requestedAcademyId && requestedAcademyId !== gestorRole.academia_id) {
           return NextResponse.json(
             { error: "Access denied to this academy" },
             { status: 403 }
           );
         }
-        academyId = nivelAccess.academia_id;
-        accessLevel = `nivel_${nivelAccess.nivel}`;
+        academyId = gestorRole.academia_id;
+        accessLevel = gestorRole.role;
       }
     }
 
