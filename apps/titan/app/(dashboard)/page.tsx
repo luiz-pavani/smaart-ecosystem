@@ -14,18 +14,21 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
   
   const { count: atletasCount } = await supabase
-    .from('atletas')
+    .from('stakeholders')
     .select('*', { count: 'exact', head: true })
-  
+    .eq('role', 'atleta')
+
   const { data: atletasAtivosData, count: atletasAtivos } = await supabase
-    .from('atletas')
+    .from('stakeholders')
     .select('*', { count: 'exact' })
+    .eq('role', 'atleta')
     .eq('status', 'ativo')
-  
+
   // Get pending approvals
   const { count: atletasEmAnalise } = await supabase
-    .from('atletas')
+    .from('stakeholders')
     .select('*', { count: 'exact', head: true })
+    .eq('role', 'atleta')
     .eq('status', 'pendente')
   
   const { count: academiasEmAnalise } = await supabase

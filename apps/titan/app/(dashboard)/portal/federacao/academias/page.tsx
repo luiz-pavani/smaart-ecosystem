@@ -43,9 +43,9 @@ export default function AcademiasFedaracaoPage() {
         if (!user) return
 
         const { data: role } = await supabase
-          .from('user_roles')
+          .from('stakeholders')
           .select('federacao_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .not('federacao_id', 'is', null)
           .limit(1)
           .single()
@@ -365,15 +365,15 @@ export default function AcademiasFedaracaoPage() {
       if (!user) return
 
       const { data: role } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('federacao_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .not('federacao_id', 'is', null)
         .limit(1)
         .single()
 
       if (!role?.federacao_id) return
-      
+
       setFederacaoId(role.federacao_id)
 
       // Fetch from API endpoint (same as /academias page)

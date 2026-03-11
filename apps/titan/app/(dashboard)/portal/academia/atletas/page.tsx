@@ -14,7 +14,7 @@ import { useToast } from '@/components/ui/toast'
 
 interface AtletaRow {
   id: string
-  nome: string
+  nome_completo: string
   cpf: string | null
   graduacao: string | null
   status?: string | null
@@ -41,7 +41,7 @@ export default function AtletasAcademiaPage() {
   const handleBulkDelete = async () => {
     const ids = Array.from(selection.selectedIds)
     const { error } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .delete()
       .in('id', ids)
 
@@ -66,9 +66,9 @@ export default function AtletasAcademiaPage() {
         if (!user) throw new Error('Nao autenticado')
 
         const { data: role } = await supabase
-          .from('user_roles')
+          .from('stakeholders')
           .select('academia_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .not('academia_id', 'is', null)
           .limit(1)
           .single()
@@ -79,12 +79,13 @@ export default function AtletasAcademiaPage() {
         const end = start + pageSize - 1
 
         let query = supabase
-          .from('atletas')
-          .select('id, nome, cpf, graduacao, status', { count: 'exact' })
+          .from('stakeholders')
+          .select('id, nome_completo, cpf, graduacao, status', { count: 'exact' })
           .eq('academia_id', role.academia_id)
+          .eq('role', 'atleta')
 
         if (search) {
-          query = query.ilike('nome', `%${search}%`)
+          query = query.ilike('nome_completo', `%${search}%`)
         }
         if (filterGraduacao) {
           query = query.eq('graduacao', filterGraduacao)
@@ -94,7 +95,7 @@ export default function AtletasAcademiaPage() {
         }
 
         const { data, count } = await query
-          .order('nome', { ascending: true })
+          .order('nome_completo', { ascending: true })
           .range(start, end)
 
         setAtletas(data || [])
@@ -254,7 +255,7 @@ export default function AtletasAcademiaPage() {
                         className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-slate-900 cursor-pointer"
                       />
                     </td>
-                    <td className="px-6 py-4 text-gray-300">{atleta.nome}</td>
+                    <td className="px-6 py-4 text-gray-300">{atleta.nome_completo}</td>
                     <td className="px-6 py-4 text-gray-400 font-mono text-sm">{atleta.cpf || '—'}</td>
                     <td className="px-6 py-4 text-gray-300">{atleta.graduacao || '—'}</td>
                     <td className="px-6 py-4">
@@ -337,27 +338,28 @@ export default function AtletasAcademiaPage() {
       if (!user) throw new Error('Nao autenticado')
 
       const { data: role } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('academia_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .not('academia_id', 'is', null)
         .limit(1)
         .single()
 
       if (!role?.academia_id) throw new Error('Academia nao encontrada')
-      
+
       setAcademiaId(role.academia_id)
 
       const start = page * pageSize
       const end = start + pageSize - 1
 
       let query = supabase
-        .from('atletas')
-        .select('id, nome, cpf, graduacao, status', { count: 'exact' })
+        .from('stakeholders')
+        .select('id, nome_completo, cpf, graduacao, status', { count: 'exact' })
         .eq('academia_id', role.academia_id)
+        .eq('role', 'atleta')
 
       if (search) {
-        query = query.ilike('nome', `%${search}%`)
+        query = query.ilike('nome_completo', `%${search}%`)
       }
       if (filterGraduacao) {
         query = query.eq('graduacao', filterGraduacao)

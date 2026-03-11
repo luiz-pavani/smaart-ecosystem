@@ -15,9 +15,9 @@ export default async function NovaAcademiaPage() {
 
   // Get user profile
   const { data: perfil, error: perfilError } = await supabase
-    .from('user_roles')
+    .from('stakeholders')
     .select('role, federacao_id')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single()
 
   if (perfilError || !perfil) {

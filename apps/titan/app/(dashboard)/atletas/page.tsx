@@ -55,9 +55,9 @@ export default function AtletasPage() {
 
       // Get user profile to check role
       const { data: perfilArray } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('role, federacao_id, academia_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .limit(1)
 
       const perfilData = perfilArray?.[0]
@@ -71,14 +71,15 @@ export default function AtletasPage() {
 
       // Build query based on user role
       let query = supabase
-        .from('atletas')
+        .from('stakeholders')
         .select(`
           *,
-          academia:academias!atletas_academia_id_fkey (
+          academia:academias!stakeholders_academia_id_fkey (
             id,
             nome
           )
         `)
+        .eq('role', 'atleta')
         .order('created_at', { ascending: false })
 
       // Filter by role

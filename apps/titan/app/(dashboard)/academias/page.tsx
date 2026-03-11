@@ -68,9 +68,9 @@ export default function AcademiasPage() {
 
       // Get user profile to check role
       const { data: perfilArray } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('role, federacao_id, academia_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .limit(1)
 
       const perfilData = perfilArray?.[0]

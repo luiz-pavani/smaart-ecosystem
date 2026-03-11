@@ -32,23 +32,10 @@ export default function EventosAtletaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const { data: atleta } = await supabase
-          .from('atletas')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1)
-          .single()
-
-        if (!atleta?.id) {
-          setUpcomingEvents([])
-          setPastEvents([])
-          return
-        }
-
         const { data } = await supabase
           .from('event_registrations')
           .select('id, status, registration_date, event:eventos(id, nome, data_evento, local)')
-          .eq('atleta_id', atleta.id)
+          .eq('atleta_id', user.id)
           .order('registration_date', { ascending: false })
 
         const now = new Date()

@@ -45,9 +45,9 @@ export default function InstructorsManagementPage() {
         if (!user) throw new Error('Not authenticated');
 
         const { data: userRole } = await supabase
-          .from('user_roles')
+          .from('stakeholders')
           .select('academia_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .eq('role', 'academia_admin')
           .single();
 

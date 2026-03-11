@@ -33,9 +33,9 @@ export default function CompartilharRegistroPage() {
       }
 
       const { data: perfilArray } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('academia_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .limit(1)
 
       const perfil = perfilArray?.[0]

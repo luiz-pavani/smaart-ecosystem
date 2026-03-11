@@ -8,7 +8,7 @@ interface PendingPromotion {
   id: string;
   athlete: {
     id: string;
-    nome: string;
+    nome_completo: string;
     email: string;
   };
   modality_name: string;
@@ -48,9 +48,9 @@ export default function BeltProgressionPage() {
         if (!user) throw new Error('Not authenticated');
 
         const { data: userRole } = await supabase
-          .from('user_roles')
+          .from('stakeholders')
           .select('academia_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .eq('role', 'academia_admin')
           .single();
 
@@ -61,7 +61,7 @@ export default function BeltProgressionPage() {
           .from('belt_progression')
           .select(`
             id,
-            athlete:athlete_id(id, nome, email),
+            athlete:athlete_id(id, nome_completo, email),
             modality:modality_id(name),
             current_belt,
             promotion_requested_date,
@@ -241,7 +241,7 @@ export default function BeltProgressionPage() {
                   <div key={promotion.id} className="bg-white rounded-lg border border-gray-200 p-6">
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div>
-                        <h3 className="text-lg font-bold text-gray-900">{promotion.athlete.nome}</h3>
+                        <h3 className="text-lg font-bold text-gray-900">{promotion.athlete.nome_completo}</h3>
                         <p className="text-sm text-gray-600">{promotion.athlete.email}</p>
                         <p className="text-sm text-gray-500 mt-1">{promotion.modality_name}</p>
                       </div>

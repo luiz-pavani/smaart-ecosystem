@@ -38,7 +38,7 @@ export async function POST(
 
     // Get athlete data
     const { data: atleta } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .select('federacao_id, graduacao')
       .eq('id', params.id)
       .single()
@@ -49,14 +49,14 @@ export async function POST(
 
     // Check if athlete belongs to this federation
     if (atleta.federacao_id !== perfil.federacao_id) {
-      return NextResponse.json({ 
-        error: 'Você não tem permissão para aprovar este atleta' 
+      return NextResponse.json({
+        error: 'Você não tem permissão para aprovar este atleta'
       }, { status: 403 })
     }
 
     // Update approval status
     const { error: updateError } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .update({
         graduacao_aprovada: true,
         graduacao_aprovada_por: user.id,
@@ -116,7 +116,7 @@ export async function DELETE(
 
     // Get athlete data
     const { data: atleta } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .select('federacao_id')
       .eq('id', params.id)
       .single()
@@ -127,14 +127,14 @@ export async function DELETE(
 
     // Check if athlete belongs to this federation
     if (atleta.federacao_id !== perfil.federacao_id) {
-      return NextResponse.json({ 
-        error: 'Você não tem permissão para rejeitar este atleta' 
+      return NextResponse.json({
+        error: 'Você não tem permissão para rejeitar este atleta'
       }, { status: 403 })
     }
 
     // Update approval status
     const { error: updateError } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .update({
         graduacao_aprovada: false,
         graduacao_aprovada_por: null,

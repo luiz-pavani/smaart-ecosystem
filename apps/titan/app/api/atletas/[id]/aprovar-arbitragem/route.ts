@@ -20,9 +20,9 @@ export async function POST(
 
     // Get user role
     const { data: perfil } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role, federacao_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!perfil) {
@@ -31,14 +31,14 @@ export async function POST(
 
     // Only federacao_admin can approve arbitragem
     if (perfil.role !== 'federacao_admin' && perfil.role !== 'federacao_staff') {
-      return NextResponse.json({ 
-        error: 'Apenas administradores da federação podem aprovar níveis de arbitragem' 
+      return NextResponse.json({
+        error: 'Apenas administradores da federação podem aprovar níveis de arbitragem'
       }, { status: 403 })
     }
 
     // Get athlete data
     const { data: atleta } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .select('federacao_id, nivel_arbitragem')
       .eq('id', params.id)
       .single()
@@ -56,7 +56,7 @@ export async function POST(
 
     // Update approval status
     const { error: updateError } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .update({
         arbitragem_aprovada: true,
         arbitragem_aprovada_por: user.id,
@@ -98,9 +98,9 @@ export async function DELETE(
 
     // Get user role
     const { data: perfil } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role, federacao_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!perfil) {
@@ -109,14 +109,14 @@ export async function DELETE(
 
     // Only federacao_admin can reject arbitragem
     if (perfil.role !== 'federacao_admin' && perfil.role !== 'federacao_staff') {
-      return NextResponse.json({ 
-        error: 'Apenas administradores da federação podem rejeitar níveis de arbitragem' 
+      return NextResponse.json({
+        error: 'Apenas administradores da federação podem rejeitar níveis de arbitragem'
       }, { status: 403 })
     }
 
     // Get athlete data
     const { data: atleta } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .select('federacao_id')
       .eq('id', params.id)
       .single()
@@ -134,7 +134,7 @@ export async function DELETE(
 
     // Update approval status
     const { error: updateError } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .update({
         arbitragem_aprovada: false,
         arbitragem_aprovada_por: null,

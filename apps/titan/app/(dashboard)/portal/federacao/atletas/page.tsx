@@ -14,7 +14,7 @@ interface KyuDanOption {
 
 interface AtletaRow {
   id: string
-  nome: string
+  nome_completo: string
   graduacao: string | null
   kyuDanIcones?: string | null
   kyuDanNome?: string | null
@@ -39,7 +39,7 @@ export default function AtletasFedaracaoPage() {
   const [filterSituacao, setFilterSituacao] = useState('')
   const [filterStatusMembro, setFilterStatusMembro] = useState('')
   const [downloadingCSV, setDownloadingCSV] = useState(false)
-  const [sortBy, setSortBy] = useState<'nome'|'academia'|'graduacao'|'status'|'validade'>('nome')
+  const [sortBy, setSortBy] = useState<'nome_completo'|'academia'|'graduacao'|'status'|'validade'>('nome_completo')
   const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
   const pageSize = 100
 
@@ -65,9 +65,9 @@ export default function AtletasFedaracaoPage() {
         if (!user) return
 
         const { data: role } = await supabase
-          .from('user_roles')
+          .from('stakeholders')
           .select('federacao_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .not('federacao_id', 'is', null)
           .limit(1)
           .single()
@@ -131,7 +131,7 @@ export default function AtletasFedaracaoPage() {
 
           mapped = (res.data || []).map((item: any) => ({
             id: item.stakeholder_id,
-            nome: item.nome_completo ?? '',
+            nome_completo: item.nome_completo ?? '',
             graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : '',
             kyuDanIcones: item.kyu_dan?.icones || null,
             kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
@@ -144,19 +144,20 @@ export default function AtletasFedaracaoPage() {
           count = res.count;
         } else {
           query = supabase
-            .from('atletas')
-            .select('id, nome, graduacao, status_plano, status_membro, data_expiracao, academia:academias(sigla), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
-            .eq('federacao_id', role.federacao_id);
+            .from('stakeholders')
+            .select('id, nome_completo, graduacao, status_plano, status_membro, data_expiracao, academia:academias(sigla), kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
+            .eq('federacao_id', role.federacao_id)
+            .eq('role', 'atleta');
           if (search) {
-            query = query.ilike('nome', `%${search}%`);
+            query = query.ilike('nome_completo', `%${search}%`);
           }
           if (filterGraduacao) {
             query = query.eq('kyu_dan_id', Number(filterGraduacao));
           }
-          const res = await query.order('nome', { ascending: true }).range(start, end);
+          const res = await query.order('nome_completo', { ascending: true }).range(start, end);
           mapped = (res.data || []).map((item: any) => ({
             id: item.id,
-            nome: item.nome_completo ?? '',
+            nome_completo: item.nome_completo ?? '',
             graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : (item.graduacao ?? ''),
             kyuDanIcones: item.kyu_dan?.icones || null,
             kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
@@ -197,9 +198,9 @@ export default function AtletasFedaracaoPage() {
       }
 
       const { data: role } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('federacao_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .not('federacao_id', 'is', null)
         .limit(1)
         .single()
@@ -438,7 +439,7 @@ export default function AtletasFedaracaoPage() {
               <table className="w-full">
                 <thead className="bg-white/5 border-b border-white/10">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('nome');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Nome</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('nome_completo');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Nome</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('academia');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>Academia</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('graduacao');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Graduação">🥋</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Status do Plano">$</th>
@@ -457,7 +458,7 @@ export default function AtletasFedaracaoPage() {
                     <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-gray-300">
                         <a href={`/portal/federacao/atletas/${atleta.id}`} className="underline hover:text-blue-400 transition-colors">
-                          {atleta.nome}
+                          {atleta.nome_completo}
                         </a>
                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.academia?.nome || '—'}</td>

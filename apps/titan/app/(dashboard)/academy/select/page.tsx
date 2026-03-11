@@ -30,9 +30,9 @@ export default function SelectAcademy() {
         }
 
         const { data: userRoles } = await supabase
-          .from("user_roles")
+          .from("stakeholders")
           .select("role")
-          .eq("user_id", user.id)
+          .eq("id", user.id)
           .limit(1);
 
         if (!userRoles?.some(r => r.role === "master_access")) {

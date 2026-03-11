@@ -19,15 +19,15 @@ export async function GET(
     }
 
     const { data: atleta, error } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .select(`
         *,
-        academia:academias!atletas_academia_id_fkey (
+        academia:academias!stakeholders_academia_id_fkey (
           id,
           nome,
           sigla
         ),
-        federacao:federacoes!atletas_federacao_id_fkey (
+        federacao:federacoes!stakeholders_federacao_id_fkey (
           id,
           nome,
           sigla
@@ -67,9 +67,9 @@ export async function DELETE(
 
     // Get user role
     const { data: perfil } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role, federacao_id, academia_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (!perfil) {
@@ -78,7 +78,7 @@ export async function DELETE(
 
     // Get athlete to check permissions
     const { data: atleta } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .select('federacao_id, academia_id, foto_perfil_url, foto_documento_url, certificado_arbitragem_url, certificado_dan_url')
       .eq('id', params.id)
       .single()
@@ -120,14 +120,14 @@ export async function DELETE(
       }
     }
 
-    // Delete athlete record
+    // Remove athlete role (reset to base atleta role, clearing federation link)
     const { error: deleteError } = await supabase
-      .from('atletas')
-      .delete()
+      .from('stakeholders')
+      .update({ role: 'atleta', federacao_id: null })
       .eq('id', params.id)
 
     if (deleteError) {
-      console.error('Error deleting atleta:', deleteError)
+      console.error('Error removing atleta:', deleteError)
       return NextResponse.json({ error: 'Erro ao excluir atleta' }, { status: 500 })
     }
 
@@ -190,7 +190,7 @@ export async function PUT(
 
     // Get current athlete data
     const { data: currentAtleta } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .select('*')
       .eq('id', params.id)
       .single()
@@ -308,7 +308,7 @@ export async function PUT(
 
     // Update athlete
     const { data: updatedAtleta, error: updateError } = await supabase
-      .from('atletas')
+      .from('stakeholders')
       .update(atletaData)
       .eq('id', params.id)
       .select()

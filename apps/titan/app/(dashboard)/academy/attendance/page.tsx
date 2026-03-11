@@ -43,9 +43,9 @@ export default function AttendanceCheckInPage() {
         if (!user) throw new Error('Not authenticated');
 
         const { data: userRole } = await supabase
-          .from('user_roles')
+          .from('stakeholders')
           .select('academia_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .in('role', ['academia_admin', 'professor'])
           .single();
 
@@ -146,14 +146,14 @@ export default function AttendanceCheckInPage() {
       if (response.ok) {
         // Get athlete info
         const { data: athlete } = await supabase
-          .from('atletas')
-          .select('nome, user_roles(role)')
+          .from('stakeholders')
+          .select('nome_completo, role')
           .eq('id', athleteId)
           .single();
 
         const checkInRecord: AthleteCheckIn = {
           athlete_id: athleteId,
-          athlete_name: athlete?.nome || 'Unknown',
+          athlete_name: athlete?.nome_completo || 'Unknown',
           belt: 'N/A',
           check_in_time: new Date().toLocaleTimeString('pt-BR'),
           status: 'success',

@@ -33,9 +33,9 @@ export default function PortalFederacaoPage() {
       if (!user) return
 
       const { data: role } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('federacao_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .not('federacao_id', 'is', null)
         .limit(1)
         .single()
@@ -57,9 +57,10 @@ export default function PortalFederacaoPage() {
 
       // Total atletas
       const { count: totalAtletas } = await supabase
-        .from('atletas')
+        .from('stakeholders')
         .select('*', { count: 'exact', head: true })
         .eq('federacao_id', role.federacao_id)
+        .eq('role', 'atleta')
 
       // Atletas por cidade (top 5)
       const { data: academiasData } = await supabase
@@ -68,9 +69,10 @@ export default function PortalFederacaoPage() {
         .eq('federacao_id', role.federacao_id)
 
       const { data: atletasData } = await supabase
-        .from('atletas')
+        .from('stakeholders')
         .select('academia_id')
         .eq('federacao_id', role.federacao_id)
+        .eq('role', 'atleta')
 
       const cidadeMap = new Map<string, number>()
       const academiaIdToCidade = new Map<string, string>()

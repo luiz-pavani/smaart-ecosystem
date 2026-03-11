@@ -160,9 +160,9 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
 
         if (user?.id) {
           const { data: userRoles } = await supabase
-            .from("user_roles")
+            .from("stakeholders")
             .select("role, federacao_id, academia_id")
-            .eq("user_id", user.id);
+            .eq("id", user.id);
           setRoles((userRoles || []) as UserRole[]);
         } else {
           setRoles([]);

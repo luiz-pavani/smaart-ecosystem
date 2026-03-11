@@ -47,9 +47,9 @@ export async function GET() {
 
     // Step 5: Try to get role
     const { data: perfilArray, error: perfilError } = await supabase
-      .from('user_roles')
+      .from('stakeholders')
       .select('role, federacao_id, academia_id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .limit(1)
 
     const perfilData = perfilArray?.[0] || null

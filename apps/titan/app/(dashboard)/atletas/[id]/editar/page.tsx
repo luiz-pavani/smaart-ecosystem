@@ -20,9 +20,9 @@ export default async function EditarAtletaPage(props: PageProps) {
 
   // Get user role
   const { data: perfil } = await supabase
-    .from('user_roles')
+    .from('stakeholders')
     .select('role, federacao_id, academia_id')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single()
 
   if (!perfil) {
@@ -31,10 +31,10 @@ export default async function EditarAtletaPage(props: PageProps) {
 
   // Get athlete data
   const { data: atleta, error } = await supabase
-    .from('atletas')
+    .from('stakeholders')
     .select(`
       *,
-      academia:academias!atletas_academia_id_fkey (
+      academia:academias!stakeholders_academia_id_fkey (
         id,
         nome
       )

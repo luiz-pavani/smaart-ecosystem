@@ -43,9 +43,9 @@ export default function PortalAcademiaPage() {
       }
 
       const { data: role } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('academia_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .not('academia_id', 'is', null)
         .limit(1)
         .single()
@@ -59,15 +59,17 @@ export default function PortalAcademiaPage() {
 
       // Total atletas
       const { count: totalAtletas } = await supabase
-        .from('atletas')
+        .from('stakeholders')
         .select('*', { count: 'exact', head: true })
         .eq('academia_id', role.academia_id)
+        .eq('role', 'atleta')
 
       // Atletas ativos
       const { count: atletasAtivos } = await supabase
-        .from('atletas')
+        .from('stakeholders')
         .select('*', { count: 'exact', head: true })
         .eq('academia_id', role.academia_id)
+        .eq('role', 'atleta')
         .eq('status', 'Ativo')
 
       // Total aulas
@@ -99,9 +101,10 @@ export default function PortalAcademiaPage() {
 
       // Distribuição por graduação
       const { data: atletasData } = await supabase
-        .from('atletas')
+        .from('stakeholders')
         .select('graduacao')
         .eq('academia_id', role.academia_id)
+        .eq('role', 'atleta')
         .eq('status', 'Ativo')
 
       const graduacaoMap = new Map<string, number>()
@@ -121,7 +124,7 @@ export default function PortalAcademiaPage() {
 
       const { data: topAttendance } = await supabase
         .from('attendance_records')
-        .select('athlete_id, athlete:atletas(nome, graduacao)')
+        .select('athlete_id, athlete:stakeholders(nome_completo, graduacao)')
         .eq('academy_id', role.academia_id)
         .eq('status', 'PRESENT')
         .gte('attendance_date', thirtyDaysStr)
@@ -135,7 +138,7 @@ export default function PortalAcademiaPage() {
             current.count += 1
           } else {
             athleteAttendance.set(key, {
-              nome: record.athlete.nome,
+              nome: record.athlete.nome_completo,
               graduacao: record.athlete.graduacao || '',
               count: 1
             })

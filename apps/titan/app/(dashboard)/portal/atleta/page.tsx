@@ -38,26 +38,13 @@ export default function PortalAtletaPage() {
         return
       }
 
-      const { data: role } = await supabase
-        .from('user_roles')
-        .select('atleta_id')
-        .eq('user_id', user.id)
-        .not('atleta_id', 'is', null)
-        .limit(1)
-        .single()
-
-      if (!role?.atleta_id) {
-        setError('Atleta vinculado não encontrado para este usuário')
-        return
-      }
-
-      // Buscar dados do atleta
+      // Buscar dados do atleta diretamente do stakeholder
       let atleta = null
       try {
         const { data, error } = await supabase
-          .from('atletas')
+          .from('stakeholders')
           .select('*')
-          .eq('id', role.atleta_id)
+          .eq('id', user.id)
           .single()
         if (error) {
           console.error('Erro ao buscar atleta:', error.message)
@@ -72,26 +59,26 @@ export default function PortalAtletaPage() {
       const { count: totalTreinos } = await supabase
         .from('athlete_attendance')
         .select('*', { count: 'exact', head: true })
-        .eq('athlete_id', role.atleta_id)
+        .eq('athlete_id', user.id)
 
       // Treinos últimos 30 dias
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      
+
       const { count: treinosUltimos30Dias } = await supabase
         .from('athlete_attendance')
         .select('*', { count: 'exact', head: true })
-        .eq('athlete_id', role.atleta_id)
+        .eq('athlete_id', user.id)
         .gte('created_at', thirtyDaysAgo.toISOString())
 
       // Histórico últimos 7 dias (agrupado por dia)
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      
+
       const { data: attendanceData } = await supabase
         .from('athlete_attendance')
         .select('created_at')
-        .eq('athlete_id', role.atleta_id)
+        .eq('athlete_id', user.id)
         .gte('created_at', sevenDaysAgo.toISOString())
         .order('created_at', { ascending: true })
 
@@ -108,7 +95,7 @@ export default function PortalAtletaPage() {
 
       // Próxima graduação
       const graduacoes = ['Branca', '1ª Faixa Cinza', '2ª Faixa Cinza', '3ª Faixa Cinza', 'Amarela', 'Laranja', 'Verde', 'Roxa', 'Marrom', 'Preta']
-      const currentGradIndex = graduacoes.indexOf(atleta?.graduacao || 'Branca')
+      const currentGradIndex = graduacoes.indexOf(atleta?.faixa || atleta?.graduacao || 'Branca')
       const proximaGraduacao = currentGradIndex < graduacoes.length - 1 ? graduacoes[currentGradIndex + 1] : 'Máxima'
 
       // Próximos eventos (mock - você pode implementar com tabela de event_registrations)
@@ -137,7 +124,7 @@ export default function PortalAtletaPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">
-            {data?.atleta?.nome && typeof data.atleta.nome === 'string' ? `Olá, ${data.atleta.nome.split(' ')[0]}!` : 'Portal do Atleta'}
+            {data?.atleta?.nome_completo && typeof data.atleta.nome_completo === 'string' ? `Olá, ${data.atleta.nome_completo.split(' ')[0]}!` : 'Portal do Atleta'}
           </h1>
           <p className="text-slate-400">Acompanhe seu progresso e evolução</p>
         </div>

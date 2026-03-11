@@ -24,23 +24,10 @@ export default function PerfilAtletaPage() {
           return
         }
 
-        const { data: role } = await supabase
-          .from('user_roles')
-          .select('atleta_id')
-          .eq('user_id', user.id)
-          .not('atleta_id', 'is', null)
-          .limit(1)
-          .single()
-
-        if (!role?.atleta_id) {
-          setError('Atleta não vinculado a este usuário')
-          return
-        }
-
         const { data, error: atletaError } = await supabase
-          .from('atletas')
+          .from('stakeholders')
           .select('*')
-          .eq('id', role.atleta_id)
+          .eq('id', user.id)
           .limit(1)
           .single()
 
@@ -96,12 +83,12 @@ export default function PerfilAtletaPage() {
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-8">
             <div className="flex items-start justify-between mb-8">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-2">{atleta.nome || 'Sem nome'}</h2>
+                <h2 className="text-2xl font-bold text-white mb-2">{atleta.nome_completo || 'Sem nome'}</h2>
                 <p className="text-gray-400">CPF: {atleta.cpf || 'Não informado'}</p>
               </div>
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-20 h-20 rounded-xl flex items-center justify-center">
                 <span className="text-white text-3xl font-bold">
-                  {atleta.nome?.[0]?.toUpperCase() || 'A'}
+                  {atleta.nome_completo?.[0]?.toUpperCase() || 'A'}
                 </span>
               </div>
             </div>
@@ -116,7 +103,7 @@ export default function PerfilAtletaPage() {
                   </div>
                   <div className="flex items-center gap-3 text-gray-300">
                     <Phone className="w-5 h-5" />
-                    <span>{atleta.celular || 'Não informado'}</span>
+                    <span>{atleta.telefone || atleta.celular || 'Não informado'}</span>
                   </div>
                 </div>
               </div>
@@ -141,7 +128,7 @@ export default function PerfilAtletaPage() {
                 <h3 className="font-semibold text-white mb-4">Graduação</h3>
                 <div className="flex items-center gap-3">
                   <Award className="w-5 h-5 text-yellow-500" />
-                  <span className="text-gray-300">{atleta.nivel || atleta.graduacao || 'Não informado'}</span>
+                  <span className="text-gray-300">{atleta.faixa || atleta.graduacao || 'Não informado'}</span>
                 </div>
               </div>
             </div>

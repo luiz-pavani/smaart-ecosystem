@@ -18,9 +18,9 @@ export default function AcademiaAtletaPage() {
         if (!user) return
 
         const { data: atletaData } = await supabase
-          .from('atletas')
+          .from('stakeholders')
           .select('academia_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .limit(1)
           .single()
 

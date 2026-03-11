@@ -48,9 +48,9 @@ export default function PortalPage() {
       }
       // Get user roles
       const { data, error: rolesError } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('role, federacao_id, academia_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
       if (rolesError) throw rolesError
       setUserRoles(data || [])
     } catch (err) {

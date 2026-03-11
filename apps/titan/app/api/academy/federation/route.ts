@@ -45,9 +45,10 @@ export async function GET(request: NextRequest) {
 
       // Get athletes in academy
       const { data: athletes, error: athletesError } = await supabase
-        .from("atletas")
-        .select("id, nome, graduacao, modality")
+        .from("stakeholders")
+        .select("id, nome_completo, graduacao, modality")
         .eq("academia_id", academy_id)
+        .eq("role", "atleta")
         .limit(100);
 
       if (athletesError && athletesError.code !== "PGRST116")
@@ -90,9 +91,10 @@ export async function GET(request: NextRequest) {
 
       // Get academy athletes
       const { data: athletes, error: athletesError } = await supabase
-        .from("atletas")
+        .from("stakeholders")
         .select("id")
-        .eq("academia_id", academy_id);
+        .eq("academia_id", academy_id)
+        .eq("role", "atleta");
 
       if (athletesError && athletesError.code !== "PGRST116")
         throw athletesError;
@@ -117,10 +119,11 @@ export async function GET(request: NextRequest) {
     if (type === "athletes") {
       // Get academy athletes for registration
       const { data: athletes, error: athletesError } = await supabase
-        .from("atletas")
-        .select("id, nome, graduacao, modality, data_nascimento")
+        .from("stakeholders")
+        .select("id, nome_completo, graduacao, modality, data_nascimento")
         .eq("academia_id", academy_id)
-        .order("nome", { ascending: true });
+        .eq("role", "atleta")
+        .order("nome_completo", { ascending: true });
 
       if (athletesError && athletesError.code !== "PGRST116")
         throw athletesError;
@@ -144,10 +147,11 @@ export async function GET(request: NextRequest) {
 
       // Verify athlete belongs to academy
       const { data: athlete } = await supabase
-        .from("atletas")
+        .from("stakeholders")
         .select("id")
         .eq("id", athleteId)
         .eq("academia_id", academy_id)
+        .eq("role", "atleta")
         .single();
 
       if (!athlete) {

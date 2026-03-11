@@ -49,9 +49,9 @@ export default function AulasAcademiaPage() {
         }
 
         const { data: role } = await supabase
-          .from('user_roles')
+          .from('stakeholders')
           .select('academia_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .not('academia_id', 'is', null)
           .limit(1)
           .single()
@@ -236,9 +236,9 @@ export default function AulasAcademiaPage() {
       if (!user) return
 
       const { data: role } = await supabase
-        .from('user_roles')
+        .from('stakeholders')
         .select('academia_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .not('academia_id', 'is', null)
         .limit(1)
         .single()

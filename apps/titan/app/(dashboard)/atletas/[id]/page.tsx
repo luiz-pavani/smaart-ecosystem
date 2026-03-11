@@ -24,23 +24,23 @@ export default async function AtletaDetalhesPage(props: PageProps) {
 
   // Get user role
   const { data: perfil } = await supabase
-    .from('user_roles')
+    .from('stakeholders')
     .select('role')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single()
 
   const isFederacaoAdmin = perfil?.role === 'federacao_admin' || perfil?.role === 'federacao_staff'
 
   const { data: atleta, error } = await supabase
-    .from('atletas')
+    .from('stakeholders')
     .select(`
       *,
-      academia:academias!atletas_academia_id_fkey (
+      academia:academias!stakeholders_academia_id_fkey (
         id,
         nome,
         sigla
       ),
-      federacao:federacoes!atletas_federacao_id_fkey (
+      federacao:federacoes!stakeholders_federacao_id_fkey (
         id,
         nome,
         sigla

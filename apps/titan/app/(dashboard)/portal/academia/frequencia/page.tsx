@@ -34,9 +34,9 @@ export default function FrequenciaAcademiaPage() {
         }
 
         const { data: role } = await supabase
-          .from('user_roles')
+          .from('stakeholders')
           .select('academia_id')
-          .eq('user_id', user.id)
+          .eq('id', user.id)
           .not('academia_id', 'is', null)
           .limit(1)
           .single()
@@ -52,13 +52,13 @@ export default function FrequenciaAcademiaPage() {
 
         const { data } = await supabase
           .from('attendance_records')
-          .select('athlete_id, status, attendance_date, athlete:atletas(nome)')
+          .select('athlete_id, status, attendance_date, athlete:stakeholders(nome_completo)')
           .eq('academy_id', role.academia_id)
           .gte('attendance_date', startDateStr)
 
         const map = new Map<string, Row>()
         ;(data || []).forEach((record: any) => {
-          const name = record.athlete?.nome || 'Sem nome'
+          const name = record.athlete?.nome_completo || 'Sem nome'
           const current = map.get(name) || { atleta: name, presencas: 0, faltas: 0, percentual: 0 }
           if (record.status === 'PRESENT') current.presencas += 1
           if (record.status === 'ABSENT') current.faltas += 1

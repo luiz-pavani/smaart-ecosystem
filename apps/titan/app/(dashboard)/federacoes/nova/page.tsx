@@ -14,9 +14,9 @@ export default async function NovaFederacaoPage() {
   }
 
   const { data: perfil } = await supabase
-    .from('user_roles')
+    .from('stakeholders')
     .select('role')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single()
 
   if (!perfil || perfil.role !== 'master_access') {

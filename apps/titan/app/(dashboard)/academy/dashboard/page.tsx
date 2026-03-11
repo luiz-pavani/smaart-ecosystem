@@ -46,9 +46,9 @@ export default function AcademyDashboard() {
         }
 
         const { data: userRoles } = await supabase
-          .from("user_roles")
+          .from("stakeholders")
           .select("role")
-          .eq("user_id", user.id)
+          .eq("id", user.id)
           .limit(1);
 
         const isMaster = userRoles?.some(r => r.role === "master_access");
