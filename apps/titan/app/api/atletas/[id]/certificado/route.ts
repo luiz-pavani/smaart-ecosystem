@@ -26,6 +26,7 @@ export async function GET(
         stakeholder_id,
         nome_completo,
         academias,
+        academia_id,
         validado_em,
         kyu_dan_id,
         kyu_dan:kyu_dan_id (
@@ -51,17 +52,32 @@ export async function GET(
       )
     }
 
-    // 4. Buscar logo da academia
+    // 4. Buscar logo da academia via academia_id → academias → academy_logos
     let academiaLogo = null
-    if (atleta.academias) {
-      const { data: logoData } = await supabase
-        .from('academy_logos')
-        .select('logo_url, logo_width, logo_height')
-        .eq('academia_nome', atleta.academias.trim())
-        .single()
-      
-      if (logoData) {
-        academiaLogo = logoData
+    {
+      const namesToTry: string[] = []
+
+      // Resolve nome/sigla via academia_id (mais confiável)
+      if (atleta.academia_id) {
+        const { data: academiaData } = await supabase
+          .from('academias')
+          .select('nome, sigla')
+          .eq('id', atleta.academia_id)
+          .single()
+        if (academiaData?.nome) namesToTry.push(academiaData.nome)
+        if (academiaData?.sigla) namesToTry.push(academiaData.sigla)
+      }
+
+      // Fallback: campo texto direto
+      if (atleta.academias) namesToTry.push(atleta.academias.trim())
+
+      for (const name of namesToTry) {
+        const { data: logoData } = await supabase
+          .from('academy_logos')
+          .select('logo_url, logo_width, logo_height')
+          .eq('academia_nome', name)
+          .single()
+        if (logoData) { academiaLogo = logoData; break }
       }
     }
 
