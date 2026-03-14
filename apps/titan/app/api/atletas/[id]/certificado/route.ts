@@ -21,6 +21,33 @@ export async function GET(
     }
 
     // 2. Buscar dados do atleta com joins necessários
+    const { data: stakeholder, error: stakeholderError } = await supabase
+      .from('stakeholders')
+      .select(`
+        id,
+        kyu_dan:kyu_dan_id (
+          id,
+          kyu_dan,
+          cor_faixa
+        )
+      `)
+      .eq('id', id)
+      .single()
+
+    if (stakeholderError) {
+      return NextResponse.json(
+        { error: `Erro ao buscar stakeholder: ${stakeholderError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!stakeholder) {
+      return NextResponse.json(
+        { error: 'Stakeholder não encontrado' },
+        { status: 404 }
+      )
+    }
+
     const { data: atleta, error: atletaError } = await supabase
       .from('user_fed_lrsj')
       .select(`
@@ -28,13 +55,7 @@ export async function GET(
         nome_completo,
         academias,
         academia_id,
-        validado_em,
-        kyu_dan_id,
-        kyu_dan:kyu_dan_id (
-          id,
-          kyu_dan,
-          cor_faixa
-        )
+        validado_em
       `)
       .eq('stakeholder_id', id)
       .single()
@@ -98,8 +119,8 @@ export async function GET(
       : new Date().getFullYear()
 
     // 7. Formatar dados para o frontend
-    const kyuDanData = Array.isArray(atleta.kyu_dan) ? atleta.kyu_dan[0] : atleta.kyu_dan
-    
+    const kyuDanData = Array.isArray(stakeholder.kyu_dan) ? stakeholder.kyu_dan[0] : stakeholder.kyu_dan
+
     const documentData = {
       atleta: {
         id: atleta.stakeholder_id,

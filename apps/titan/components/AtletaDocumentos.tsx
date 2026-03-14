@@ -403,34 +403,21 @@ export default function AtletaDocumentos({
         )
       }
 
-      // Label "GRADUAÇÃO"
-      if (config.graduacao_label) {
-        doc.setFontSize(config.graduacao_label.fontSize || 24)
-        doc.setFont(pdfFontRegular, 'normal')
-        doc.setTextColor(255, 255, 255)
-        doc.text(
-          config.graduacao_label.text || 'GRADUAÇÃO',
-          config.graduacao_label.x || width / 2,
-          420,
-          { align: config.graduacao_label.align || 'center' }
-        )
-      }
-
-      // Graduação (valor)
+      // Graduação (valor) - sem label duplicado
       if (config.graduacao) {
         const graduacaoX = config.graduacao.x || 530
-        const graduacaoY = 470
+        const graduacaoY = config.graduacao.y || 470
         const graduacaoMaxWidth = config.graduacao.maxWidth || 620
         const graduacaoFontSize = fitFontSize(
           atleta.graduacao,
           config.graduacao.fontSize || 52,
           36,
           graduacaoMaxWidth,
-          pdfFontRegular
+          pdfFontCondensed
         )
 
         doc.setFontSize(graduacaoFontSize)
-        doc.setFont(pdfFontRegular, 'normal')
+        doc.setFont(pdfFontCondensed, 'normal')
         doc.text(
           atleta.graduacao,
           graduacaoX,
@@ -573,7 +560,7 @@ export default function AtletaDocumentos({
             ) : (
               <>
                 <FileText className="w-5 h-5" />
-                Baixar Certificado de Graduação
+                Baixar Certificado de Graduação (v{BETA_VERSION})
               </>
             )}
           </button>
