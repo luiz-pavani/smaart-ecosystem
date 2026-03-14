@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Users, Search, Filter, Download, Trash2, Eye, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Users, Search, Filter, Download, Upload, Trash2, Eye, AlertCircle, CheckCircle2 } from 'lucide-react';
+import ImportLrsjModal from './ImportLrsjModal';
 
 interface Atleta {
   id: string;
@@ -22,6 +23,7 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'todos' | 'ativo'>('todos');
   const [selectedAtleta, setSelectedAtleta] = useState<Atleta | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -140,13 +142,22 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
             Gerenceie todos os atletas filiados a {federation.nome_completo}
           </p>
         </div>
-        <button
-          onClick={exportToCSV}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-        >
-          <Download className="h-4 w-4" />
-          Exportar CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            <Upload className="h-4 w-4" />
+            Importar Smoothcomp
+          </button>
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          >
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -268,6 +279,19 @@ export default function FederationAthletesPage({ params }: { params: { slug: str
             </button>
           </div>
         </div>
+      )}
+
+      {/* Import LRSJ Modal */}
+      {showImportModal && (
+        <ImportLrsjModal
+          slug={params.slug}
+          onClose={() => setShowImportModal(false)}
+          onSuccess={(inserted) => {
+            setShowImportModal(false);
+            // Recarregar lista após importação
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );
