@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 export async function GET(
@@ -60,9 +61,9 @@ export async function GET(
     {
       const namesToTry: string[] = []
 
-      // Resolve nome/sigla via academia_id (mais confiável)
+      // Resolve nome/sigla via academia_id (mais confiável) — usa admin para bypassar RLS
       if (atleta.academia_id) {
-        const { data: academiaData } = await supabase
+        const { data: academiaData } = await supabaseAdmin
           .from('academias')
           .select('nome, sigla')
           .eq('id', atleta.academia_id)
@@ -75,7 +76,7 @@ export async function GET(
       if (atleta.academias) namesToTry.push(atleta.academias.trim())
 
       for (const name of namesToTry) {
-        const { data: logoData } = await supabase
+        const { data: logoData } = await supabaseAdmin
           .from('academy_logos')
           .select('logo_url, logo_width, logo_height')
           .eq('academia_nome', name)
