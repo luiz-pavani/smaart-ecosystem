@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, FileText, IdCard, Loader2 } from 'lucide-react'
 
 // Versão beta para teste visual de atualizações
-const BETA_VERSION = '25'
+const BETA_VERSION = '26'
 
 interface AtletaDocumentosProps {
   atletaId: string
@@ -407,7 +407,7 @@ export default function AtletaDocumentos({
 
         doc.setFontSize(nomeFontSize)
         doc.setFont(pdfFontCondensed, 'normal')
-        doc.text(atleta.nome, nomeX, nomeY, { align: 'center' })
+        doc.text(atleta.nome.toUpperCase(), nomeX, nomeY, { align: 'center' })
       }
 
       // Graduação — kyu_dan | cor_faixa, abaixo, centralizado
