@@ -8,12 +8,14 @@ import { Loader2 } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
+import { CriteriosAulaSection } from './CriteriosAulaSection'
 
 const aulaSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   location: z.string().optional(),
   capacity: z.number().min(1, 'Capacidade deve ser maior que 0').optional(),
-  day_of_week: z.number().min(0).max(6),
+  instructor_name: z.string().optional(),
+  days_of_week: z.array(z.number()).min(1, 'Selecione ao menos um dia'),
   start_time: z.string().min(1, 'Horário de início é obrigatório'),
   end_time: z.string().min(1, 'Horário de término é obrigatório'),
 })
@@ -39,6 +41,10 @@ const dias = [
 
 export function NovaAulaModal({ isOpen, onClose, academiaId, onSuccess }: NovaAulaModalProps) {
   const [loading, setLoading] = useState(false)
+  const [selectedDays, setSelectedDays] = useState<number[]>([])
+  const [criterios, setCriterios] = useState({
+    min_age: '', max_age: '', min_kyu_dan_id: '', max_kyu_dan_id: '',
+  })
   const { showToast } = useToast()
   const supabase = createClient()
 
@@ -47,9 +53,19 @@ export function NovaAulaModal({ isOpen, onClose, academiaId, onSuccess }: NovaAu
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<AulaFormData>({
     resolver: zodResolver(aulaSchema),
+    defaultValues: { days_of_week: [] },
   })
+
+  const toggleDay = (day: number) => {
+    const updated = selectedDays.includes(day)
+      ? selectedDays.filter(d => d !== day)
+      : [...selectedDays, day]
+    setSelectedDays(updated)
+    setValue('days_of_week', updated)
+  }
 
   const onSubmit = async (data: AulaFormData) => {
     try {
@@ -62,6 +78,11 @@ export function NovaAulaModal({ isOpen, onClose, academiaId, onSuccess }: NovaAu
           name: data.name,
           location: data.location || null,
           capacity: data.capacity || null,
+          instructor_name: data.instructor_name || null,
+          min_age: criterios.min_age ? parseInt(criterios.min_age) : null,
+          max_age: criterios.max_age ? parseInt(criterios.max_age) : null,
+          min_kyu_dan_id: criterios.min_kyu_dan_id ? parseInt(criterios.min_kyu_dan_id) : null,
+          max_kyu_dan_id: criterios.max_kyu_dan_id ? parseInt(criterios.max_kyu_dan_id) : null,
           academy_id: academiaId,
           is_active: true,
           current_enrollment: 0,
@@ -71,20 +92,24 @@ export function NovaAulaModal({ isOpen, onClose, academiaId, onSuccess }: NovaAu
 
       if (classError) throw classError
 
-      // Create schedule
+      // Create one schedule per selected day
       const { error: scheduleError } = await supabase
         .from('class_schedules')
-        .insert({
-          class_id: classData.id,
-          day_of_week: data.day_of_week,
-          start_time: data.start_time,
-          end_time: data.end_time,
-        })
+        .insert(
+          data.days_of_week.map(day => ({
+            class_id: classData.id,
+            day_of_week: day,
+            start_time: data.start_time,
+            end_time: data.end_time,
+          }))
+        )
 
       if (scheduleError) throw scheduleError
 
       showToast('success', 'Aula cadastrada com sucesso!')
       reset()
+      setSelectedDays([])
+      setCriterios({ min_age: '', max_age: '', min_kyu_dan_id: '', max_kyu_dan_id: '' })
       onClose()
       onSuccess()
     } catch (error: any) {
@@ -141,24 +166,46 @@ export function NovaAulaModal({ isOpen, onClose, academiaId, onSuccess }: NovaAu
           )}
         </div>
 
-        {/* Dia da Semana */}
+        {/* Professor */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Professor / Instrutor</label>
+          <input
+            {...register('instructor_name')}
+            type="text"
+            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+            placeholder="Nome do professor"
+          />
+        </div>
+
+        <CriteriosAulaSection
+          minAge={criterios.min_age} maxAge={criterios.max_age}
+          minKyuDanId={criterios.min_kyu_dan_id} maxKyuDanId={criterios.max_kyu_dan_id}
+          onChange={(field, value) => setCriterios(prev => ({ ...prev, [field]: value }))}
+        />
+
+        {/* Dias da Semana */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
-            Dia da Semana *
+            Dias da Semana *
           </label>
-          <select
-            {...register('day_of_week', { valueAsNumber: true })}
-            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-purple-500 transition-colors"
-          >
-            <option value="">Selecione...</option>
+          <div className="flex flex-wrap gap-2">
             {dias.map((dia) => (
-              <option key={dia.value} value={dia.value}>
+              <button
+                key={dia.value}
+                type="button"
+                onClick={() => toggleDay(dia.value)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                  selectedDays.includes(dia.value)
+                    ? 'bg-purple-500/30 border-purple-500/60 text-purple-200'
+                    : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/30'
+                }`}
+              >
                 {dia.label}
-              </option>
+              </button>
             ))}
-          </select>
-          {errors.day_of_week && (
-            <p className="text-red-400 text-xs mt-1">{errors.day_of_week.message}</p>
+          </div>
+          {errors.days_of_week && (
+            <p className="text-red-400 text-xs mt-1">{errors.days_of_week.message}</p>
           )}
         </div>
 
