@@ -30,17 +30,16 @@ export function CommandPalette() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', user.id)
+      const { data: perfil } = await supabase
+        .from('stakeholders')
+        .select('academia_id, role')
+        .eq('id', user.id)
         .limit(1)
+        .single()
 
-      if (roles?.[0]) {
-        if (roles[0].academia_id) setUserRole('academia')
-        else if (roles[0].federacao_id) setUserRole('federacao')
-        else if (roles[0].atleta_id) setUserRole('atleta')
-      }
+      if (perfil?.academia_id) setUserRole('academia')
+      else if (perfil?.role === 'master_access') setUserRole('federacao')
+      else setUserRole('atleta')
     }
     detectRole()
   }, [supabase])
@@ -73,51 +72,51 @@ export function CommandPalette() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: role } = await supabase
-        .from('user_roles')
-        .select('academia_id, federacao_id, atleta_id')
-        .eq('user_id', user.id)
+      const { data: perfil } = await supabase
+        .from('stakeholders')
+        .select('academia_id, role')
+        .eq('id', user.id)
         .limit(1)
         .single()
 
-      if (!role) return
+      if (!perfil) return
+
+      const isMaster = perfil.role === 'master_access'
+      const academiaId = perfil.academia_id
 
       const searchResults: SearchResult[] = []
 
-      // Search Atletas (if academia or federacao)
-      if (role.academia_id || role.federacao_id) {
-        let atletasQuery = supabase
-          .from('atletas')
-          .select('id, nome, graduacao, academia:academias(nome)')
-          .ilike('nome', `%${searchQuery}%`)
-          .limit(5)
+      // Search Atletas
+      let atletasQuery = supabase
+        .from('user_fed_lrsj')
+        .select('stakeholder_id, nome_completo, academia_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)')
+        .ilike('nome_completo', `%${searchQuery}%`)
+        .eq('federacao_id', 1)
+        .limit(5)
 
-        if (role.academia_id) {
-          atletasQuery = atletasQuery.eq('academia_id', role.academia_id)
-        } else if (role.federacao_id) {
-          atletasQuery = atletasQuery.eq('federacao_id', role.federacao_id)
-        }
-
-        const { data: atletas } = await atletasQuery
-
-        atletas?.forEach((a: any) => {
-          searchResults.push({
-            id: a.id,
-            type: 'atleta',
-            title: a.nome,
-            subtitle: `${a.graduacao || 'Sem graduação'} • ${a.academia?.nome || ''}`,
-            href: `/atletas/${a.id}`,
-            icon: Users
-          })
-        })
+      if (academiaId && !isMaster) {
+        atletasQuery = atletasQuery.eq('academia_id', academiaId)
       }
 
-      // Search Academias (if federacao)
-      if (role.federacao_id) {
+      const { data: atletas } = await atletasQuery
+
+      atletas?.forEach((a: any) => {
+        const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
+        searchResults.push({
+          id: a.stakeholder_id,
+          type: 'atleta',
+          title: a.nome_completo,
+          subtitle: kd ? `${kd.cor_faixa} | ${kd.kyu_dan}` : 'Sem graduação',
+          href: `/portal/federacao/atletas/${a.stakeholder_id}`,
+          icon: Users
+        })
+      })
+
+      // Search Academias (if master)
+      if (isMaster) {
         const { data: academias } = await supabase
           .from('academias')
-          .select('id, nome, cidade, estado')
-          .eq('federacao_id', role.federacao_id)
+          .select('id, nome, endereco_cidade, endereco_estado')
           .ilike('nome', `%${searchQuery}%`)
           .limit(5)
 
@@ -126,19 +125,19 @@ export function CommandPalette() {
             id: a.id,
             type: 'academia',
             title: a.nome,
-            subtitle: `${a.cidade || ''}, ${a.estado || ''}`,
-            href: `/academias/${a.id}`,
+            subtitle: `${a.endereco_cidade || ''}, ${a.endereco_estado || ''}`,
+            href: `/portal/federacao/academias`,
             icon: Building2
           })
         })
       }
 
       // Search Aulas (if academia)
-      if (role.academia_id) {
+      if (academiaId) {
         const { data: aulas } = await supabase
           .from('classes')
           .select('id, name, location')
-          .eq('academy_id', role.academia_id)
+          .eq('academy_id', academiaId)
           .ilike('name', `%${searchQuery}%`)
           .limit(5)
 

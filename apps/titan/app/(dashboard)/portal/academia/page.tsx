@@ -84,18 +84,18 @@ export default function PortalAcademiaPage() {
 
       // Total atletas
       const { count: totalAtletas } = await supabase
-        .from('stakeholders')
+        .from('user_fed_lrsj')
         .select('*', { count: 'exact', head: true })
         .eq('academia_id', resolvedAcademiaId)
-        .eq('role', 'atleta')
+        .eq('federacao_id', 1)
 
-      // Atletas ativos
+      // Atletas ativos (plano válido)
       const { count: atletasAtivos } = await supabase
-        .from('stakeholders')
+        .from('user_fed_lrsj')
         .select('*', { count: 'exact', head: true })
         .eq('academia_id', resolvedAcademiaId)
-        .eq('role', 'atleta')
-        .eq('status', 'Ativo')
+        .eq('federacao_id', 1)
+        .eq('status_plano', 'Válido')
 
       // Total aulas
       const { count: totalAulas } = await supabase
@@ -126,15 +126,15 @@ export default function PortalAcademiaPage() {
 
       // Distribuição por graduação
       const { data: atletasData } = await supabase
-        .from('stakeholders')
-        .select('graduacao')
+        .from('user_fed_lrsj')
+        .select('kyu_dan:kyu_dan_id(cor_faixa)')
         .eq('academia_id', resolvedAcademiaId)
-        .eq('role', 'atleta')
-        .eq('status', 'Ativo')
+        .eq('federacao_id', 1)
 
       const graduacaoMap = new Map<string, number>()
-      atletasData?.forEach(a => {
-        const grad = a.graduacao || 'Não definida'
+      atletasData?.forEach((a: any) => {
+        const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
+        const grad = kd?.cor_faixa || 'Não definida'
         graduacaoMap.set(grad, (graduacaoMap.get(grad) || 0) + 1)
       })
 
