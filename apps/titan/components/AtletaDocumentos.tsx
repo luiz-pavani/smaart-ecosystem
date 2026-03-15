@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, FileText, IdCard, Loader2 } from 'lucide-react'
 
 // Versão beta para teste visual de atualizações
-const BETA_VERSION = '24'
+const BETA_VERSION = '25'
 
 interface AtletaDocumentosProps {
   atletaId: string
@@ -386,11 +386,15 @@ export default function AtletaDocumentos({
         return currentSize
       }
 
+      // Sanitiza caracteres fora do charset da fonte (ex: ū → u)
+      const sanitizeFontText = (text: string) =>
+        text.replace(/ū/g, 'u').replace(/Ū/g, 'U')
+
       doc.setTextColor(255, 255, 255)
 
-      // Nome
+      // Nome — sempre centralizado horizontalmente
       if (config.nome) {
-        const nomeX = s(config.nome.x || templateWidth / 2, 'x')
+        const nomeX = width / 2
         const nomeY = s(config.nome.y || 345, 'y')
         const nomeMaxWidth = s(config.nome.maxWidth || 700, 'x')
         const nomeFontSize = fitFontSize(
@@ -403,43 +407,34 @@ export default function AtletaDocumentos({
 
         doc.setFontSize(nomeFontSize)
         doc.setFont(pdfFontCondensed, 'normal')
-        doc.text(
-          atleta.nome,
-          nomeX,
-          nomeY,
-          { align: config.nome.align || 'center' }
-        )
+        doc.text(atleta.nome, nomeX, nomeY, { align: 'center' })
       }
 
-      // Graduação (valor) — sem label "GRADUAÇÃO"
+      // Graduação — kyu_dan | cor_faixa, abaixo, centralizado
       if (config.graduacao) {
-        const graduacaoX = s(config.graduacao.x || templateWidth / 2, 'x')
-        const graduacaoY = s(config.graduacao.y || 481, 'y')
-        const graduacaoMaxWidth = s(config.graduacao.maxWidth || 600, 'x')
+        const graduacaoX = width / 2
+        const graduacaoY = s(config.graduacao.y || 560, 'y')
+        const graduacaoMaxWidth = s(config.graduacao.maxWidth || 700, 'x')
+        const graduacaoText = sanitizeFontText(atleta.graduacao)
         const graduacaoFontSize = fitFontSize(
-          atleta.graduacao,
-          config.graduacao.fontSize || 52,
-          36,
+          graduacaoText,
+          config.graduacao.fontSize || 44,
+          28,
           graduacaoMaxWidth,
           pdfFontCondensed
         )
 
         doc.setFontSize(graduacaoFontSize)
         doc.setFont(pdfFontCondensed, 'normal')
-        doc.text(
-          atleta.graduacao,
-          graduacaoX,
-          graduacaoY,
-          { align: 'center' }
-        )
+        doc.text(graduacaoText, graduacaoX, graduacaoY, { align: 'center' })
       }
 
-      // Logo da Academia
+      // Logo da Academia — um pouco mais à esquerda e abaixo
       if (academiaLogo && config.logo_academia) {
         try {
           const logoData = await loadImageAsBase64(resolveAssetUrl(academiaLogo))
-          const boxX = s(config.logo_academia.x || 860, 'x')
-          const boxY = s(config.logo_academia.y || 500, 'y')
+          const boxX = s(config.logo_academia.x || 810, 'x')
+          const boxY = s(config.logo_academia.y || 570, 'y')
           const boxWidth = s(config.logo_academia.width || 180, 'x')
           const boxHeight = s(config.logo_academia.height || 180, 'y')
           const logoImg = new Image()
@@ -461,39 +456,10 @@ export default function AtletaDocumentos({
             boxHeight
           )
 
-          doc.addImage(
-            logoData,
-            'PNG',
-            drawX,
-            drawY,
-            drawWidth,
-            drawHeight
-          )
+          doc.addImage(logoData, 'PNG', drawX, drawY, drawWidth, drawHeight)
         } catch (err) {
           console.warn('Erro ao carregar logo academia:', err)
         }
-      }
-
-      // Assinatura "PRESIDENTE"
-      if (config.presidente) {
-        const presX = s(config.presidente.x || 540, 'x')
-        const presY = s(config.presidente.y || 640, 'y')
-        doc.setFontSize(config.presidente.fontSize || 16)
-        doc.setFont(pdfFontRegular, 'normal')
-        doc.setTextColor(150, 150, 150)
-
-        // Linha para assinatura
-        doc.setDrawColor(200, 200, 200)
-        doc.line(presX - 100, presY - 10, presX + 100, presY - 10)
-
-        doc.text(
-          config.presidente.text || 'PRESIDENTE',
-          presX,
-          presY,
-          { align: config.presidente.align || 'center' }
-        )
-
-        doc.setTextColor(255, 255, 255)
       }
 
       // 6. Download
