@@ -105,7 +105,7 @@ export async function GET(
         id: atleta.stakeholder_id,
         nome: atleta.nome_completo,
         academia: atleta.academias || '—',
-        graduacao: kyuDanData?.cor_faixa || '—',
+        graduacao: kyuDanData?.kyu_dan || '—',
         ano: anoValidacao.toString(),
       },
       academiaLogo: academiaLogo?.logo_url || null,
