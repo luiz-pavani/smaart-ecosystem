@@ -28,12 +28,22 @@ export default function PortalAcademiaPage() {
   const [error, setError] = useState<string | null>(null)
   const [academiaId, setAcademiaId] = useState<string | null>(null)
   const [downloadingCertificado, setDownloadingCertificado] = useState(false)
+  const [academias, setAcademias] = useState<{ id: string; nome: string }[]>([])
+  const [selectedAcademiaId, setSelectedAcademiaId] = useState<string>('')
+  const [isMaster, setIsMaster] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
   }, [])
 
-  async function loadDashboardData() {
+  useEffect(() => {
+    if (selectedAcademiaId) {
+      setAcademiaId(selectedAcademiaId)
+      loadDashboardData(selectedAcademiaId)
+    }
+  }, [selectedAcademiaId])
+
+  async function loadDashboardData(overrideAcademiaId?: string) {
     try {
       setError(null)
       const { data: { user } } = await supabase.auth.getUser()
@@ -42,33 +52,48 @@ export default function PortalAcademiaPage() {
         return
       }
 
-      const { data: role } = await supabase
+      const { data: perfil } = await supabase
         .from('stakeholders')
-        .select('academia_id')
+        .select('role, academia_id')
         .eq('id', user.id)
-        .not('academia_id', 'is', null)
         .limit(1)
         .single()
 
-      if (!role?.academia_id) {
+      const master = perfil?.role === 'master_access'
+      setIsMaster(master)
+
+      let resolvedAcademiaId = overrideAcademiaId || academiaId || perfil?.academia_id
+
+      if (!resolvedAcademiaId) {
+        if (master) {
+          // Carregar lista de academias para o seletor
+          const { data: acadList } = await supabase
+            .from('academias')
+            .select('id, nome')
+            .eq('ativo', true)
+            .order('nome', { ascending: true })
+          setAcademias(acadList || [])
+          setLoading(false)
+          return
+        }
         setError('Academia vinculada não encontrada para este usuário')
         return
       }
 
-      setAcademiaId(role.academia_id)
+      setAcademiaId(resolvedAcademiaId)
 
       // Total atletas
       const { count: totalAtletas } = await supabase
         .from('stakeholders')
         .select('*', { count: 'exact', head: true })
-        .eq('academia_id', role.academia_id)
+        .eq('academia_id', resolvedAcademiaId)
         .eq('role', 'atleta')
 
       // Atletas ativos
       const { count: atletasAtivos } = await supabase
         .from('stakeholders')
         .select('*', { count: 'exact', head: true })
-        .eq('academia_id', role.academia_id)
+        .eq('academia_id', resolvedAcademiaId)
         .eq('role', 'atleta')
         .eq('status', 'Ativo')
 
@@ -76,7 +101,7 @@ export default function PortalAcademiaPage() {
       const { count: totalAulas } = await supabase
         .from('classes')
         .select('*', { count: 'exact', head: true })
-        .eq('academy_id', role.academia_id)
+        .eq('academy_id', resolvedAcademiaId)
         .eq('is_active', true)
 
       // Frequência últimos 7 dias (agregado por dia)
@@ -89,7 +114,7 @@ export default function PortalAcademiaPage() {
       const { data: attendanceData } = await supabase
         .from('attendance_records')
         .select('attendance_date')
-        .eq('academy_id', role.academia_id)
+        .eq('academy_id', resolvedAcademiaId)
         .eq('status', 'PRESENT')
         .gte('attendance_date', last7Days[0])
         .lte('attendance_date', last7Days[6])
@@ -103,7 +128,7 @@ export default function PortalAcademiaPage() {
       const { data: atletasData } = await supabase
         .from('stakeholders')
         .select('graduacao')
-        .eq('academia_id', role.academia_id)
+        .eq('academia_id', resolvedAcademiaId)
         .eq('role', 'atleta')
         .eq('status', 'Ativo')
 
@@ -125,7 +150,7 @@ export default function PortalAcademiaPage() {
       const { data: topAttendance } = await supabase
         .from('attendance_records')
         .select('athlete_id, athlete:stakeholders(nome_completo, graduacao)')
-        .eq('academy_id', role.academia_id)
+        .eq('academy_id', resolvedAcademiaId)
         .eq('status', 'PRESENT')
         .gte('attendance_date', thirtyDaysStr)
 
@@ -268,6 +293,23 @@ export default function PortalAcademiaPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Seletor de academia para master_access */}
+        {isMaster && !academiaId && academias.length > 0 && (
+          <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center max-w-md mx-auto mt-8">
+            <h3 className="text-white font-semibold text-lg mb-4">Selecione uma Academia</h3>
+            <select
+              value={selectedAcademiaId}
+              onChange={(e) => setSelectedAcademiaId(e.target.value)}
+              className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
+            >
+              <option value="">-- Escolha uma academia --</option>
+              {academias.map((a) => (
+                <option key={a.id} value={a.id}>{a.nome}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-white">Carregando...</div>
@@ -276,7 +318,7 @@ export default function PortalAcademiaPage() {
           <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
             <p className="text-red-200 font-medium mb-3">{error}</p>
             <button
-              onClick={loadDashboardData}
+              onClick={() => loadDashboardData()}
               className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
               Tentar novamente
