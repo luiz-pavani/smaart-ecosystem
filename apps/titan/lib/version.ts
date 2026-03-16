@@ -3,8 +3,8 @@
  * Auto-updated with each release
  */
 
-export const APP_VERSION = '47.0.0'
-export const APP_VERSION_NAME = 'Beta 47'
+export const APP_VERSION = '48.0.0'
+export const APP_VERSION_NAME = 'Beta 48'
 export const APP_RELEASE_DATE = '2026-03-16'
 export const APP_BUILD = 'Portal Federação: stats corrigidos, crescimento YoY, cidades reais - Beta 47'
 
