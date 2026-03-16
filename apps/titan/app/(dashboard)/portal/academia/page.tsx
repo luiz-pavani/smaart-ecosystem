@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User, Award } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -418,6 +418,13 @@ export default function PortalAcademiaPage() {
       icon: <TrendingUp className="w-6 h-6" />,
       href: '/portal/academia/desempenho',
       color: 'from-emerald-500 to-emerald-600'
+    },
+    {
+      title: 'Graduações',
+      description: 'Motor de promoção de faixa',
+      icon: <Award className="w-6 h-6" />,
+      href: '/portal/academia/promocao',
+      color: 'from-amber-500 to-amber-600'
     },
   ]
 
