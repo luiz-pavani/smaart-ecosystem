@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Search, UserPlus, Loader2, Users, X, Filter } from 'lucide-react'
+import { ArrowLeft, Search, UserPlus, Loader2, Users, X, Filter, Star } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
@@ -46,6 +46,7 @@ export default function AulaDetailPage() {
   const [searchLoading, setSearchLoading] = useState(false)
   const [actionId, setActionId] = useState<string | null>(null)
   const [filterByCriteria, setFilterByCriteria] = useState(false)
+  const [rating, setRating] = useState<{ avg: number | null; total: number } | null>(null)
 
   // Load class info
   useEffect(() => {
@@ -76,6 +77,13 @@ export default function AulaDetailPage() {
           schedules: d.class_schedules || [],
         })
       }
+      // Load rating
+      const ratingRes = await fetch(`/api/aulas/${classId}/rating`)
+      if (ratingRes.ok) {
+        const ratingJson = await ratingRes.json()
+        setRating({ avg: ratingJson.avg, total: ratingJson.total })
+      }
+
       setLoading(false)
     }
     init()
@@ -187,6 +195,12 @@ export default function AulaDetailPage() {
                   <Users className="w-4 h-4 inline mr-1" />
                   {classInfo.current_enrollment}/{classInfo.capacity || '—'} alunos
                 </span>
+                {rating && rating.total > 0 && (
+                  <span className="flex items-center gap-1 text-yellow-400 text-sm">
+                    <Star className="w-4 h-4 fill-yellow-400" />
+                    {rating.avg!.toFixed(1)} <span className="text-gray-400 text-xs">({rating.total} avaliações)</span>
+                  </span>
+                )}
               </div>
               {/* Criteria badges */}
               {(classInfo.min_age != null || classInfo.max_age != null || classInfo.min_kyu_dan_id != null || classInfo.max_kyu_dan_id != null) && (

@@ -1,12 +1,26 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, AlertCircle, User, Mail, Phone, MapPin, Award, Building2, CreditCard, Settings } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Settings, Calendar, Clock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
+import { RatingStars } from '@/components/RatingStars'
 
 interface KyuDan { id: number; cor_faixa: string; kyu_dan: string; icones?: string }
+
+interface TurmaMatriculada {
+  id: string
+  name: string
+  location: string | null
+  instructor_name: string | null
+  enrolled_at: string
+  schedules: { day_of_week: number; start_time: string; end_time: string }[]
+}
+
+const dayLabels: Record<number, string> = {
+  0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb',
+}
 
 interface AtletaPerfil {
   stakeholder_id: string
@@ -49,6 +63,7 @@ export default function PerfilAtletaPage() {
   const supabase = createClient()
   const [atleta, setAtleta] = useState<AtletaPerfil | null>(null)
   const [kyuDan, setKyuDan] = useState<KyuDan | null>(null)
+  const [turmas, setTurmas] = useState<TurmaMatriculada[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,9 +74,14 @@ export default function PerfilAtletaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setError('Usuário não autenticado'); return }
 
-        const [{ data: fedData, error: fedErr }, { data: kdData }] = await Promise.all([
+        const [{ data: fedData, error: fedErr }, { data: kdData }, { data: enrollData }] = await Promise.all([
           supabase.from('user_fed_lrsj').select('*').eq('stakeholder_id', user.id).maybeSingle(),
           supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan, icones').order('id'),
+          supabase.from('class_enrollments')
+            .select('enrolled_at, class:class_id(id, name, location, instructor_name, class_schedules(day_of_week, start_time, end_time))')
+            .eq('athlete_id', user.id)
+            .eq('is_active', true)
+            .order('enrolled_at', { ascending: false }),
         ])
 
         if (fedErr) throw fedErr
@@ -71,6 +91,18 @@ export default function PerfilAtletaPage() {
           const kd = (kdData || []).find((k: KyuDan) => k.id === fedData.kyu_dan_id)
           setKyuDan(kd || null)
         }
+
+        setTurmas((enrollData || []).map((e: any) => {
+          const c = Array.isArray(e.class) ? e.class[0] : e.class
+          return {
+            id: c?.id || '',
+            name: c?.name || '',
+            location: c?.location || null,
+            instructor_name: c?.instructor_name || null,
+            enrolled_at: e.enrolled_at,
+            schedules: c?.class_schedules || [],
+          }
+        }).filter((t: TurmaMatriculada) => t.id))
       } catch (err) {
         console.error(err)
         setError('Não foi possível carregar seu perfil')
@@ -216,6 +248,46 @@ export default function PerfilAtletaPage() {
                 <Row label="Status do Membro" value={atleta.status_membro} />
                 <Row label="Validade" value={atleta.data_expiracao} />
               </div>
+            </div>
+
+            {/* Minhas Turmas */}
+            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-4 h-4 text-purple-400" />
+                <h3 className="font-semibold text-white">Minhas Turmas</h3>
+                <span className="ml-auto text-xs text-gray-400">{turmas.length} matriculado{turmas.length !== 1 ? 's' : ''}</span>
+              </div>
+              {turmas.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">Nenhuma turma matriculada</p>
+              ) : (
+                <div className="space-y-3">
+                  {turmas.map((t) => (
+                    <div key={t.id} className="bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+                      <p className="text-white font-medium text-sm">{t.name}</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                        {t.instructor_name && (
+                          <span className="text-xs text-purple-400">👤 {t.instructor_name}</span>
+                        )}
+                        {t.location && (
+                          <span className="text-xs text-gray-400">📍 {t.location}</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+                        <div className="flex flex-wrap gap-1.5">
+                          {t.schedules.map((s, i) => (
+                            <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                              {dayLabels[s.day_of_week]} {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
+                            </span>
+                          ))}
+                        </div>
+                        {atleta && (
+                          <RatingStars classId={t.id} athleteId={atleta.stakeholder_id} />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (

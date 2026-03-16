@@ -11,6 +11,13 @@ import { TopList } from '@/components/dashboard/TopList'
 import { gerarCertificadoPdf } from '@/lib/certificados/gerarCertificadoPdf'
 import { saveSelectedAcademiaId, getSelectedAcademiaId } from '@/lib/portal/resolveAcademiaId'
 
+interface AtletaInativo {
+  nome_completo: string
+  telefone: string | null
+  status_plano: string | null
+  data_expiracao: string | null
+}
+
 interface AulaHoje {
   name: string
   location: string | null
@@ -27,6 +34,7 @@ interface Aniversariante {
   data_nascimento: string
   idade: number
   hoje: boolean
+  telefone?: string | null
 }
 
 interface DashboardData {
@@ -39,6 +47,7 @@ interface DashboardData {
   topAtletas: { name: string; value: number; subtitle: string }[]
   aniversariantes: Aniversariante[]
   aulasHoje: AulaHoje[]
+  atletasInativos: AtletaInativo[]
 }
 
 export default function PortalAcademiaPage() {
@@ -226,10 +235,27 @@ export default function PortalAcademiaPage() {
       // Calcular frequência média
       const avgFrequency = attendanceByDay.reduce((sum, day) => sum + day.value, 0) / 7
 
+      // Atletas inativos (plano vencido ou sem plano)
+      const { data: inativos } = await supabase
+        .from('user_fed_lrsj')
+        .select('nome_completo, telefone, status_plano, data_expiracao')
+        .eq('academia_id', resolvedAcademiaId)
+        .eq('federacao_id', 1)
+        .neq('status_plano', 'Válido')
+        .order('data_expiracao', { ascending: true })
+        .limit(10)
+
+      const atletasInativos: AtletaInativo[] = (inativos || []).map((a: any) => ({
+        nome_completo: a.nome_completo,
+        telefone: a.telefone || null,
+        status_plano: a.status_plano || null,
+        data_expiracao: a.data_expiracao || null,
+      }))
+
       // Aniversariantes da semana (próximos 7 dias incluindo hoje)
       const { data: atletasAniversario } = await supabase
         .from('user_fed_lrsj')
-        .select('nome_completo, data_nascimento')
+        .select('nome_completo, data_nascimento, telefone')
         .eq('academia_id', resolvedAcademiaId)
         .eq('federacao_id', 1)
         .not('data_nascimento', 'is', null)
@@ -251,7 +277,8 @@ export default function PortalAcademiaPage() {
               data_nascimento: a.data_nascimento,
               idade: age,
               hoje: d === 0,
-            })
+              telefone: (a as any).telefone || null,
+            } as any)
             break
           }
         }
@@ -310,6 +337,7 @@ export default function PortalAcademiaPage() {
         topAtletas,
         aniversariantes,
         aulasHoje,
+        atletasInativos,
       })
     } catch (err) {
       console.error('Erro ao carregar dashboard da academia:', err)
@@ -574,12 +602,63 @@ export default function PortalAcademiaPage() {
                           : 'bg-white/5 border-white/10'
                       }`}>
                         <span className="text-xl">{a.hoje ? '🎂' : '🎁'}</span>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-white font-medium text-sm leading-tight">{a.nome_completo}</p>
                           <p className={`text-xs ${a.hoje ? 'text-pink-300' : 'text-gray-400'}`}>
                             {dia}/{mes} · {a.idade} anos{a.hoje ? ' · Hoje!' : ''}
                           </p>
                         </div>
+                        {a.telefone && (
+                          <a
+                            href={`https://wa.me/55${a.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`🎂 Feliz Aniversário, ${a.nome_completo.split(' ')[0]}! Desejamos um ótimo dia! 🥋`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors"
+                            title="Enviar parabéns pelo WhatsApp"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            Parabéns
+                          </a>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Atletas Inativos */}
+            {data.atletasInativos.length > 0 && (
+              <div className="bg-gradient-to-br from-red-500/10 to-orange-500/5 border border-red-500/20 rounded-xl p-6 mb-8">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <span className="text-red-400">⚠️</span>
+                  Atletas com Plano Inativo
+                  <span className="ml-auto text-sm font-normal text-gray-400">{data.atletasInativos.length} atleta{data.atletasInativos.length !== 1 ? 's' : ''}</span>
+                </h3>
+                <div className="space-y-2">
+                  {data.atletasInativos.map((a, i) => {
+                    const expStr = a.data_expiracao
+                      ? new Date(a.data_expiracao).toLocaleDateString('pt-BR')
+                      : null
+                    return (
+                      <div key={i} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-medium text-sm">{a.nome_completo}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {a.status_plano || 'Sem plano'}{expStr ? ` · venceu em ${expStr}` : ''}
+                          </p>
+                        </div>
+                        {a.telefone && (
+                          <a
+                            href={`https://wa.me/55${a.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${a.nome_completo.split(' ')[0]}! 👋 Sentimos sua falta! Sua filiação à academia está vencida. Que tal renovar? 🥋`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors ml-3"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            Contatar
+                          </a>
+                        )}
                       </div>
                     )
                   })}
