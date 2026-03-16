@@ -3,10 +3,10 @@
  * Auto-updated with each release
  */
 
-export const APP_VERSION = '49.0.0'
-export const APP_VERSION_NAME = 'Beta 49'
+export const APP_VERSION = '50.0.0'
+export const APP_VERSION_NAME = 'Beta 50'
 export const APP_RELEASE_DATE = '2026-03-16'
-export const APP_BUILD = 'Fase 2: Waitlist por turma - Beta 49'
+export const APP_BUILD = 'Fase 2: Check-in por QR Code - Beta 50'
 
 export const getVersionString = () => {
   return `${APP_VERSION_NAME} (v${APP_VERSION})`

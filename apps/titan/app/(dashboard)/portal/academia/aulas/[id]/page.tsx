@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Search, UserPlus, Loader2, Users, X, Filter, Star, Clock, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Search, UserPlus, Loader2, Users, X, Filter, Star, Clock, ChevronUp, QrCode } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
@@ -230,13 +230,22 @@ export default function AulaDetailPage() {
       {/* Header */}
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-6xl mx-auto px-4">
-          <button
-            onClick={() => router.push('/portal/academia/aulas')}
-            className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Voltar para Aulas
-          </button>
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => router.push('/portal/academia/aulas')}
+              className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Voltar para Aulas
+            </button>
+            <button
+              onClick={() => router.push(`/portal/academia/aulas/${classId}/checkin`)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 border border-green-500/30 text-green-300 hover:bg-green-500/30 text-sm font-medium transition-colors"
+            >
+              <QrCode className="w-4 h-4" />
+              Check-in QR
+            </button>
+          </div>
           {classInfo && (
             <>
               <h1 className="text-3xl font-bold text-white">{classInfo.name}</h1>
