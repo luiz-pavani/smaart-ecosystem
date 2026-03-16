@@ -42,16 +42,15 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   // Update enrollment count
-  await supabaseAdmin.rpc('increment_enrollment' as any, { class_id: classId }).catch(() => {
-    supabaseAdmin
-      .from('classes')
-      .select('current_enrollment')
-      .eq('id', classId)
-      .single()
-      .then(({ data }) => {
-        supabaseAdmin.from('classes').update({ current_enrollment: (data?.current_enrollment || 0) + 1 }).eq('id', classId)
-      })
-  })
+  const { data: classData } = await supabaseAdmin
+    .from('classes')
+    .select('current_enrollment')
+    .eq('id', classId)
+    .single()
+  await supabaseAdmin
+    .from('classes')
+    .update({ current_enrollment: (classData?.current_enrollment || 0) + 1 })
+    .eq('id', classId)
 
   // Remove from waitlist
   await supabaseAdmin.from('class_waitlist').delete().eq('id', (entry as any).id)
