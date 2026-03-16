@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -10,6 +10,17 @@ import { PieChart } from '@/components/dashboard/PieChart'
 import { TopList } from '@/components/dashboard/TopList'
 import { gerarCertificadoPdf } from '@/lib/certificados/gerarCertificadoPdf'
 import { saveSelectedAcademiaId, getSelectedAcademiaId } from '@/lib/portal/resolveAcademiaId'
+
+interface AulaHoje {
+  name: string
+  location: string | null
+  instructor_name: string | null
+  start_time: string
+  end_time: string
+  current_enrollment: number
+  capacity: number | null
+  status: 'passada' | 'em_andamento' | 'proxima'
+}
 
 interface Aniversariante {
   nome_completo: string
@@ -27,6 +38,7 @@ interface DashboardData {
   graduacaoDistribution: { name: string; value: number }[]
   topAtletas: { name: string; value: number; subtitle: string }[]
   aniversariantes: Aniversariante[]
+  aulasHoje: AulaHoje[]
 }
 
 export default function PortalAcademiaPage() {
@@ -245,6 +257,43 @@ export default function PortalAcademiaPage() {
         }
       }
 
+      // Aulas de hoje
+      const todayDow = new Date().getDay() // 0=Dom, 1=Seg...
+      const { data: aulasHojeData } = await supabase
+        .from('class_schedules')
+        .select('start_time, end_time, class:class_id(id, name, location, instructor_name, current_enrollment, capacity, is_active, academy_id)')
+        .eq('day_of_week', todayDow)
+
+      const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes()
+
+      const aulasHoje: AulaHoje[] = (aulasHojeData || [])
+        .filter((s: any) => {
+          const c = Array.isArray(s.class) ? s.class[0] : s.class
+          return c?.is_active && c?.academy_id === resolvedAcademiaId
+        })
+        .map((s: any) => {
+          const c = Array.isArray(s.class) ? s.class[0] : s.class
+          const [sh, sm] = s.start_time.split(':').map(Number)
+          const [eh, em] = s.end_time.split(':').map(Number)
+          const startMin = sh * 60 + sm
+          const endMin = eh * 60 + em
+          const status: AulaHoje['status'] =
+            nowMinutes >= startMin && nowMinutes < endMin ? 'em_andamento'
+            : nowMinutes < startMin ? 'proxima'
+            : 'passada'
+          return {
+            name: c.name,
+            location: c.location || null,
+            instructor_name: c.instructor_name || null,
+            start_time: s.start_time.slice(0, 5),
+            end_time: s.end_time.slice(0, 5),
+            current_enrollment: c.current_enrollment || 0,
+            capacity: c.capacity || null,
+            status,
+          }
+        })
+        .sort((a: AulaHoje, b: AulaHoje) => a.start_time.localeCompare(b.start_time))
+
       aniversariantes.sort((a, b) => {
         if (a.hoje && !b.hoje) return -1
         if (!a.hoje && b.hoje) return 1
@@ -260,6 +309,7 @@ export default function PortalAcademiaPage() {
         graduacaoDistribution,
         topAtletas,
         aniversariantes,
+        aulasHoje,
       })
     } catch (err) {
       console.error('Erro ao carregar dashboard da academia:', err)
@@ -425,6 +475,68 @@ export default function PortalAcademiaPage() {
                 color="orange"
                 onClick={() => router.push('/portal/academia/frequencia')}
               />
+            </div>
+
+            {/* Aulas de Hoje */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-purple-400" />
+                {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                <span className="ml-auto text-sm font-normal text-gray-400">
+                  {data.aulasHoje.length === 0 ? 'Nenhuma aula hoje' : `${data.aulasHoje.length} aula${data.aulasHoje.length !== 1 ? 's' : ''}`}
+                </span>
+              </h3>
+              {data.aulasHoje.length === 0 ? (
+                <p className="text-gray-500 text-sm text-center py-4">Sem aulas programadas para hoje</p>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {data.aulasHoje.map((aula, i) => (
+                    <div
+                      key={i}
+                      onClick={() => router.push('/portal/academia/aulas')}
+                      className={`cursor-pointer flex-1 min-w-[200px] rounded-xl border px-4 py-3 transition-all ${
+                        aula.status === 'em_andamento'
+                          ? 'bg-green-500/15 border-green-500/40 shadow-[0_0_12px_rgba(34,197,94,0.15)]'
+                          : aula.status === 'proxima'
+                          ? 'bg-white/5 border-white/15 hover:bg-white/8'
+                          : 'bg-white/3 border-white/8 opacity-50'
+                      }`}
+                    >
+                      {/* Status badge + time */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-white text-sm tabular-nums">
+                          {aula.start_time} – {aula.end_time}
+                        </span>
+                        {aula.status === 'em_andamento' && (
+                          <span className="flex items-center gap-1 text-[10px] font-semibold text-green-400 bg-green-500/20 px-2 py-0.5 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
+                            AO VIVO
+                          </span>
+                        )}
+                        {aula.status === 'proxima' && (
+                          <span className="text-[10px] text-purple-400 bg-purple-500/15 px-2 py-0.5 rounded-full font-medium">PRÓXIMA</span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-white text-sm leading-tight">{aula.name}</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                        {aula.instructor_name && (
+                          <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <User className="w-3 h-3" />{aula.instructor_name}
+                          </span>
+                        )}
+                        {aula.location && (
+                          <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />{aula.location}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          {aula.current_enrollment}/{aula.capacity ?? '—'} alunos
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Charts Row */}

@@ -3,10 +3,10 @@
  * Auto-updated with each release
  */
 
-export const APP_VERSION = '44.0.0'
-export const APP_VERSION_NAME = 'Beta 44'
+export const APP_VERSION = '45.0.0'
+export const APP_VERSION_NAME = 'Beta 45'
 export const APP_RELEASE_DATE = '2026-03-16'
-export const APP_BUILD = 'Dashboard: gráfico graduação agrupado + aniversariantes - Beta 44'
+export const APP_BUILD = 'Dashboard: aulas de hoje com status dinâmico - Beta 45'
 
 export const getVersionString = () => {
   return `${APP_VERSION_NAME} (v${APP_VERSION})`
