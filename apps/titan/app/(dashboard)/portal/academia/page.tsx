@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -11,6 +11,13 @@ import { TopList } from '@/components/dashboard/TopList'
 import { gerarCertificadoPdf } from '@/lib/certificados/gerarCertificadoPdf'
 import { saveSelectedAcademiaId, getSelectedAcademiaId } from '@/lib/portal/resolveAcademiaId'
 
+interface Aniversariante {
+  nome_completo: string
+  data_nascimento: string
+  idade: number
+  hoje: boolean
+}
+
 interface DashboardData {
   totalAtletas: number
   atletasAtivos: number
@@ -19,6 +26,7 @@ interface DashboardData {
   atletasLast7Days: { name: string; value: number }[]
   graduacaoDistribution: { name: string; value: number }[]
   topAtletas: { name: string; value: number; subtitle: string }[]
+  aniversariantes: Aniversariante[]
 }
 
 export default function PortalAcademiaPage() {
@@ -186,6 +194,43 @@ export default function PortalAcademiaPage() {
       // Calcular frequência média
       const avgFrequency = attendanceByDay.reduce((sum, day) => sum + day.value, 0) / 7
 
+      // Aniversariantes da semana (próximos 7 dias incluindo hoje)
+      const { data: atletasAniversario } = await supabase
+        .from('user_fed_lrsj')
+        .select('nome_completo, data_nascimento')
+        .eq('academia_id', resolvedAcademiaId)
+        .eq('federacao_id', 1)
+        .not('data_nascimento', 'is', null)
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const aniversariantes: Aniversariante[] = []
+
+      for (const a of atletasAniversario || []) {
+        const birth = new Date(a.data_nascimento)
+        // Check next 7 days (ignoring year)
+        for (let d = 0; d < 7; d++) {
+          const check = new Date(today)
+          check.setDate(today.getDate() + d)
+          if (birth.getMonth() === check.getMonth() && birth.getDate() === check.getDate()) {
+            const age = check.getFullYear() - birth.getFullYear()
+            aniversariantes.push({
+              nome_completo: a.nome_completo,
+              data_nascimento: a.data_nascimento,
+              idade: age,
+              hoje: d === 0,
+            })
+            break
+          }
+        }
+      }
+
+      aniversariantes.sort((a, b) => {
+        if (a.hoje && !b.hoje) return -1
+        if (!a.hoje && b.hoje) return 1
+        return new Date(a.data_nascimento).getDate() - new Date(b.data_nascimento).getDate()
+      })
+
       setData({
         totalAtletas: totalAtletas || 0,
         atletasAtivos: atletasAtivos || 0,
@@ -193,7 +238,8 @@ export default function PortalAcademiaPage() {
         frequenciaMedia: Math.round(avgFrequency),
         atletasLast7Days: attendanceByDay,
         graduacaoDistribution,
-        topAtletas
+        topAtletas,
+        aniversariantes,
       })
     } catch (err) {
       console.error('Erro ao carregar dashboard da academia:', err)
@@ -375,6 +421,39 @@ export default function PortalAcademiaPage() {
                 height={250}
               />
             </div>
+
+            {/* Aniversariantes da Semana */}
+            {data.aniversariantes.length > 0 && (
+              <div className="bg-gradient-to-br from-pink-500/10 to-rose-500/5 border border-pink-500/20 rounded-xl p-6 mb-8">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <Cake className="w-5 h-5 text-pink-400" />
+                  Aniversariantes da Semana
+                  <span className="ml-auto text-sm font-normal text-gray-400">{data.aniversariantes.length} atleta{data.aniversariantes.length !== 1 ? 's' : ''}</span>
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {data.aniversariantes.map((a, i) => {
+                    const birth = new Date(a.data_nascimento)
+                    const dia = birth.getDate().toString().padStart(2, '0')
+                    const mes = (birth.getMonth() + 1).toString().padStart(2, '0')
+                    return (
+                      <div key={i} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-colors ${
+                        a.hoje
+                          ? 'bg-pink-500/20 border-pink-500/40'
+                          : 'bg-white/5 border-white/10'
+                      }`}>
+                        <span className="text-xl">{a.hoje ? '🎂' : '🎁'}</span>
+                        <div>
+                          <p className="text-white font-medium text-sm leading-tight">{a.nome_completo}</p>
+                          <p className={`text-xs ${a.hoje ? 'text-pink-300' : 'text-gray-400'}`}>
+                            {dia}/{mes} · {a.idade} anos{a.hoje ? ' · Hoje!' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Top Atletas + Quick Links */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
