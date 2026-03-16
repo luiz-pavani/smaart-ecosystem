@@ -68,5 +68,22 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Award points for check-in (fire-and-forget)
+  const { data: classData } = await supabaseAdmin
+    .from('classes')
+    .select('academy_id')
+    .eq('id', classId)
+    .maybeSingle()
+  if (classData?.academy_id) {
+    supabaseAdmin.from('pontos_atleta').insert({
+      athlete_id: user.id,
+      academia_id: classData.academy_id,
+      tipo: 'checkin',
+      pontos: 10,
+      descricao: 'Check-in na aula',
+      ref_id: classId,
+    }).then(() => {})
+  }
+
   return NextResponse.json({ ok: true })
 }
