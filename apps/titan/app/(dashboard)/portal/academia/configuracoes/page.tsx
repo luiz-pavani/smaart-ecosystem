@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
 
 interface AcademiaForm {
   nome: string
@@ -79,24 +80,14 @@ export default function ConfiguracoesAcademiaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const { data: perfil } = await supabase
-          .from('stakeholders')
-          .select('academia_id')
-          .eq('id', user.id)
-          .not('academia_id', 'is', null)
-          .limit(1)
-          .single()
+        const resolvedId = await resolveAcademiaId(supabase)
+        if (!resolvedId) { setError('Academia não encontrada. Selecione uma academia no portal.'); return }
+        setAcademiaId(resolvedId)
 
-        if (!perfil?.academia_id) { setError('Academia não encontrada'); return }
-        setAcademiaId(perfil.academia_id)
-
-        const { data: academia, error: acadErr } = await supabase
-          .from('academias')
-          .select('*')
-          .eq('id', perfil.academia_id)
-          .single()
-
-        if (acadErr || !academia) { setError('Erro ao carregar dados da academia'); return }
+        const res = await fetch(`/api/academias/${resolvedId}`)
+        if (!res.ok) { setError('Erro ao carregar dados da academia'); return }
+        const { academia } = await res.json()
+        if (!academia) { setError('Academia não encontrada'); return }
 
         setForm({
           nome: academia.nome || '',
@@ -145,9 +136,10 @@ export default function ConfiguracoesAcademiaPage() {
       setError(null)
       setSuccess(false)
 
-      const { error: updateErr } = await supabase
-        .from('academias')
-        .update({
+      const res = await fetch(`/api/academias/${academiaId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           nome: form.nome,
           nome_fantasia: form.nome_fantasia,
           sigla: form.sigla.slice(0, 3).toUpperCase(),
@@ -173,10 +165,13 @@ export default function ConfiguracoesAcademiaPage() {
           horario_funcionamento: form.horario_funcionamento,
           quantidade_alunos: form.quantidade_alunos ? parseInt(form.quantidade_alunos) : null,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', academiaId)
+        }),
+      })
 
-      if (updateErr) throw updateErr
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Erro ao salvar')
+      }
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {

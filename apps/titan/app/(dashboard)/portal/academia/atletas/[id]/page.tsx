@@ -1,10 +1,11 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, AlertCircle, User, Mail, Phone, MapPin, Award, Building2, CreditCard, Settings } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, BookOpen, X, Plus } from 'lucide-react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
+import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
 
 interface KyuDan { id: number; cor_faixa: string; kyu_dan: string; icones?: string }
 
@@ -26,6 +27,7 @@ interface AtletaPerfil {
   status_membro: string | null
   data_expiracao: string | null
   url_foto: string | null
+  nivel_arbitragem: string | null
   tamanho_patch: string | null
 }
 
@@ -44,13 +46,30 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-export default function PerfilAtletaPage() {
+export default function AtletaAcademiaDetailPage() {
   const router = useRouter()
+  const params = useParams()
+  const atletaId = params.id as string
   const supabase = createClient()
   const [atleta, setAtleta] = useState<AtletaPerfil | null>(null)
   const [kyuDan, setKyuDan] = useState<KyuDan | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [turmas, setTurmas] = useState<{ id: string; name: string; schedules: { day_of_week: number; start_time: string; end_time: string }[] }[]>([])
+  const [allTurmas, setAllTurmas] = useState<{ id: string; name: string; enrolled: boolean }[]>([])
+  const [showAddTurma, setShowAddTurma] = useState(false)
+  const [turmaActionId, setTurmaActionId] = useState<string | null>(null)
+  const [academiaId, setAcademiaId] = useState<string | null>(null)
+
+  const dayShort: Record<number, string> = { 0:'Dom',1:'Seg',2:'Ter',3:'Qua',4:'Qui',5:'Sex',6:'Sáb' }
+
+  const loadTurmas = useCallback(async (acadId: string) => {
+    const res = await fetch(`/api/atletas/${atletaId}/turmas?academiaId=${acadId}`)
+    if (!res.ok) return
+    const json = await res.json()
+    setTurmas(json.enrolled || [])
+    setAllTurmas(json.all || [])
+  }, [atletaId])
 
   useEffect(() => {
     const load = async () => {
@@ -59,8 +78,30 @@ export default function PerfilAtletaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setError('Usuário não autenticado'); return }
 
+        // Verify user is associated with an academia
+        const { data: perfil } = await supabase
+          .from('stakeholders')
+          .select('academia_id, role')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (!perfil?.academia_id && perfil?.role !== 'master_access') {
+          setError('Sem permissão para acessar este perfil')
+          return
+        }
+
+        const acadId = await resolveAcademiaId(supabase)
+        if (acadId) {
+          setAcademiaId(acadId)
+          loadTurmas(acadId)
+        }
+
         const [{ data: fedData, error: fedErr }, { data: kdData }] = await Promise.all([
-          supabase.from('user_fed_lrsj').select('*').eq('stakeholder_id', user.id).maybeSingle(),
+          supabase
+            .from('user_fed_lrsj')
+            .select('*')
+            .eq('stakeholder_id', atletaId)
+            .maybeSingle(),
           supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan, icones').order('id'),
         ])
 
@@ -70,30 +111,32 @@ export default function PerfilAtletaPage() {
           setAtleta(fedData as AtletaPerfil)
           const kd = (kdData || []).find((k: KyuDan) => k.id === fedData.kyu_dan_id)
           setKyuDan(kd || null)
+        } else {
+          setError('Atleta não encontrado')
         }
       } catch (err) {
         console.error(err)
-        setError('Não foi possível carregar seu perfil')
+        setError('Não foi possível carregar o perfil do atleta')
       } finally {
         setLoading(false)
       }
     }
     load()
-  }, [])
+  }, [atletaId])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-4xl mx-auto px-4">
           <button
-            onClick={() => router.push('/portal/atleta')}
+            onClick={() => router.push('/portal/academia/atletas')}
             className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            Voltar
+            Voltar para Atletas
           </button>
-          <h1 className="text-3xl font-bold text-white">Meu Perfil</h1>
-          <p className="text-gray-400 mt-1">Dados pessoais e de filiação na federação</p>
+          <h1 className="text-3xl font-bold text-white">Perfil do Atleta</h1>
+          <p className="text-gray-400 mt-1">Dados de filiação na federação</p>
         </div>
       </div>
 
@@ -148,13 +191,6 @@ export default function PerfilAtletaPage() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => router.push('/configuracoes')}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shrink-0"
-                >
-                  <Settings className="w-4 h-4" />
-                  Editar Perfil
-                </button>
               </div>
             </div>
 
@@ -165,6 +201,86 @@ export default function PerfilAtletaPage() {
                 statusMembro={atleta.status_membro}
                 kyuDanId={atleta.kyu_dan_id}
               />
+            </div>
+
+            {/* Turmas */}
+            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen className="w-4 h-4 text-purple-400" />
+                <h3 className="font-semibold text-white">Turmas</h3>
+                <button
+                  onClick={() => setShowAddTurma(v => !v)}
+                  className="ml-auto flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-purple-500/30 text-xs font-medium transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  {showAddTurma ? 'Fechar' : 'Adicionar'}
+                </button>
+              </div>
+
+              {turmas.length === 0 && !showAddTurma && (
+                <p className="text-gray-400 text-sm">Nenhuma turma atribuída</p>
+              )}
+
+              {turmas.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {turmas.map(t => (
+                    <div key={t.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                      <div>
+                        <p className="text-white text-sm font-medium">{t.name}</p>
+                        <p className="text-gray-400 text-xs">
+                          {t.schedules.map(s => `${dayShort[s.day_of_week]} ${s.start_time.slice(0,5)}`).join(' · ')}
+                        </p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          setTurmaActionId(t.id)
+                          await fetch(`/api/aulas/${t.id}/atletas`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ athlete_id: atletaId }),
+                          })
+                          if (academiaId) loadTurmas(academiaId)
+                          setTurmaActionId(null)
+                        }}
+                        disabled={turmaActionId === t.id}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        {turmaActionId === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showAddTurma && (
+                <div className="space-y-2 border-t border-white/10 pt-4 mt-2">
+                  <p className="text-gray-400 text-xs mb-2">Selecione turmas para adicionar:</p>
+                  {allTurmas.filter(t => !t.enrolled).length === 0 ? (
+                    <p className="text-gray-500 text-sm">Todas as turmas já atribuídas</p>
+                  ) : allTurmas.filter(t => !t.enrolled).map(t => (
+                    <div key={t.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                      <p className="text-gray-300 text-sm">{t.name}</p>
+                      <button
+                        onClick={async () => {
+                          setTurmaActionId(t.id)
+                          await fetch(`/api/aulas/${t.id}/atletas`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ athlete_id: atletaId }),
+                          })
+                          if (academiaId) loadTurmas(academiaId)
+                          setTurmaActionId(null)
+                        }}
+                        disabled={turmaActionId === t.id}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-purple-500/30 text-xs transition-colors disabled:opacity-50"
+                      >
+                        {turmaActionId === t.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                        Adicionar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -199,10 +315,8 @@ export default function PerfilAtletaPage() {
                   <Award className="w-4 h-4 text-blue-400" />
                   <h3 className="font-semibold text-white">Graduação</h3>
                 </div>
-                <Row
-                  label="Faixa"
-                  value={kyuDan ? `${kyuDan.cor_faixa} | ${kyuDan.kyu_dan}` : '—'}
-                />
+                <Row label="Faixa" value={kyuDan ? `${kyuDan.cor_faixa} | ${kyuDan.kyu_dan}` : '—'} />
+                <Row label="Nível de Arbitragem" value={atleta.nivel_arbitragem} />
               </div>
 
               {/* Filiação */}
@@ -222,7 +336,6 @@ export default function PerfilAtletaPage() {
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-8 text-center">
             <User className="w-12 h-12 text-gray-500 mx-auto mb-3" />
             <p className="text-gray-400">Nenhum perfil de filiação encontrado</p>
-            <p className="text-gray-500 text-sm mt-1">Entre em contato com sua academia ou federação</p>
           </div>
         )}
       </div>

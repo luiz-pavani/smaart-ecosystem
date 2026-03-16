@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Download, Filter, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
 
 interface Row {
   atleta: string
@@ -33,16 +34,10 @@ export default function FrequenciaAcademiaPage() {
           return
         }
 
-        const { data: role } = await supabase
-          .from('stakeholders')
-          .select('academia_id')
-          .eq('id', user.id)
-          .not('academia_id', 'is', null)
-          .limit(1)
-          .single()
+        const role = { academia_id: await resolveAcademiaId(supabase) }
 
         if (!role?.academia_id) {
-          setError('Academia não encontrada para este usuário')
+          setError('Academia não encontrada. Selecione uma academia no portal.')
           return
         }
 

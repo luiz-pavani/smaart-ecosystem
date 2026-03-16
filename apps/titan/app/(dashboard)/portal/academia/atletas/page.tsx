@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Search, Loader2, Download, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
 
 interface KyuDanOption {
   id: number
@@ -57,16 +58,10 @@ export default function AtletasAcademiaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const { data: perfil } = await supabase
-          .from('stakeholders')
-          .select('academia_id')
-          .eq('id', user.id)
-          .not('academia_id', 'is', null)
-          .limit(1)
-          .single()
+        const resolvedAcademiaId = await resolveAcademiaId(supabase)
+        if (!resolvedAcademiaId) return
 
-        if (!perfil?.academia_id) return
-        setAcademiaId(perfil.academia_id)
+        setAcademiaId(resolvedAcademiaId)
 
         const start = page * pageSize
         const end = start + pageSize - 1
@@ -74,7 +69,7 @@ export default function AtletasAcademiaPage() {
         let query = supabase
           .from('user_fed_lrsj')
           .select('stakeholder_id, nome_completo, status_plano, status_membro, data_expiracao, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
-          .eq('academia_id', perfil.academia_id)
+          .eq('academia_id', resolvedAcademiaId)
 
         if (search) query = query.ilike('nome_completo', `%${search}%`)
         if (filterGraduacao) query = query.eq('kyu_dan_id', Number(filterGraduacao))
@@ -114,15 +109,18 @@ export default function AtletasAcademiaPage() {
       setDownloadingCSV(true)
       if (!academiaId) return
 
-      const { data, error } = await supabase
+      let csvQuery = supabase
         .from('user_fed_lrsj')
         .select(`
           stakeholder_id, nome_completo, nome_patch, genero, data_nascimento,
           email, telefone, status_membro, status_plano, data_expiracao,
           kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)
         `)
-        .eq('academia_id', academiaId)
         .order('nome_completo', { ascending: true })
+
+      if (academiaId) csvQuery = csvQuery.eq('academia_id', academiaId)
+
+      const { data, error } = await csvQuery
 
       if (error || !data?.length) {
         alert('Nenhum atleta encontrado')
@@ -274,7 +272,7 @@ export default function AtletasAcademiaPage() {
                   {atletas.map((atleta) => (
                     <tr key={atleta.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-gray-300">
-                        <a href={`/portal/federacao/atletas/${atleta.id}`} className="underline hover:text-blue-400 transition-colors">
+                        <a href={`/portal/academia/atletas/${atleta.id}`} className="underline hover:text-blue-400 transition-colors">
                           {atleta.nome_completo}
                         </a>
                       </td>

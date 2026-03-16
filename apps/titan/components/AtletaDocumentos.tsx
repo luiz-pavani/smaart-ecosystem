@@ -1,21 +1,21 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { Download, FileText, IdCard, Loader2 } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { FileText, IdCard, Loader2, Lock } from 'lucide-react'
 
 // Versão beta para teste visual de atualizações
 const BETA_VERSION = '26'
 
 interface AtletaDocumentosProps {
   atletaId: string
-  showIdentidade?: boolean
-  showCertificado?: boolean
+  statusMembro?: string | null
+  kyuDanId?: number | null
 }
 
 export default function AtletaDocumentos({
   atletaId,
-  showIdentidade = true,
-  showCertificado = true,
+  statusMembro,
+  kyuDanId,
 }: AtletaDocumentosProps) {
   const [loadingIdentidade, setLoadingIdentidade] = useState(false)
   const [loadingCertificado, setLoadingCertificado] = useState(false)
@@ -25,6 +25,20 @@ export default function AtletaDocumentos({
     { name: string; fileName: string; data: string }[] | null
   >(null)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+
+  // Availability rules
+  const isAceito = String(statusMembro ?? '').trim().toLowerCase() === 'aceito'
+  const isKyu = typeof kyuDanId === 'number' && kyuDanId >= 1 && kyuDanId <= 12
+
+  const identidadeEnabled = isAceito
+  const certificadoEnabled = isAceito && isKyu
+
+  const identidadeMsg = !isAceito ? 'Disponível apenas para membros com status "Aceito"' : ''
+  const certificadoMsg = !isAceito
+    ? 'Disponível apenas para membros com status "Aceito"'
+    : !isKyu
+    ? 'Disponível apenas para graduações Kyū (não disponível para graduações Dan)'
+    : ''
 
   // Carrega as fontes personalizadas para uso no canvas
   const loadCanvasFonts = async () => {
@@ -141,7 +155,7 @@ export default function AtletaDocumentos({
       // 1. Buscar dados do atleta
       const response = await fetch(`/api/atletas/${atletaId}/identidade`)
       if (!response.ok) throw new Error('Erro ao buscar dados')
-      
+
       const data = await response.json()
       const { atleta, academiaLogo, template } = data
 
@@ -164,7 +178,7 @@ export default function AtletaDocumentos({
       try {
         const background = new Image()
         background.crossOrigin = 'anonymous'
-        
+
         await new Promise((resolve) => {
           background.onload = resolve
           background.onerror = () => resolve(null) // Ignorar erro de fundo
@@ -188,7 +202,7 @@ export default function AtletaDocumentos({
       // Helper para desenhar texto com rotação, alinhamento e letterSpacing
       const drawText = (text: string, fieldConfig: any) => {
         if (!fieldConfig) return
-        
+
         ctx.save()
         const fontSize = fieldConfig.fontSize || 24
         const fontWeight = fieldConfig.fontWeight || 'normal'
@@ -197,16 +211,16 @@ export default function AtletaDocumentos({
         const align = fieldConfig.align || 'left'
         const rotation = fieldConfig.rotation || 0
         const letterSpacing = fieldConfig.letterSpacing !== undefined ? fieldConfig.letterSpacing : 0
-        
+
         ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`
         ctx.fillStyle = color
         ctx.textAlign = align
-        
+
         // Se tem rotação, usar translate/rotate
         if (rotation) {
           ctx.translate(fieldConfig.x, fieldConfig.y)
           ctx.rotate((rotation * Math.PI) / 180)
-          
+
           // Desenhar com letterSpacing
           if (letterSpacing === 0) {
             // Sem espaçamento extra, desenhar normalmente
@@ -222,7 +236,7 @@ export default function AtletaDocumentos({
         } else {
           // Sem rotação, usar posição direta
           let xPos = fieldConfig.x
-          
+
           if (letterSpacing === 0) {
             // Sem espaçamento extra, desenhar normalmente
             ctx.fillText(text, xPos, fieldConfig.y)
@@ -234,7 +248,7 @@ export default function AtletaDocumentos({
             }
           }
         }
-        
+
         ctx.restore()
       }
 
@@ -245,7 +259,7 @@ export default function AtletaDocumentos({
       if (academiaLogo && config.logo_academia) {
         const logo = new Image()
         logo.crossOrigin = 'anonymous'
-        
+
         await new Promise((resolve) => {
           logo.onload = resolve
           logo.onerror = () => resolve(null)
@@ -285,17 +299,17 @@ export default function AtletaDocumentos({
           rotation: -45,
         }
       )
-      
+
       // Labels
       drawText(config.data_nascimento_label?.text || 'DATA DE NASCIMENTO', { ...config.data_nascimento_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
       drawText(String(atleta.dataNascimento || '').toLocaleUpperCase('pt-BR'), { ...config.data_nascimento, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
-      
+
       drawText(config.graduacao_label?.text || 'GRADUAÇÃO', { ...config.graduacao_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
       drawText(String(atleta.graduacao || '').toLocaleUpperCase('pt-BR'), { ...config.graduacao, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
-      
+
       drawText(config.nivel_arbitragem_label?.text || 'NÍVEL DE ARBITRAGEM', { ...config.nivel_arbitragem_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
       drawText(String(atleta.nivelArbitragem || '').toLocaleUpperCase('pt-BR'), { ...config.nivel_arbitragem, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
-      
+
       drawText(config.validade_label?.text || 'VALIDADE', { ...config.validade_label, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
       drawText(String(atleta.validade || '').toLocaleUpperCase('pt-BR'), { ...config.validade, fontFamily: 'HighwayGothic-Regular, Arial', align: 'right' })
 
@@ -325,7 +339,7 @@ export default function AtletaDocumentos({
       // 1. Buscar dados do atleta
       const response = await fetch(`/api/atletas/${atletaId}/certificado`)
       if (!response.ok) throw new Error('Erro ao buscar dados')
-      
+
       const data = await response.json()
       const { atleta, academiaLogo, template } = data
 
@@ -473,6 +487,7 @@ export default function AtletaDocumentos({
     }
   }
 
+
   // Helper para carregar imagem como base64
   const loadImageAsBase64 = (url: string): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -498,13 +513,18 @@ export default function AtletaDocumentos({
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Documentos</h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {showIdentidade && (
+        {/* Identidade Esportiva */}
+        <div title={identidadeMsg || undefined} className="flex flex-col gap-1">
           <button
-            onClick={gerarIdentidade}
-            disabled={loadingIdentidade}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            onClick={identidadeEnabled ? gerarIdentidade : undefined}
+            disabled={loadingIdentidade || !identidadeEnabled}
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+              identidadeEnabled
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-white/10 text-gray-500 cursor-not-allowed border border-white/10'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {loadingIdentidade ? (
               <>
@@ -513,18 +533,33 @@ export default function AtletaDocumentos({
               </>
             ) : (
               <>
-                <IdCard className="w-5 h-5" />
-                Baixar Identidade Esportiva (v{BETA_VERSION})
+                {identidadeEnabled ? (
+                  <IdCard className="w-5 h-5" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
+                Identidade Esportiva (v{BETA_VERSION})
               </>
             )}
           </button>
-        )}
+          {!identidadeEnabled && identidadeMsg && (
+            <p className="text-xs text-yellow-400/80 flex items-center gap-1">
+              <Lock className="w-3 h-3 shrink-0" />
+              {identidadeMsg}
+            </p>
+          )}
+        </div>
 
-        {showCertificado && (
+        {/* Certificado de Graduação */}
+        <div title={certificadoMsg || undefined} className="flex flex-col gap-1">
           <button
-            onClick={gerarCertificado}
-            disabled={loadingCertificado}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            onClick={certificadoEnabled ? gerarCertificado : undefined}
+            disabled={loadingCertificado || !certificadoEnabled}
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors ${
+              certificadoEnabled
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-white/10 text-gray-500 cursor-not-allowed border border-white/10'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {loadingCertificado ? (
               <>
@@ -533,12 +568,23 @@ export default function AtletaDocumentos({
               </>
             ) : (
               <>
-                <FileText className="w-5 h-5" />
-                Baixar Certificado de Graduação (v{BETA_VERSION})
+                {certificadoEnabled ? (
+                  <FileText className="w-5 h-5" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
+                Certificado de Graduação (v{BETA_VERSION})
               </>
             )}
           </button>
-        )}
+          {!certificadoEnabled && certificadoMsg && (
+            <p className="text-xs text-yellow-400/80 flex items-center gap-1">
+              <Lock className="w-3 h-3 shrink-0" />
+              {certificadoMsg}
+            </p>
+          )}
+        </div>
+
       </div>
 
       {/* Canvas oculto para geração de imagens */}

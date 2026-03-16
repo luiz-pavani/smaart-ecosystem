@@ -1,6 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return NextResponse.json({ error: 'Missing credentials' }, { status: 500 })
+
+  const supabase = createClient(url, key)
+  const { data, error } = await supabase.from('academias').select('*').eq('id', id).maybeSingle()
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+  if (!data) return NextResponse.json({ error: 'Academia não encontrada' }, { status: 404 })
+  return NextResponse.json({ academia: data })
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

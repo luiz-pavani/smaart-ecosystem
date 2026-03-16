@@ -39,8 +39,9 @@ type AthleteRecord = {
   validado_por?: string | null;
 };
 
-type Academia = { id: string; nome?: string; sigla?: string };
+type Academia = { id: string; nome?: string; sigla?: string; federacao_id?: string };
 type Graduacao = { id: number; cor_faixa: string; kyu_dan: string };
+type Federacao = { id: string; nome?: string; sigla?: string };
 
 // Context passed down to module-level components to avoid inline redefinition
 type EditCtx = {
@@ -50,7 +51,26 @@ type EditCtx = {
   setField: (field: keyof AthleteRecord, value: string) => void;
   academias: Academia[];
   graduacoes: Graduacao[];
+  nivelHierarquico: number; // 1=master … 7=atleta
+  federacoes: Federacao[];
+  federacaoFiltro: string;
+  setFederacaoFiltro: (id: string) => void;
 };
+
+// Fields only writable by levels 1–3
+const NIVEL_1_3_FIELDS: (keyof AthleteRecord)[] = ['status_plano', 'data_expiracao', 'status_membro', 'lote_id'];
+// Fields writable by 1–7, but locked to 1–3 once status_membro = "Aceito"
+const GRAD_FIELDS: (keyof AthleteRecord)[] = ['kyu_dan_id', 'nivel_arbitragem'];
+
+function canEditField(field: keyof AthleteRecord, nivelHierarquico: number, statusMembro: string | null | undefined): boolean {
+  if (NIVEL_1_3_FIELDS.includes(field)) return nivelHierarquico <= 3;
+  if (GRAD_FIELDS.includes(field)) {
+    const aceito = String(statusMembro ?? '').trim().toLowerCase() === 'aceito';
+    if (aceito) return nivelHierarquico <= 3;
+    return true; // not aceito → any level can edit
+  }
+  return true; // all other fields: unrestricted
+}
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -167,9 +187,11 @@ function EditableRow({
   readOnly?: boolean;
   ctx: EditCtx;
 }) {
-  const { editMode, canEdit, formData, setField, academias, graduacoes } = ctx;
+  const { editMode, canEdit, formData, setField, academias, graduacoes, nivelHierarquico } = ctx;
+  // federacoes/federacaoFiltro are used in inline JSX in the parent, not in EditableRow
+  const fieldAllowed = canEditField(field, nivelHierarquico, formData.status_membro);
 
-  if (editMode && canEdit && !readOnly) {
+  if (editMode && canEdit && !readOnly && fieldAllowed) {
     if (field === "academia_id") {
       return (
         <div className="flex flex-col gap-1">
@@ -283,12 +305,8 @@ function EditableRow({
   }
 
   // View mode
-  if (field === "academia_id" && formData[field]) {
-    const ac = academias.find(a => a.id === formData[field]);
-    return <InfoRow label={label} value={ac?.sigla ?? formData[field]} />;
-  }
   if (field === "academias") {
-    const ac = academias.find(a => a.id === (formData.academia_id));
+    const ac = academias.find(a => a.id === formData.academia_id);
     return <InfoRow label={label} value={ac?.nome ?? formData[field]} />;
   }
   if (field === "kyu_dan_id") {
@@ -308,6 +326,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   const [atleta, setAtleta] = useState<AthleteRecord | null>(null);
   const [formData, setFormData] = useState<Partial<AthleteRecord>>({});
   const [roles, setRoles] = useState<{ role: string }[]>([]);
+  const [nivelHierarquico, setNivelHierarquico] = useState<number>(7);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -315,6 +334,8 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   const [message, setMessage] = useState("");
   const [academias, setAcademias] = useState<Academia[]>([]);
   const [graduacoes, setGraduacoes] = useState<Graduacao[]>([]);
+  const [federacoes, setFederacoes] = useState<Federacao[]>([]);
+  const [federacaoFiltro, setFederacaoFiltro] = useState<string>('');
   const [atletaId, setAtletaId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -329,20 +350,38 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         setCurrentUserEmail(user?.email ?? null);
 
         if (user?.id) {
-          const { data: r } = await supabase.from("stakeholders").select("role").eq("id", user.id);
+          const [{ data: r }, { data: nivel }] = await Promise.all([
+            supabase.from("stakeholders").select("role").eq("id", user.id),
+            supabase.rpc("get_my_nivel"),
+          ]);
           setRoles(r || []);
+          if (typeof nivel === "number") setNivelHierarquico(nivel);
         }
 
-        const [{ data: acadData }, { data: kdData }, { data: fedData, error: fedErr }] = await Promise.all([
-          supabase.from("academias").select("id, nome, sigla").order("sigla"),
+        const [
+          acadRes,
+          fedListRes,
+          { data: kdData },
+          { data: fedData, error: fedErr },
+        ] = await Promise.all([
+          fetch('/api/academias/listar').then(r => r.json()),
+          fetch('/api/federacoes/listar').then(r => r.json()),
           supabase.from("kyu_dan").select("id, cor_faixa, kyu_dan").order("id"),
           supabase.from("user_fed_lrsj").select("*").eq("stakeholder_id", id).maybeSingle(),
         ]);
 
-        setAcademias((acadData || []) as Academia[]);
+        const acadList = (acadRes.academias || []) as Academia[];
+        setAcademias(acadList);
         setGraduacoes((kdData || []) as Graduacao[]);
+        setFederacoes((fedListRes.federacoes || []) as Federacao[]);
 
         if (fedErr) console.error("Erro ao buscar atleta:", fedErr);
+
+        // Pre-select the federation matching the athlete's current academy
+        if (fedData?.academia_id) {
+          const currentAcad = acadList.find(a => a.id === fedData.academia_id);
+          if (currentAcad?.federacao_id) setFederacaoFiltro(currentAcad.federacao_id);
+        }
 
         const normalized = fedData
           ? { ...(fedData as AthleteRecord), idade: computeAgeByBirthYear((fedData as AthleteRecord).data_nascimento) }
@@ -386,7 +425,11 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const ctx: EditCtx = { editMode, canEdit, formData, setField, academias, graduacoes };
+  const academiasFiltradas = federacaoFiltro
+    ? academias.filter(a => a.federacao_id === federacaoFiltro)
+    : academias;
+
+  const ctx: EditCtx = { editMode, canEdit, formData, setField, academias, graduacoes, nivelHierarquico, federacoes, federacaoFiltro, setFederacaoFiltro };
 
   const saveChanges = async () => {
     if (!atleta || !canEdit || !atletaId) return;
@@ -560,11 +603,43 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           </InfoCard>
 
           <InfoCard title="Academia" icon={Building2}>
-            <EditableRow label="Sigla da Academia" field="academia_id" type="select" ctx={ctx} />
-            <EditableRow label="Academia (nome completo)" field="academias" readOnly ctx={ctx} />
+            <EditableRow label="Academia" field="academias" readOnly ctx={ctx} />
           </InfoCard>
 
           <InfoCard title="Plano e Filiação" icon={CreditCard}>
+            {editMode && canEdit && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <span className="text-gray-400 text-sm">Federação</span>
+                  <select
+                    value={federacaoFiltro}
+                    onChange={e => {
+                      setFederacaoFiltro(e.target.value);
+                      setField("academia_id", "");
+                    }}
+                    className={selectCls}
+                  >
+                    <option value="">Todas as Federações</option>
+                    {federacoes.map(f => (
+                      <option key={f.id} value={f.id}>{f.nome || f.sigla}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-gray-400 text-sm">Academia</span>
+                  <select
+                    value={String(formData.academia_id ?? "")}
+                    onChange={e => setField("academia_id", e.target.value)}
+                    className={selectCls}
+                  >
+                    <option value="">Selecione uma academia</option>
+                    {academiasFiltradas.map(a => (
+                      <option key={a.id} value={a.id}>{a.nome || a.sigla}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
             <EditableRow label="Data de Adesão" field="data_adesao" type="date" ctx={ctx} />
             <EditableRow label="Tipo de Plano" field="plano_tipo" type="select" ctx={ctx} />
             <EditableRow label="Status do Plano" field="status_plano" type="select" ctx={ctx} />
@@ -604,7 +679,11 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
 
         {/* Documentos Gerados */}
         <div className="mt-6 bg-white/5 backdrop-blur rounded-xl p-6 border border-white/10">
-          <AtletaDocumentos atletaId={atleta.stakeholder_id} showIdentidade={true} showCertificado={true} />
+          <AtletaDocumentos
+            atletaId={atleta.stakeholder_id}
+            statusMembro={atleta.status_membro}
+            kyuDanId={atleta.kyu_dan_id != null ? Number(atleta.kyu_dan_id) : null}
+          />
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import { LineChart } from '@/components/dashboard/LineChart'
 import { PieChart } from '@/components/dashboard/PieChart'
 import { TopList } from '@/components/dashboard/TopList'
 import { gerarCertificadoPdf } from '@/lib/certificados/gerarCertificadoPdf'
+import { saveSelectedAcademiaId, getSelectedAcademiaId } from '@/lib/portal/resolveAcademiaId'
 
 interface DashboardData {
   totalAtletas: number
@@ -38,6 +39,7 @@ export default function PortalAcademiaPage() {
 
   useEffect(() => {
     if (selectedAcademiaId) {
+      saveSelectedAcademiaId(selectedAcademiaId)
       setAcademiaId(selectedAcademiaId)
       loadDashboardData(selectedAcademiaId)
     }
@@ -64,15 +66,16 @@ export default function PortalAcademiaPage() {
 
       let resolvedAcademiaId = overrideAcademiaId || academiaId || perfil?.academia_id
 
+      if (!resolvedAcademiaId && master) {
+        resolvedAcademiaId = getSelectedAcademiaId()
+      }
+
       if (!resolvedAcademiaId) {
         if (master) {
-          // Carregar lista de academias para o seletor
-          const { data: acadList } = await supabase
-            .from('academias')
-            .select('id, nome')
-            .eq('ativo', true)
-            .order('nome', { ascending: true })
-          setAcademias(acadList || [])
+          // Carregar lista de academias via API (bypassa RLS)
+          const res = await fetch('/api/academias/listar')
+          const json = await res.json()
+          setAcademias((json.academias || []).map((a: any) => ({ id: a.id, nome: a.nome })))
           setLoading(false)
           return
         }

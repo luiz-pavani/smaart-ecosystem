@@ -12,22 +12,38 @@ export async function PATCH(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    // Verify requester is master_access, federation admin/staff, or academia admin
-    const { data: perfil } = await supabase
-      .from('stakeholders')
-      .select('role, academia_id')
-      .eq('id', user.id)
-      .single()
+    // Verify requester role and fetch their hierarchy level
+    const [{ data: perfil }, { data: nivelRaw }] = await Promise.all([
+      supabase.from('stakeholders').select('role, academia_id').eq('id', user.id).single(),
+      supabase.rpc('get_my_nivel'),
+    ])
 
-    const allowed = ['master_access', 'federacao_admin', 'federacao_staff', 'academia_admin', 'academia_staff']
-    if (!perfil || !allowed.includes(perfil.role)) {
+    const allowedRoles = ['master_access', 'federacao_admin', 'federacao_gestor', 'academia_admin', 'academia_gestor', 'professor', 'atleta']
+    if (!perfil || !allowedRoles.includes(perfil.role)) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 
+    const nivel: number = typeof nivelRaw === 'number' ? nivelRaw : 7
+
+    // Fetch current athlete record to check status_membro
+    const { data: current } = await supabaseAdmin
+      .from('user_fed_lrsj')
+      .select('status_membro')
+      .eq('stakeholder_id', id)
+      .maybeSingle()
+
+    const statusMembro = String(current?.status_membro ?? '').trim().toLowerCase()
+    const isAceito = statusMembro === 'aceito'
+
     const body = await req.json()
 
-    // Whitelist all admin-editable fields
-    const ALLOWED_FIELDS = [
+    // Fields only writable by levels 1–3
+    const NIVEL_1_3_ONLY = ['status_plano', 'data_expiracao', 'status_membro', 'lote_id']
+    // Fields writable by 1–7, but locked to 1–3 once status_membro = "Aceito"
+    const GRAD_FIELDS = ['kyu_dan_id', 'nivel_arbitragem']
+
+    // Full whitelist of editable fields
+    const ALL_FIELDS = [
       'nome_completo', 'nome_patch', 'genero', 'data_nascimento', 'nacionalidade',
       'email', 'telefone', 'cidade', 'estado', 'pais', 'tamanho_patch',
       'kyu_dan_id', 'nivel_arbitragem', 'academia_id', 'academias',
@@ -36,11 +52,13 @@ export async function PATCH(
     ] as const
 
     const payload: Record<string, unknown> = {}
-    for (const key of ALLOWED_FIELDS) {
-      if (key in body) {
-        const v = body[key]
-        payload[key] = v === '' ? null : v
-      }
+    for (const key of ALL_FIELDS) {
+      if (!(key in body)) continue
+      // Enforce level restrictions
+      if (NIVEL_1_3_ONLY.includes(key) && nivel > 3) continue
+      if (GRAD_FIELDS.includes(key) && isAceito && nivel > 3) continue
+      const v = body[key]
+      payload[key] = v === '' ? null : v
     }
 
     if (Object.keys(payload).length === 0) {
