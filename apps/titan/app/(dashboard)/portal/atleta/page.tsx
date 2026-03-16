@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap } from 'lucide-react'
+import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { TopList } from '@/components/dashboard/TopList'
@@ -337,6 +337,25 @@ export default function PortalAtletaPage() {
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Meus Pontos</h3>
               <p className="text-sm text-slate-400">Ranking e histórico de pontos</p>
+            </div>
+          </button>
+
+          {/* Conta Família */}
+          <button
+            onClick={() => router.push('/portal/atleta/familia')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-pink-500/10 to-rose-600/5
+                     hover:from-pink-500/20 hover:to-rose-600/10 border border-pink-500/20 hover:border-pink-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-500/0 to-rose-600/0
+                          group-hover:from-pink-500/10 group-hover:to-rose-600/5 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <Users className="w-6 h-6 text-pink-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Conta Família</h3>
+              <p className="text-sm text-slate-400">Dependentes e membros da família</p>
             </div>
           </button>
         </div>
