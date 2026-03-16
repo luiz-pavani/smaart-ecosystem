@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User, Award } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User, Award, UserSearch } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -425,6 +425,13 @@ export default function PortalAcademiaPage() {
       icon: <Award className="w-6 h-6" />,
       href: '/portal/academia/promocao',
       color: 'from-amber-500 to-amber-600'
+    },
+    {
+      title: 'CRM de Leads',
+      description: 'Funil de conversão',
+      icon: <UserSearch className="w-6 h-6" />,
+      href: '/portal/academia/crm',
+      color: 'from-pink-500 to-pink-600'
     },
   ]
 
