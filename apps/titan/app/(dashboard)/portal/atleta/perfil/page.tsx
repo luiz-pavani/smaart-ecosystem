@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Settings, Calendar, Clock } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Settings, Calendar, Clock, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
@@ -61,11 +61,19 @@ function Row({ label, value }: { label: string; value?: string | null }) {
 export default function PerfilAtletaPage() {
   const router = useRouter()
   const supabase = createClient()
+  interface WaitlistItem {
+    class_id: string
+    name: string
+    position: number
+  }
+
   const [atleta, setAtleta] = useState<AtletaPerfil | null>(null)
   const [kyuDan, setKyuDan] = useState<KyuDan | null>(null)
   const [turmas, setTurmas] = useState<TurmaMatriculada[]>([])
+  const [waitlistItems, setWaitlistItems] = useState<WaitlistItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [removingWaitlist, setRemovingWaitlist] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -74,7 +82,7 @@ export default function PerfilAtletaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setError('Usuário não autenticado'); return }
 
-        const [{ data: fedData, error: fedErr }, { data: kdData }, { data: enrollData }] = await Promise.all([
+        const [{ data: fedData, error: fedErr }, { data: kdData }, { data: enrollData }, { data: waitData }] = await Promise.all([
           supabase.from('user_fed_lrsj').select('*').eq('stakeholder_id', user.id).maybeSingle(),
           supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan, icones').order('id'),
           supabase.from('class_enrollments')
@@ -82,6 +90,10 @@ export default function PerfilAtletaPage() {
             .eq('athlete_id', user.id)
             .eq('is_active', true)
             .order('enrolled_at', { ascending: false }),
+          supabase.from('class_waitlist')
+            .select('position, class:class_id(id, name)')
+            .eq('athlete_id', user.id)
+            .order('position', { ascending: true }),
         ])
 
         if (fedErr) throw fedErr
@@ -103,6 +115,11 @@ export default function PerfilAtletaPage() {
             schedules: c?.class_schedules || [],
           }
         }).filter((t: TurmaMatriculada) => t.id))
+
+        setWaitlistItems((waitData || []).map((w: any) => {
+          const c = Array.isArray(w.class) ? w.class[0] : w.class
+          return { class_id: c?.id || '', name: c?.name || '—', position: w.position }
+        }).filter((w: WaitlistItem) => w.class_id))
       } catch (err) {
         console.error(err)
         setError('Não foi possível carregar seu perfil')
@@ -289,6 +306,44 @@ export default function PerfilAtletaPage() {
                 </div>
               )}
             </div>
+            {/* Fila de Espera */}
+            {waitlistItems.length > 0 && (
+              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="w-4 h-4 text-orange-400" />
+                  <h3 className="font-semibold text-white">Fila de Espera</h3>
+                  <span className="ml-auto text-xs text-gray-400">{waitlistItems.length} turma{waitlistItems.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="space-y-2">
+                  {waitlistItems.map((w) => (
+                    <div key={w.class_id} className="flex items-center gap-3 bg-orange-500/5 border border-orange-500/20 rounded-lg px-4 py-3">
+                      <span className="w-6 h-6 rounded-full bg-orange-500/20 text-orange-300 text-xs font-bold flex items-center justify-center shrink-0">
+                        {w.position}
+                      </span>
+                      <p className="text-white font-medium text-sm flex-1">{w.name}</p>
+                      <span className="text-orange-300 text-xs">Posição #{w.position}</span>
+                      <button
+                        onClick={async () => {
+                          setRemovingWaitlist(w.class_id)
+                          await fetch(`/api/aulas/${w.class_id}/waitlist`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({}),
+                          })
+                          setWaitlistItems(prev => prev.filter(x => x.class_id !== w.class_id))
+                          setRemovingWaitlist(null)
+                        }}
+                        disabled={removingWaitlist === w.class_id}
+                        className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                        title="Sair da fila"
+                      >
+                        {removingWaitlist === w.class_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-8 text-center">

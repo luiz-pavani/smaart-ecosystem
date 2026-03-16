@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Search, UserPlus, Loader2, Users, X, Filter, Star } from 'lucide-react'
+import { ArrowLeft, Search, UserPlus, Loader2, Users, X, Filter, Star, Clock, ChevronUp } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
@@ -11,6 +11,13 @@ interface Atleta {
   nome_completo: string
   graduacao?: string | null
   enrolled?: boolean
+}
+
+interface WaitlistEntry {
+  id: string
+  athlete_id: string
+  nome_completo: string
+  position: number
 }
 
 interface ClassInfo {
@@ -39,6 +46,7 @@ export default function AulaDetailPage() {
 
   const [classInfo, setClassInfo] = useState<ClassInfo | null>(null)
   const [enrolled, setEnrolled] = useState<Atleta[]>([])
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([])
   const [searchResults, setSearchResults] = useState<Atleta[]>([])
   const [search, setSearch] = useState('')
   const [academiaId, setAcademiaId] = useState<string | null>(null)
@@ -47,6 +55,11 @@ export default function AulaDetailPage() {
   const [actionId, setActionId] = useState<string | null>(null)
   const [filterByCriteria, setFilterByCriteria] = useState(false)
   const [rating, setRating] = useState<{ avg: number | null; total: number } | null>(null)
+  const [activeTab, setActiveTab] = useState<'matriculados' | 'fila'>('matriculados')
+
+  const isFull = classInfo
+    ? classInfo.capacity != null && classInfo.current_enrollment >= classInfo.capacity
+    : false
 
   // Load class info
   useEffect(() => {
@@ -77,7 +90,6 @@ export default function AulaDetailPage() {
           schedules: d.class_schedules || [],
         })
       }
-      // Load rating
       const ratingRes = await fetch(`/api/aulas/${classId}/rating`)
       if (ratingRes.ok) {
         const ratingJson = await ratingRes.json()
@@ -89,14 +101,24 @@ export default function AulaDetailPage() {
     init()
   }, [classId])
 
-  // Load enrolled athletes
   const loadEnrolled = useCallback(async () => {
     const res = await fetch(`/api/aulas/${classId}/atletas`)
     const json = await res.json()
     setEnrolled(json.enrolled || [])
   }, [classId])
 
-  useEffect(() => { loadEnrolled() }, [loadEnrolled])
+  const loadWaitlist = useCallback(async () => {
+    const res = await fetch(`/api/aulas/${classId}/waitlist`)
+    if (res.ok) {
+      const json = await res.json()
+      setWaitlist(json.waitlist || [])
+    }
+  }, [classId])
+
+  useEffect(() => {
+    loadEnrolled()
+    loadWaitlist()
+  }, [loadEnrolled, loadWaitlist])
 
   // Search athletes
   useEffect(() => {
@@ -158,6 +180,45 @@ export default function AulaDetailPage() {
     setActionId(null)
   }
 
+  const addToWaitlist = async (athleteId: string) => {
+    setActionId(athleteId)
+    await fetch(`/api/aulas/${classId}/waitlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ athlete_id: athleteId }),
+    })
+    await loadWaitlist()
+    await refreshSearch()
+    setActionId(null)
+  }
+
+  const removeFromWaitlist = async (athleteId: string) => {
+    setActionId(athleteId)
+    await fetch(`/api/aulas/${classId}/waitlist`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ athlete_id: athleteId }),
+    })
+    await loadWaitlist()
+    setActionId(null)
+  }
+
+  const promote = async (athleteId: string) => {
+    setActionId(athleteId)
+    await fetch(`/api/aulas/${classId}/waitlist/promote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ athlete_id: athleteId }),
+    })
+    await loadEnrolled()
+    await loadWaitlist()
+    await refreshSearch()
+    setClassInfo(prev => prev ? { ...prev, current_enrollment: (prev.current_enrollment || 0) + 1 } : prev)
+    setActionId(null)
+  }
+
+  const waitlistIds = new Set(waitlist.map(w => w.athlete_id))
+
   if (loading) return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center">
       <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -191,10 +252,17 @@ export default function AulaDetailPage() {
                     {dayLabels[s.day_of_week]} {s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}
                   </span>
                 ))}
-                <span className="text-gray-400 text-sm">
-                  <Users className="w-4 h-4 inline mr-1" />
-                  {classInfo.current_enrollment}/{classInfo.capacity || '—'} alunos
+                <span className={`text-sm flex items-center gap-1 ${isFull ? 'text-red-400' : 'text-gray-400'}`}>
+                  <Users className="w-4 h-4" />
+                  {classInfo.current_enrollment}/{classInfo.capacity || '—'}
+                  {isFull && <span className="text-xs px-1.5 py-0.5 rounded-full bg-red-500/20 border border-red-500/30 text-red-400">Lotada</span>}
                 </span>
+                {waitlist.length > 0 && (
+                  <span className="text-orange-300 text-sm flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {waitlist.length} na fila
+                  </span>
+                )}
                 {rating && rating.total > 0 && (
                   <span className="flex items-center gap-1 text-yellow-400 text-sm">
                     <Star className="w-4 h-4 fill-yellow-400" />
@@ -202,7 +270,6 @@ export default function AulaDetailPage() {
                   </span>
                 )}
               </div>
-              {/* Criteria badges */}
               {(classInfo.min_age != null || classInfo.max_age != null || classInfo.min_kyu_dan_id != null || classInfo.max_kyu_dan_id != null) && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {(classInfo.min_age != null || classInfo.max_age != null) && (
@@ -223,35 +290,90 @@ export default function AulaDetailPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left: Enrolled athletes */}
+        {/* Left: Enrolled + Waitlist with tabs */}
         <div>
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-purple-400" />
-            Atletas na Turma
-            <span className="ml-auto text-sm font-normal text-gray-400">{enrolled.length} matriculados</span>
-          </h2>
-          {enrolled.length === 0 ? (
-            <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center text-gray-400">
-              Nenhum atleta matriculado ainda
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {enrolled.map((a) => (
-                <div key={a.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3 hover:bg-white/8 transition-colors">
-                  <div>
+          {/* Tabs */}
+          <div className="flex gap-1 mb-4 bg-white/5 rounded-xl p-1 border border-white/10">
+            <button
+              onClick={() => setActiveTab('matriculados')}
+              className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
+                activeTab === 'matriculados'
+                  ? 'bg-purple-500/30 text-white border border-purple-500/30'
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <Users className="w-4 h-4 inline mr-1.5" />
+              Matriculados ({enrolled.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('fila')}
+              className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
+                activeTab === 'fila'
+                  ? 'bg-orange-500/30 text-white border border-orange-500/30'
+                  : 'text-gray-400 hover:text-gray-300'
+              }`}
+            >
+              <Clock className="w-4 h-4 inline mr-1.5" />
+              Fila de Espera ({waitlist.length})
+            </button>
+          </div>
+
+          {activeTab === 'matriculados' ? (
+            enrolled.length === 0 ? (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center text-gray-400">
+                Nenhum atleta matriculado ainda
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {enrolled.map((a) => (
+                  <div key={a.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3 hover:bg-white/8 transition-colors">
                     <p className="text-white font-medium text-sm">{a.nome_completo}</p>
+                    <button
+                      onClick={() => remove(a.id)}
+                      disabled={actionId === a.id}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                      title="Remover da turma"
+                    >
+                      {actionId === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => remove(a.id)}
-                    disabled={actionId === a.id}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                    title="Remover da turma"
-                  >
-                    {actionId === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )
+          ) : (
+            waitlist.length === 0 ? (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center text-gray-400">
+                Nenhum atleta na fila de espera
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {waitlist.map((w) => (
+                  <div key={w.id} className="flex items-center gap-3 bg-orange-500/5 border border-orange-500/20 rounded-xl px-4 py-3">
+                    <span className="w-6 h-6 rounded-full bg-orange-500/20 text-orange-300 text-xs font-bold flex items-center justify-center shrink-0">
+                      {w.position}
+                    </span>
+                    <p className="text-white font-medium text-sm flex-1">{w.nome_completo}</p>
+                    <button
+                      onClick={() => promote(w.athlete_id)}
+                      disabled={actionId === w.athlete_id || !isFull === false}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 border border-green-500/30 text-green-300 hover:bg-green-500/30 text-xs transition-colors disabled:opacity-50"
+                      title="Promover para matriculado"
+                    >
+                      {actionId === w.athlete_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ChevronUp className="w-3 h-3" />}
+                      Matricular
+                    </button>
+                    <button
+                      onClick={() => removeFromWaitlist(w.athlete_id)}
+                      disabled={actionId === w.athlete_id}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                      title="Remover da fila"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
 
@@ -260,6 +382,11 @@ export default function AulaDetailPage() {
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-green-400" />
             Adicionar Atletas
+            {isFull && (
+              <span className="ml-auto text-xs text-orange-300 font-normal bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full">
+                Turma lotada — adicionando à fila
+              </span>
+            )}
           </h2>
 
           <div className="relative mb-3">
@@ -294,32 +421,51 @@ export default function AulaDetailPage() {
                 {search ? 'Nenhum atleta encontrado' : 'Digite para buscar atletas da academia'}
               </div>
             )}
-            {searchResults.map((a) => (
-              <div key={a.id} className={`flex items-center justify-between rounded-xl px-4 py-3 border transition-colors ${
-                a.enrolled
-                  ? 'bg-green-500/10 border-green-500/30'
-                  : 'bg-white/5 border-white/10 hover:bg-white/8'
-              }`}>
-                <div>
-                  <p className="text-white font-medium text-sm">{a.nome_completo}</p>
-                  {a.graduacao && <p className="text-gray-400 text-xs mt-0.5">{a.graduacao}</p>}
+            {searchResults.map((a) => {
+              const onWaitlist = waitlistIds.has(a.id)
+              const pos = onWaitlist ? waitlist.find(w => w.athlete_id === a.id)?.position : undefined
+              return (
+                <div key={a.id} className={`flex items-center justify-between rounded-xl px-4 py-3 border transition-colors ${
+                  a.enrolled
+                    ? 'bg-green-500/10 border-green-500/30'
+                    : onWaitlist
+                    ? 'bg-orange-500/10 border-orange-500/30'
+                    : 'bg-white/5 border-white/10 hover:bg-white/8'
+                }`}>
+                  <div>
+                    <p className="text-white font-medium text-sm">{a.nome_completo}</p>
+                    {a.graduacao && <p className="text-gray-400 text-xs mt-0.5">{a.graduacao}</p>}
+                  </div>
+                  {a.enrolled ? (
+                    <span className="text-green-400 text-xs font-medium px-2 py-1 rounded-full bg-green-500/20">
+                      Matriculado
+                    </span>
+                  ) : onWaitlist ? (
+                    <span className="text-orange-300 text-xs font-medium px-2 py-1 rounded-full bg-orange-500/20">
+                      Na fila #{pos}
+                    </span>
+                  ) : isFull ? (
+                    <button
+                      onClick={() => addToWaitlist(a.id)}
+                      disabled={actionId === a.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-300 hover:bg-orange-500/30 text-xs font-medium transition-colors disabled:opacity-50"
+                    >
+                      {actionId === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock className="w-3 h-3" />}
+                      Fila de Espera
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => enroll(a.id)}
+                      disabled={actionId === a.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-purple-500/30 text-xs font-medium transition-colors disabled:opacity-50"
+                    >
+                      {actionId === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserPlus className="w-3 h-3" />}
+                      Adicionar
+                    </button>
+                  )}
                 </div>
-                {a.enrolled ? (
-                  <span className="text-green-400 text-xs font-medium px-2 py-1 rounded-full bg-green-500/20">
-                    Matriculado
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => enroll(a.id)}
-                    disabled={actionId === a.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-purple-500/30 text-xs font-medium transition-colors disabled:opacity-50"
-                  >
-                    {actionId === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserPlus className="w-3 h-3" />}
-                    Adicionar
-                  </button>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>
