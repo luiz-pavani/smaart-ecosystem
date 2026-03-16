@@ -10,9 +10,11 @@ import { TopList } from '@/components/dashboard/TopList'
 
 interface DashboardData {
   totalAcademias: number
-  totalAtletas: number  
+  totalAtletas: number
   academiasAtivas: number
   crescimentoMensal: number
+  totalAnoPassado: number
+  deltaFiliados: number
   atletasPorCidade: { name: string; value: number }[]
   topAcademias: { name: string; value: number; subtitle: string }[]
 }
@@ -45,54 +47,58 @@ export default function PortalFederacaoPage() {
       if (!isMaster && !perfil.federacao_id) return
 
       // Total academias
-      const academiasQuery = supabase
-        .from('academias')
-        .select('*', { count: 'exact', head: true })
+      const academiasQuery = supabase.from('academias').select('*', { count: 'exact', head: true })
       const { count: totalAcademias } = isMaster
         ? await academiasQuery
         : await academiasQuery.eq('federacao_id', perfil.federacao_id)
 
-      // Academias ativas
-      const academiasAtivasQuery = supabase
-        .from('academias')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'Ativa')
+      // Academias ativas (ativo = true)
+      const academiasAtivasQuery = supabase.from('academias').select('*', { count: 'exact', head: true }).eq('ativo', true)
       const { count: academiasAtivas } = isMaster
         ? await academiasAtivasQuery
         : await academiasAtivasQuery.eq('federacao_id', perfil.federacao_id)
 
-      // Total atletas
-      const atletasQuery = supabase
-        .from('stakeholders')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'atleta')
-      const { count: totalAtletas } = isMaster
-        ? await atletasQuery
-        : await atletasQuery.eq('federacao_id', perfil.federacao_id)
-
-      // Atletas por cidade (top 5)
-      const academiasDataQuery = supabase.from('academias').select('id, cidade')
-      const { data: academiasData } = isMaster
-        ? await academiasDataQuery
-        : await academiasDataQuery.eq('federacao_id', perfil.federacao_id)
-
-      const atletasDataQuery = supabase
-        .from('stakeholders')
+      // Total filiados (user_fed_lrsj, federacao_id=1)
+      const { data: filiadosData } = await supabase
+        .from('user_fed_lrsj')
         .select('academia_id')
-        .eq('role', 'atleta')
-      const { data: atletasData } = isMaster
-        ? await atletasDataQuery
-        : await atletasDataQuery.eq('federacao_id', perfil.federacao_id)
+        .eq('federacao_id', 1)
+      const totalAtletas = (filiadosData || []).length
 
-      const cidadeMap = new Map<string, number>()
+      // Total filiados mesmo período ano anterior
+      const lastYearDate = new Date()
+      lastYearDate.setFullYear(lastYearDate.getFullYear() - 1)
+      const lastYearStr = lastYearDate.toISOString().split('T')[0]
+      const { data: filiadosAnoPassadoData } = await supabase
+        .from('user_fed_lrsj')
+        .select('id')
+        .eq('federacao_id', 1)
+        .lte('data_adesao', lastYearStr)
+      const totalAnoPassado = (filiadosAnoPassadoData || []).length
+      const deltaFiliados = totalAtletas - totalAnoPassado
+      const crescimentoPct = totalAnoPassado > 0
+        ? Math.round((deltaFiliados / totalAnoPassado) * 100)
+        : 0
+
+      // Atletas por cidade — via academia_id → academias.endereco_cidade
+      const academiasFullQuery = supabase.from('academias').select('id, nome, endereco_cidade')
+      const { data: academiasFullData } = isMaster
+        ? await academiasFullQuery
+        : await academiasFullQuery.eq('federacao_id', perfil.federacao_id)
+
       const academiaIdToCidade = new Map<string, string>()
-      academiasData?.forEach(a => {
-        academiaIdToCidade.set(a.id, a.cidade || 'Não definida')
+      const academiaIdToNome = new Map<string, string>()
+      ;(academiasFullData || []).forEach((a: any) => {
+        academiaIdToCidade.set(a.id, a.endereco_cidade || 'Não definida')
+        academiaIdToNome.set(a.id, a.nome)
       })
 
-      atletasData?.forEach(a => {
+      const cidadeMap = new Map<string, number>()
+      const academiaCountMap = new Map<string, number>()
+      ;(filiadosData || []).forEach((a: any) => {
         const cidade = academiaIdToCidade.get(a.academia_id) || 'Não definida'
         cidadeMap.set(cidade, (cidadeMap.get(cidade) || 0) + 1)
+        if (a.academia_id) academiaCountMap.set(a.academia_id, (academiaCountMap.get(a.academia_id) || 0) + 1)
       })
 
       const atletasPorCidade = Array.from(cidadeMap.entries())
@@ -100,43 +106,25 @@ export default function PortalFederacaoPage() {
         .sort((a, b) => b.value - a.value)
         .slice(0, 5)
 
-      // Top academias por número de atletas
-      const atletasPorAcademia = new Map<string, { nome: string; cidade: string; count: number }>()
-      
-      const academiasFullQuery = supabase.from('academias').select('id, nome, cidade')
-      const { data: academiasFullData } = isMaster
-        ? await academiasFullQuery
-        : await academiasFullQuery.eq('federacao_id', perfil.federacao_id)
-
-      academiasFullData?.forEach(a => {
-        const count = atletasData?.filter(at => at.academia_id === a.id).length || 0
-        atletasPorAcademia.set(a.id, {
-          nome: a.nome,
-          cidade: a.cidade || '',
-          count
-        })
-      })
-
-      const topAcademias = Array.from(atletasPorAcademia.values())
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5)
-        .map(a => ({
-          name: a.nome,
-          value: a.count,
-          subtitle: a.cidade
+      const topAcademias = Array.from(academiaCountMap.entries())
+        .map(([id, count]) => ({
+          name: academiaIdToNome.get(id) || id,
+          value: count,
+          subtitle: academiaIdToCidade.get(id) || '',
         }))
-
-      // Calcular crescimento mensal (mock - você pode melhorar com dados reais)
-      const crescimentoMensal = 5 // Placeholder
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5)
 
       setData({
         totalAcademias: totalAcademias || 0,
-        totalAtletas: totalAtletas || 0,
+        totalAtletas,
         academiasAtivas: academiasAtivas || 0,
-        crescimentoMensal,
+        crescimentoMensal: crescimentoPct,
         atletasPorCidade,
-        topAcademias
-      })
+        topAcademias,
+        totalAnoPassado,
+        deltaFiliados,
+      } as any)
     } finally {
       setLoading(false)
     }
@@ -234,25 +222,28 @@ export default function PortalFederacaoPage() {
               value={data.totalAcademias}
               icon={Building2}
               color="blue"
-            />
-            <MetricCard
-              title="Atletas Filiados"
-              value={data.totalAtletas}
-              icon={Users}
-              color="green"
+              onClick={() => router.push('/portal/federacao/academias')}
             />
             <MetricCard
               title="Academias Ativas"
               value={data.academiasAtivas}
               icon={Trophy}
-              color="purple"
+              color="green"
+              onClick={() => router.push('/portal/federacao/academias')}
             />
             <MetricCard
-              title="Crescimento Mensal"
-              value={`+${data.crescimentoMensal}`}
+              title="Total de Filiados"
+              value={data.totalAtletas.toLocaleString('pt-BR')}
+              icon={Users}
+              color="purple"
+              onClick={() => router.push('/portal/federacao/atletas')}
+            />
+            <MetricCard
+              title="Crescimento Anual"
+              value={`${data.deltaFiliados >= 0 ? '+' : ''}${data.deltaFiliados.toLocaleString('pt-BR')}`}
               icon={TrendingUp}
               color="orange"
-              trend={{ value: data.crescimentoMensal, label: 'novas academias' }}
+              trend={{ value: data.crescimentoMensal, label: `vs ${data.totalAnoPassado.toLocaleString('pt-BR')} em ${new Date(new Date().setFullYear(new Date().getFullYear()-1)).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}` }}
             />
           </div>
 
