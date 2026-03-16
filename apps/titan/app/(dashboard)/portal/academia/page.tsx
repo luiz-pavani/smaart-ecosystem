@@ -142,16 +142,36 @@ export default function PortalAcademiaPage() {
         .eq('academia_id', resolvedAcademiaId)
         .eq('federacao_id', 1)
 
+      const GRAD_GROUPS: Record<string, string> = {
+        'Branca': 'Branca a Cinza',
+        'Branca e Cinza': 'Branca a Cinza',
+        'Cinza': 'Branca a Cinza',
+        'Cinza e Azul': 'Branca a Cinza',
+        'Azul': 'Azul a Laranja',
+        'Azul e Amarela': 'Azul a Laranja',
+        'Amarela': 'Azul a Laranja',
+        'Amarela e Laranja': 'Azul a Laranja',
+        'Laranja': 'Azul a Laranja',
+        'Verde': 'Verde a Marrom',
+        'Roxa': 'Verde a Marrom',
+        'Marrom': 'Verde a Marrom',
+        'Preta': 'Dan',
+        'Vermelha e Branca': 'Dan',
+        'Vermelha': 'Dan',
+      }
+
       const graduacaoMap = new Map<string, number>()
       atletasData?.forEach((a: any) => {
         const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
-        const grad = kd?.cor_faixa || 'Não definida'
-        graduacaoMap.set(grad, (graduacaoMap.get(grad) || 0) + 1)
+        const cor = kd?.cor_faixa
+        const group = cor ? (GRAD_GROUPS[cor] ?? 'Não definida') : 'Não definida'
+        graduacaoMap.set(group, (graduacaoMap.get(group) || 0) + 1)
       })
 
-      const graduacaoDistribution = Array.from(graduacaoMap.entries())
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value)
+      const GROUP_ORDER = ['Branca a Cinza', 'Azul a Laranja', 'Verde a Marrom', 'Dan', 'Não definida']
+      const graduacaoDistribution = GROUP_ORDER
+        .filter(g => graduacaoMap.has(g))
+        .map(g => ({ name: g, value: graduacaoMap.get(g)! }))
 
       // Top atletas por frequência (últimos 30 dias)
       const thirtyDaysAgo = new Date()
