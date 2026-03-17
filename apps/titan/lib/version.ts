@@ -3,10 +3,10 @@
  * Auto-updated with each release
  */
 
-export const APP_VERSION = '59.0.0'
-export const APP_VERSION_NAME = 'Beta 59'
+export const APP_VERSION = '60.0.0'
+export const APP_VERSION_NAME = 'Beta 60'
 export const APP_RELEASE_DATE = '2026-03-17'
-export const APP_BUILD = 'Ordenação por check-ins desc, depois meses desc - Beta 59'
+export const APP_BUILD = 'WhatsApp Integration via Evolution API - Beta 60'
 
 export const getVersionString = () => {
   return `${APP_VERSION_NAME} (v${APP_VERSION})`
