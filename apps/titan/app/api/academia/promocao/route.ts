@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       const lastPromo = a.data_ultima_graduacao ? new Date(a.data_ultima_graduacao) : null
       const monthsInGrade = lastPromo
         ? (today.getTime() - lastPromo.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-        : 999
+        : 0
 
       const meetsCheckins = checkins >= rule.min_checkins
       const meetsTime = monthsInGrade >= rule.min_months

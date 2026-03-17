@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Award, CheckCircle2, XCircle, Loader2, Settings, ChevronUp, Save, X, PlusCircle, Zap, BarChart2, Calendar } from 'lucide-react'
+import { ArrowLeft, Award, CheckCircle2, XCircle, Loader2, Settings, ChevronUp, Save, X, PlusCircle, Zap, BarChart2, Calendar, Trash2 } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
@@ -34,7 +34,7 @@ interface AtletaDetail {
   checkinsByMonth: { month: string; count: number }[]
   totalPoints: number
   offsetPoints: number
-  pointsHistory: { tipo: string; pontos: number; descricao: string; created_at: string }[]
+  pointsHistory: { id: string; tipo: string; pontos: number; descricao: string; created_at: string }[]
 }
 
 const KYU_DAN_OPTIONS = [
@@ -178,6 +178,14 @@ export default function PromocaoPage() {
     })
     if (academiaId) await load(academiaId)
     setSavingDate(false)
+  }
+
+  const deleteOffset = async (pontosId: string) => {
+    if (!detailAthlete || !academiaId) return
+    await fetch(`/api/academia/atleta/${detailAthlete.stakeholder_id}?id=${pontosId}`, { method: 'DELETE' })
+    const res = await fetch(`/api/academia/atleta/${detailAthlete.stakeholder_id}?academia_id=${academiaId}`)
+    if (res.ok) setDetail(await res.json())
+    await load(academiaId)
   }
 
   const saveRules = async () => {
@@ -596,15 +604,26 @@ export default function PromocaoPage() {
                       <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                         {detail.pointsHistory.map((h, i) => (
                           <div key={i} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
-                            <div>
-                              <p className="text-gray-300 text-xs">{h.descricao}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-gray-300 text-xs truncate">{h.descricao}</p>
                               <p className="text-gray-600 text-[10px]">
                                 {new Date(h.created_at).toLocaleDateString('pt-BR')}
                               </p>
                             </div>
-                            <span className={`text-xs font-semibold ${h.tipo === 'offset' ? 'text-amber-400' : 'text-green-400'}`}>
-                              +{h.pontos}
-                            </span>
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <span className={`text-xs font-semibold ${h.tipo === 'offset' ? 'text-amber-400' : 'text-green-400'}`}>
+                                +{h.pontos}
+                              </span>
+                              {h.tipo === 'offset' && (
+                                <button
+                                  onClick={() => deleteOffset(h.id)}
+                                  className="text-gray-600 hover:text-red-400 transition-colors"
+                                  title="Remover offset"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

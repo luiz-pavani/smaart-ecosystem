@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   // Points summary
   const pointsQuery = supabaseAdmin
     .from('pontos_atleta')
-    .select('tipo, pontos, descricao, created_at')
+    .select('id, tipo, pontos, descricao, created_at')
     .eq('athlete_id', atletaId)
     .order('created_at', { ascending: false })
 
@@ -99,6 +99,27 @@ export async function POST(req: NextRequest, { params }: Params) {
     pontos: Number(pontos),
     descricao: descricao || `Ajuste histórico: ${pontos} presenças`,
   })
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
+// DELETE — remove an offset entry by id
+export async function DELETE(req: NextRequest, { params }: Params) {
+  const { atletaId } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const pontosId = req.nextUrl.searchParams.get('id')
+  if (!pontosId) return NextResponse.json({ error: 'id obrigatório' }, { status: 400 })
+
+  const { error } = await supabaseAdmin
+    .from('pontos_atleta')
+    .delete()
+    .eq('id', pontosId)
+    .eq('athlete_id', atletaId)
+    .eq('tipo', 'offset')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
