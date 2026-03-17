@@ -52,13 +52,20 @@ const KYU_DAN_OPTIONS = [
   { id: 12, label: 'Marrom (1º kyū)' },
 ]
 
-function ProgressBar({ value, max, ok }: { value: number; max: number; ok: boolean }) {
+function barColor(pct: number): string {
+  if (pct >= 100) return '#4ade80' // green-400
+  if (pct >= 70)  return '#facc15' // yellow-400
+  if (pct >= 30)  return '#fb923c' // orange-400
+  return '#f87171'                 // red-400
+}
+
+function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = Math.min((value / max) * 100, 100)
   return (
     <div className="h-1.5 bg-white/10 rounded-full overflow-hidden w-full">
       <div
-        className={`h-full rounded-full transition-all ${ok ? 'bg-green-400' : 'bg-amber-400'}`}
-        style={{ width: `${pct}%` }}
+        className="h-full rounded-full transition-all"
+        style={{ width: `${pct}%`, backgroundColor: barColor(pct) }}
       />
     </div>
   )
@@ -367,7 +374,7 @@ export default function PromocaoPage() {
                           </span>
                           <span className="text-gray-400">{a.checkins}/{a.min_checkins}</span>
                         </div>
-                        <ProgressBar value={a.checkins} max={a.min_checkins} ok={a.meetsCheckins} />
+                        <ProgressBar value={a.checkins} max={a.min_checkins} />
                       </div>
                       <div>
                         <div className="flex justify-between text-xs mb-1">
@@ -377,7 +384,7 @@ export default function PromocaoPage() {
                           </span>
                           <span className="text-gray-400">{a.months_in_grade}/{a.min_months}</span>
                         </div>
-                        <ProgressBar value={a.months_in_grade} max={a.min_months} ok={a.meetsTime} />
+                        <ProgressBar value={a.months_in_grade} max={a.min_months} />
                       </div>
                     </div>
                   </div>
@@ -483,7 +490,7 @@ export default function PromocaoPage() {
                         </span>
                         <span className="text-gray-400">{detailAthlete.checkins}/{detailAthlete.min_checkins}</span>
                       </div>
-                      <ProgressBar value={detailAthlete.checkins} max={detailAthlete.min_checkins} ok={detailAthlete.meetsCheckins} />
+                      <ProgressBar value={detailAthlete.checkins} max={detailAthlete.min_checkins} />
                     </div>
                     <div>
                       <div className="flex justify-between text-xs mb-1">
@@ -493,7 +500,7 @@ export default function PromocaoPage() {
                         </span>
                         <span className="text-gray-400">{detailAthlete.months_in_grade}/{detailAthlete.min_months}</span>
                       </div>
-                      <ProgressBar value={detailAthlete.months_in_grade} max={detailAthlete.min_months} ok={detailAthlete.meetsTime} />
+                      <ProgressBar value={detailAthlete.months_in_grade} max={detailAthlete.min_months} />
                     </div>
                   </div>
 

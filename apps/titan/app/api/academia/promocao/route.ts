@@ -95,7 +95,14 @@ export async function GET(req: NextRequest) {
       }
     })
     .filter(Boolean)
-    .sort((a: any, b: any) => (b.ready ? 1 : 0) - (a.ready ? 1 : 0))
+    .sort((a: any, b: any) => {
+      // Score = min(checkins%, time%) — bottleneck metric, higher = closer to promotion
+      const score = (x: any) => Math.min(
+        x.checkins / x.min_checkins,
+        x.months_in_grade / x.min_months,
+      )
+      return score(b) - score(a)
+    })
 
   return NextResponse.json({ rules: rules || [], eligible })
 }
