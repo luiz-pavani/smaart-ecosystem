@@ -3,10 +3,10 @@
  * Auto-updated with each release
  */
 
-export const APP_VERSION = '54.0.0'
-export const APP_VERSION_NAME = 'Beta 54'
+export const APP_VERSION = '55.0.0'
+export const APP_VERSION_NAME = 'Beta 55'
 export const APP_RELEASE_DATE = '2026-03-16'
-export const APP_BUILD = 'Fase 2 completa: Conta Família - Beta 54'
+export const APP_BUILD = 'Detalhe do atleta com presença histórica e offset de pontos - Beta 55'
 
 export const getVersionString = () => {
   return `${APP_VERSION_NAME} (v${APP_VERSION})`
