@@ -38,6 +38,18 @@ export async function GET(req: NextRequest) {
     ;(checkins || []).forEach((c: any) => {
       checkinMap[c.athlete_id] = (checkinMap[c.athlete_id] || 0) + 1
     })
+
+    // Add historical offsets (pontos ÷ 10 = presences)
+    const { data: offsets } = await supabaseAdmin
+      .from('pontos_atleta')
+      .select('athlete_id, pontos')
+      .in('athlete_id', athleteIds)
+      .eq('academia_id', academiaId)
+      .eq('tipo', 'offset')
+
+    ;(offsets || []).forEach((o: any) => {
+      checkinMap[o.athlete_id] = (checkinMap[o.athlete_id] || 0) + Math.floor(o.pontos / 10)
+    })
   }
 
   // Fetch kyu_dan map
@@ -69,6 +81,7 @@ export async function GET(req: NextRequest) {
         stakeholder_id: a.stakeholder_id,
         nome_completo: a.nome_completo,
         kyu_dan_id: a.kyu_dan_id,
+        data_ultima_graduacao: a.data_ultima_graduacao || null,
         graduacao: kyuDanMap[a.kyu_dan_id] || null,
         next_kyu_dan_id: a.kyu_dan_id + 1,
         next_graduacao: kyuDanMap[a.kyu_dan_id + 1] || null,

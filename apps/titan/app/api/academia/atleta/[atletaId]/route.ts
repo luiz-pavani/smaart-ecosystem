@@ -58,6 +58,27 @@ export async function GET(req: NextRequest, { params }: Params) {
   })
 }
 
+// PATCH — update data_ultima_graduacao
+export async function PATCH(req: NextRequest, { params }: Params) {
+  const { atletaId } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data_ultima_graduacao } = await req.json()
+  if (!data_ultima_graduacao) {
+    return NextResponse.json({ error: 'data_ultima_graduacao obrigatória' }, { status: 400 })
+  }
+
+  const { error } = await supabaseAdmin
+    .from('user_fed_lrsj')
+    .update({ data_ultima_graduacao })
+    .eq('stakeholder_id', atletaId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
+
 // POST — add offset points
 export async function POST(req: NextRequest, { params }: Params) {
   const { atletaId } = await params

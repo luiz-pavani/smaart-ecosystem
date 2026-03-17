@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Award, CheckCircle2, XCircle, Loader2, Settings, ChevronUp, Save, X, PlusCircle, Zap, BarChart2 } from 'lucide-react'
+import { ArrowLeft, Award, CheckCircle2, XCircle, Loader2, Settings, ChevronUp, Save, X, PlusCircle, Zap, BarChart2, Calendar } from 'lucide-react'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
@@ -10,6 +10,7 @@ interface EligibleAthlete {
   stakeholder_id: string
   nome_completo: string
   kyu_dan_id: number
+  data_ultima_graduacao: string | null
   graduacao: { kyu_dan: string; cor_faixa: string } | null
   next_kyu_dan_id: number
   next_graduacao: { kyu_dan: string; cor_faixa: string } | null
@@ -99,6 +100,8 @@ export default function PromocaoPage() {
   const [offsetValue, setOffsetValue] = useState('')
   const [offsetDesc, setOffsetDesc] = useState('')
   const [savingOffset, setSavingOffset] = useState(false)
+  const [lastPromoDate, setLastPromoDate] = useState('')
+  const [savingDate, setSavingDate] = useState(false)
 
   const load = useCallback(async (acadId: string) => {
     const res = await fetch(`/api/academia/promocao?academia_id=${acadId}`)
@@ -130,6 +133,7 @@ export default function PromocaoPage() {
     setDetailLoading(true)
     setOffsetValue('')
     setOffsetDesc('')
+    setLastPromoDate(athlete.data_ultima_graduacao || '')
     const res = await fetch(`/api/academia/atleta/${athlete.stakeholder_id}?academia_id=${academiaId}`)
     if (res.ok) setDetail(await res.json())
     setDetailLoading(false)
@@ -143,7 +147,7 @@ export default function PromocaoPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         academia_id: academiaId,
-        pontos: Number(offsetValue),
+        pontos: Number(offsetValue) * 10,
         descricao: offsetDesc || `Ajuste histórico: ${offsetValue} presenças`,
       }),
     })
@@ -155,6 +159,18 @@ export default function PromocaoPage() {
     setOffsetValue('')
     setOffsetDesc('')
     setSavingOffset(false)
+  }
+
+  const saveDate = async () => {
+    if (!detailAthlete || !lastPromoDate) return
+    setSavingDate(true)
+    await fetch(`/api/academia/atleta/${detailAthlete.stakeholder_id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data_ultima_graduacao: lastPromoDate }),
+    })
+    if (academiaId) await load(academiaId)
+    setSavingDate(false)
   }
 
   const saveRules = async () => {
@@ -481,6 +497,35 @@ export default function PromocaoPage() {
                     </div>
                   </div>
 
+                  {/* Last promotion date */}
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
+                    <p className="text-blue-300 text-sm font-medium mb-1 flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Data da Última Graduação
+                    </p>
+                    <p className="text-gray-500 text-xs mb-3">
+                      Define o ponto de partida para o cálculo de tempo na faixa atual.
+                    </p>
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <input
+                          type="date"
+                          value={lastPromoDate}
+                          onChange={e => setLastPromoDate(e.target.value)}
+                          className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <button
+                        onClick={saveDate}
+                        disabled={savingDate || !lastPromoDate}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:bg-blue-500/30 text-sm font-medium transition-colors disabled:opacity-40"
+                      >
+                        {savingDate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Offset — add historical presences */}
                   <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
                     <p className="text-amber-300 text-sm font-medium mb-1 flex items-center gap-2">
@@ -488,7 +533,7 @@ export default function PromocaoPage() {
                       Adicionar Presenças Históricas
                     </p>
                     <p className="text-gray-500 text-xs mb-3">
-                      Use para contabilizar presenças anteriores ao Titan. Cada presença equivale a 10 pontos.
+                      Use para contabilizar presenças anteriores ao Titan. Cada presença conta como 1 check-in na elegibilidade.
                     </p>
                     <div className="flex flex-col gap-2">
                       <div className="flex gap-2">
