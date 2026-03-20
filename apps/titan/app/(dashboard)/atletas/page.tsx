@@ -126,7 +126,7 @@ export default function AtletasPage() {
       }
 
       alert('✅ Atleta excluído com sucesso!')
-      loadAtletas()
+      loadAtletas(page)
     } catch (error) {
       console.error('Error deleting atleta:', error)
       alert(`❌ ${error instanceof Error ? error.message : 'Erro ao excluir atleta'}`)
