@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -185,6 +185,19 @@ export default function PortalFederacaoPage() {
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">Relatórios</h3>
             <p className="text-sm text-slate-400">Exportar relatórios em PDF</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/portal/federacao/filiacoes')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/5
+                     hover:from-orange-500/20 hover:to-orange-600/10 border border-orange-500/20 hover:border-orange-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <ShieldCheck className="w-6 h-6 text-orange-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Filiações</h3>
+            <p className="text-sm text-slate-400">Aprovações e renovações</p>
           </button>
         </div>
       </div>
