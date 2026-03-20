@@ -300,7 +300,7 @@ export default function CheckinPage() {
                         )}
                       </div>
                       {present && (
-                        <X className="w-3.5 h-3.5 text-red-400/50 hover:text-red-400 shrink-0" title="Remover presença" />
+                        <X className="w-3.5 h-3.5 text-red-400/50 hover:text-red-400 shrink-0" aria-label="Remover presença" />
                       )}
                     </button>
                   )
