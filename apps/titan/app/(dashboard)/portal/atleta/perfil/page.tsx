@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Settings, Calendar, Clock, X, Camera, Check, Pencil } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Settings, Calendar, Clock, X, Camera, Check, Pencil, MessageCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
@@ -375,6 +375,53 @@ export default function PerfilAtletaPage() {
                 </div>
               )}
             </div>
+
+            {/* Renovação banner */}
+            {(() => {
+              const exp = atleta.data_expiracao
+              const today = new Date().toISOString().split('T')[0]
+              const diffDays = exp
+                ? Math.ceil((new Date(exp + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86400000)
+                : null
+              const vencido = atleta.status_plano === 'Vencido' || (diffDays !== null && diffDays < 0)
+              const vencendo = !vencido && diffDays !== null && diffDays <= 30
+
+              if (!vencido && !vencendo) return null
+
+              const msgWpp = vencido
+                ? encodeURIComponent(`Olá! Sou atleta filiado(a) e meu plano está vencido. Gostaria de renovar minha filiação na LRSJ. Meu nome: ${atleta.nome_completo || ''}`)
+                : encodeURIComponent(`Olá! Meu plano na LRSJ vence em ${diffDays} dias. Gostaria de informações para renovação. Meu nome: ${atleta.nome_completo || ''}`)
+
+              return (
+                <div className={`rounded-xl border p-5 ${vencido ? 'bg-red-500/10 border-red-500/25' : 'bg-amber-500/10 border-amber-500/25'}`}>
+                  <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                    <div>
+                      <p className={`font-semibold text-sm ${vencido ? 'text-red-300' : 'text-amber-300'}`}>
+                        {vencido ? '⚠️ Plano vencido' : `⏳ Plano vence em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`}
+                      </p>
+                      <p className="text-gray-400 text-xs mt-0.5">
+                        {vencido
+                          ? 'Sua filiação está inativa. Entre em contato com a federação para renovar.'
+                          : 'Renove em breve para manter sua filiação ativa.'}
+                      </p>
+                    </div>
+                    <a
+                      href={`https://wa.me/555196834013?text=${msgWpp}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors shrink-0 ${
+                        vencido
+                          ? 'bg-red-600/80 hover:bg-red-600 text-white'
+                          : 'bg-amber-600/80 hover:bg-amber-600 text-white'
+                      }`}
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Solicitar renovação
+                    </a>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Documentos */}
             <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">

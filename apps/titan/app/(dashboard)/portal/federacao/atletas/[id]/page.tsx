@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft, Loader2, User, Mail, Award, Building2, FileText, CreditCard } from "lucide-react";
+import { ArrowLeft, Loader2, User, Mail, Award, Building2, FileText, CreditCard, CheckCircle2, XCircle, RefreshCw, Zap } from "lucide-react";
 import AtletaDocumentos from "@/components/AtletaDocumentos";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -337,6 +337,11 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   const [federacoes, setFederacoes] = useState<Federacao[]>([]);
   const [federacaoFiltro, setFederacaoFiltro] = useState<string>('');
   const [atletaId, setAtletaId] = useState<string | null>(null);
+  // Quick actions state
+  const [qaAction, setQaAction] = useState<'renovar' | 'graduacao' | null>(null);
+  const [qaNovaData, setQaNovaData] = useState('');
+  const [qaNovaGrad, setQaNovaGrad] = useState('');
+  const [qaSaving, setQaSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -507,6 +512,29 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  const quickPatch = async (payload: Record<string, unknown>, successMsg: string) => {
+    if (!atletaId) return;
+    setQaSaving(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/atletas/${atletaId}/update-fed`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erro');
+      setAtleta(json.data as AthleteRecord);
+      setFormData(json.data as AthleteRecord);
+      setQaAction(null);
+      setMessage(successMsg);
+    } catch (err: any) {
+      setMessage(err.message || 'Erro ao salvar');
+    } finally {
+      setQaSaving(false);
+    }
+  };
+
   const kyuDanAtual = graduacoes.find(g => g.id === Number(atleta.kyu_dan_id));
 
   return (
@@ -576,6 +604,116 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
         </div>
+
+        {/* Ações Rápidas — only visible to federation staff */}
+        {canValidate && (
+          <div className="bg-white/5 backdrop-blur rounded-xl p-6 mb-6 border border-white/10">
+            <div className="flex items-center gap-2 mb-5">
+              <Zap className="w-5 h-5 text-yellow-400" />
+              <h2 className="text-lg font-semibold text-white">Ações Rápidas</h2>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {/* Aprovar */}
+              {atleta.status_membro !== 'Aceito' && (
+                <button
+                  onClick={() => quickPatch({ status_membro: 'Aceito' }, 'Atleta aprovado com sucesso.')}
+                  disabled={qaSaving}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600/80 hover:bg-green-600 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Aprovar
+                </button>
+              )}
+
+              {/* Rejeitar */}
+              {atleta.status_membro !== 'Rejeitado' && (
+                <button
+                  onClick={() => quickPatch({ status_membro: 'Rejeitado' }, 'Atleta rejeitado.')}
+                  disabled={qaSaving}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-700/70 hover:bg-red-700 text-white text-sm font-medium disabled:opacity-50 transition-colors"
+                >
+                  <XCircle className="w-4 h-4" />
+                  Rejeitar
+                </button>
+              )}
+
+              {/* Renovar Plano */}
+              <button
+                onClick={() => { setQaAction(qaAction === 'renovar' ? null : 'renovar'); setQaNovaData(''); }}
+                disabled={qaSaving}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors ${
+                  qaAction === 'renovar' ? 'bg-blue-600 text-white' : 'bg-blue-600/40 hover:bg-blue-600/60 text-blue-200'
+                }`}
+              >
+                <RefreshCw className="w-4 h-4" />
+                Renovar plano
+              </button>
+
+              {/* Alterar Graduação */}
+              <button
+                onClick={() => { setQaAction(qaAction === 'graduacao' ? null : 'graduacao'); setQaNovaGrad(String(atleta.kyu_dan_id ?? '')); }}
+                disabled={qaSaving}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors ${
+                  qaAction === 'graduacao' ? 'bg-purple-600 text-white' : 'bg-purple-600/40 hover:bg-purple-600/60 text-purple-200'
+                }`}
+              >
+                <Award className="w-4 h-4" />
+                Graduação
+              </button>
+            </div>
+
+            {/* Inline: Renovar */}
+            {qaAction === 'renovar' && (
+              <div className="mt-4 flex items-end gap-3 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                <div className="flex-1">
+                  <label className="text-xs text-gray-400 mb-1 block">Nova data de expiração</label>
+                  <input
+                    type="date"
+                    value={qaNovaData}
+                    onChange={e => setQaNovaData(e.target.value)}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white"
+                  />
+                </div>
+                <button
+                  onClick={() => quickPatch({ data_expiracao: qaNovaData, status_plano: 'Válido' }, 'Plano renovado com sucesso.')}
+                  disabled={!qaNovaData || qaSaving}
+                  className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+                >
+                  {qaSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar'}
+                </button>
+                <button onClick={() => setQaAction(null)} className="px-3 py-2 rounded-lg bg-white/10 text-gray-400 hover:text-white text-sm transition-colors">✕</button>
+              </div>
+            )}
+
+            {/* Inline: Graduação */}
+            {qaAction === 'graduacao' && (
+              <div className="mt-4 flex items-end gap-3 bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                <div className="flex-1">
+                  <label className="text-xs text-gray-400 mb-1 block">Nova graduação</label>
+                  <select
+                    value={qaNovaGrad}
+                    onChange={e => setQaNovaGrad(e.target.value)}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white"
+                  >
+                    <option value="">Selecione</option>
+                    {graduacoes.map(g => (
+                      <option key={g.id} value={String(g.id)}>{g.cor_faixa} | {g.kyu_dan}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={() => quickPatch({ kyu_dan_id: Number(qaNovaGrad) }, 'Graduação atualizada.')}
+                  disabled={!qaNovaGrad || qaSaving}
+                  className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+                >
+                  {qaSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar'}
+                </button>
+                <button onClick={() => setQaAction(null)} className="px-3 py-2 rounded-lg bg-white/10 text-gray-400 hover:text-white text-sm transition-colors">✕</button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Info grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
