@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User, Award, UserSearch, MessageSquare } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User, Award, UserSearch, MessageSquare, Star, BookText, ShieldAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -16,6 +16,17 @@ interface AtletaInativo {
   telefone: string | null
   status_plano: string | null
   data_expiracao: string | null
+}
+
+interface AtletaChurn {
+  stakeholder_id: string
+  nome_completo: string
+  telefone: string | null
+  score: number
+  nivel: 'alto' | 'medio' | 'baixo'
+  checkins_recentes: number
+  checkins_anteriores: number
+  dias_desde_ultimo: number | null
 }
 
 interface AulaHoje {
@@ -58,6 +69,8 @@ export default function PortalAcademiaPage() {
   const [error, setError] = useState<string | null>(null)
   const [academiaId, setAcademiaId] = useState<string | null>(null)
   const [downloadingCertificado, setDownloadingCertificado] = useState(false)
+  const [churn, setChurn] = useState<AtletaChurn[]>([])
+  const [anuidades, setAnuidades] = useState<{ vencendo: any[]; vencidas: any[] } | null>(null)
   const [academias, setAcademias] = useState<{ id: string; nome: string }[]>([])
   const [selectedAcademiaId, setSelectedAcademiaId] = useState<string>('')
   const [isMaster, setIsMaster] = useState(false)
@@ -339,6 +352,18 @@ export default function PortalAcademiaPage() {
         aulasHoje,
         atletasInativos,
       })
+
+      // Churn score (fire-and-forget)
+      fetch(`/api/academia/churn?academia_id=${resolvedAcademiaId}`)
+        .then(r => r.json())
+        .then(d => setChurn(d.churn || []))
+        .catch(() => {})
+
+      // Anuidades da federação (fire-and-forget)
+      fetch(`/api/academia/anuidades?academia_id=${resolvedAcademiaId}`)
+        .then(r => r.json())
+        .then(d => setAnuidades({ vencendo: d.vencendo || [], vencidas: d.vencidas || [] }))
+        .catch(() => {})
     } catch (err) {
       console.error('Erro ao carregar dashboard da academia:', err)
       setError('Não foi possível carregar os dados do portal da academia')
@@ -439,6 +464,27 @@ export default function PortalAcademiaPage() {
       icon: <MessageSquare className="w-6 h-6" />,
       href: '/portal/academia/whatsapp',
       color: 'from-green-500 to-green-600'
+    },
+    {
+      title: 'Avaliações NPS',
+      description: 'Satisfação dos atletas por turma',
+      icon: <Star className="w-6 h-6" />,
+      href: '/portal/academia/nps',
+      color: 'from-yellow-500 to-amber-600'
+    },
+    {
+      title: 'Anuidades LRSJ',
+      description: 'Vencimentos e filiações da federação',
+      icon: <ShieldAlert className="w-6 h-6" />,
+      href: '/portal/academia/anuidades',
+      color: 'from-red-500 to-orange-600'
+    },
+    {
+      title: 'Relatórios',
+      description: 'Gere PDFs com dados da academia',
+      icon: <BookText className="w-6 h-6" />,
+      href: '/portal/academia/relatorios',
+      color: 'from-indigo-500 to-violet-600'
     },
   ]
 
@@ -648,6 +694,84 @@ export default function PortalAcademiaPage() {
               </div>
             )}
 
+            {/* Anuidades da Federação */}
+            {anuidades && (anuidades.vencendo.length > 0 || anuidades.vencidas.length > 0) && (
+              <div className="bg-gradient-to-br from-orange-500/10 to-red-500/5 border border-orange-500/20 rounded-xl p-6 mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <span>🏅</span> Anuidades da Federação
+                  </h3>
+                  <button
+                    onClick={() => router.push('/portal/academia/anuidades')}
+                    className="text-xs text-orange-300 hover:text-orange-200 underline underline-offset-2 transition-colors"
+                  >
+                    Ver todos →
+                  </button>
+                </div>
+
+                {/* Counts */}
+                <div className="flex gap-3 mb-4">
+                  {anuidades.vencendo.length > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/20">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="text-amber-300 text-sm font-medium">
+                        {anuidades.vencendo.length} vencendo em 30 dias
+                      </span>
+                    </div>
+                  )}
+                  {anuidades.vencidas.length > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/20">
+                      <span className="w-2 h-2 rounded-full bg-red-400" />
+                      <span className="text-red-300 text-sm font-medium">
+                        {anuidades.vencidas.length} vencida{anuidades.vencidas.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Expiring soon list (top 5) */}
+                {anuidades.vencendo.length > 0 && (
+                  <div className="space-y-2">
+                    {anuidades.vencendo.slice(0, 5).map((a: any, i: number) => {
+                      const exp = a.data_expiracao
+                        ? new Date(a.data_expiracao + 'T12:00:00').toLocaleDateString('pt-BR')
+                        : null
+                      return (
+                        <div key={i} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
+                          <div>
+                            <p className="text-white font-medium text-sm">{a.nome_completo}</p>
+                            <p className="text-xs text-amber-400/80 mt-0.5">
+                              {a.dias === 0 ? 'Vence hoje' : a.dias === 1 ? 'Vence amanhã' : `Vence em ${a.dias} dias`}
+                              {exp ? ` · ${exp}` : ''}
+                            </p>
+                          </div>
+                          {a.telefone && (
+                            <a
+                              href={`https://wa.me/55${a.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${a.nome_completo.split(' ')[0]}! 👋 Sua anuidade na LRSJ vence em ${a.dias} dias (${exp}). Renove para manter sua filiação ativa! 🥋`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors ml-3"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                              Avisar
+                            </a>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {anuidades.vencendo.length > 5 && (
+                      <button
+                        onClick={() => router.push('/portal/academia/anuidades')}
+                        className="w-full text-center text-xs text-gray-500 hover:text-gray-300 py-2 transition-colors"
+                      >
+                        + {anuidades.vencendo.length - 5} mais → Ver todos
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Atletas Inativos */}
             {data.atletasInativos.length > 0 && (
               <div className="bg-gradient-to-br from-red-500/10 to-orange-500/5 border border-red-500/20 rounded-xl p-6 mb-8">
@@ -683,6 +807,52 @@ export default function PortalAcademiaPage() {
                       </div>
                     )
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Risco de Abandono (Churn) */}
+            {churn.length > 0 && (
+              <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-xl p-6 mb-8">
+                <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                  <span>🎯</span> Risco de Abandono
+                  <span className="ml-auto text-sm font-normal text-gray-400">{churn.length} atleta{churn.length !== 1 ? 's' : ''} em risco</span>
+                </h3>
+                <p className="text-xs text-gray-500 mb-4">Atletas ativos com queda de frequência nas últimas semanas</p>
+                <div className="space-y-2">
+                  {churn.map((a, i) => (
+                    <div key={i} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className={`shrink-0 w-2 h-2 rounded-full ${a.nivel === 'alto' ? 'bg-red-400' : a.nivel === 'medio' ? 'bg-amber-400' : 'bg-yellow-400'}`} />
+                        <div className="min-w-0">
+                          <p className="text-white font-medium text-sm truncate">{a.nome_completo}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {a.dias_desde_ultimo !== null
+                              ? `Último treino há ${a.dias_desde_ultimo} dias`
+                              : 'Sem treinos registrados'
+                            }
+                            {' · '}{a.checkins_recentes} treino{a.checkins_recentes !== 1 ? 's' : ''} (30d)
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 ml-3 shrink-0">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.nivel === 'alto' ? 'bg-red-500/20 text-red-300' : a.nivel === 'medio' ? 'bg-amber-500/20 text-amber-300' : 'bg-yellow-500/20 text-yellow-300'}`}>
+                          {a.nivel === 'alto' ? 'Alto' : a.nivel === 'medio' ? 'Médio' : 'Baixo'}
+                        </span>
+                        {a.telefone && (
+                          <a
+                            href={`https://wa.me/55${a.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${a.nome_completo.split(' ')[0]}! 👋 Sentimos sua falta nos treinos! Está tudo bem? Qualquer dúvida, estamos aqui. 🥋`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            Contatar
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

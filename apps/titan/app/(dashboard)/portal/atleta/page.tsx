@@ -3,17 +3,29 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users } from 'lucide-react'
+import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { TopList } from '@/components/dashboard/TopList'
+
+interface Progresso {
+  graduacao_atual: { cor_faixa: string; kyu_dan: string } | null
+  proxima_graduacao: { cor_faixa: string; kyu_dan: string } | null
+  checkins: number
+  min_checkins: number | null
+  checkins_progress: number | null
+  months_in_grade: number
+  min_months: number | null
+  time_progress: number | null
+  ready: boolean
+  has_rules: boolean
+}
 
 interface DashboardData {
   atleta: any
   totalTreinos: number
   treinosUltimos30Dias: number
-  sequenciaAtual: number
-  proximaGraduacao: string
+  progresso: Progresso | null
   historicoLast7Days: { name: string; value: number }[]
   proximosEventos: { name: string; value: string; subtitle: string }[]
 }
@@ -55,58 +67,41 @@ export default function PortalAtletaPage() {
         atleta = null
       }
 
-      // Total de treinos (presencas)
-      const { count: totalTreinos } = await supabase
-        .from('athlete_attendance')
-        .select('*', { count: 'exact', head: true })
-        .eq('athlete_id', user.id)
-
-      // Treinos últimos 30 dias
+      // Total check-ins
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-      const { count: treinosUltimos30Dias } = await supabase
-        .from('athlete_attendance')
-        .select('*', { count: 'exact', head: true })
-        .eq('athlete_id', user.id)
-        .gte('created_at', thirtyDaysAgo.toISOString())
+      const [{ count: totalTreinos }, { count: treinosUltimos30Dias }, progressoRes] = await Promise.all([
+        supabase.from('class_checkins').select('*', { count: 'exact', head: true }).eq('athlete_id', user.id),
+        supabase.from('class_checkins').select('*', { count: 'exact', head: true }).eq('athlete_id', user.id).gte('checkin_date', thirtyDaysAgo.toISOString().split('T')[0]),
+        fetch('/api/atletas/self/progresso').then(r => r.json()).catch(() => null),
+      ])
 
-      // Histórico últimos 7 dias (agrupado por dia)
+      // Histórico últimos 7 dias
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-      const { data: attendanceData } = await supabase
-        .from('athlete_attendance')
-        .select('created_at')
+      const { data: checkinData } = await supabase
+        .from('class_checkins')
+        .select('checkin_date')
         .eq('athlete_id', user.id)
-        .gte('created_at', sevenDaysAgo.toISOString())
-        .order('created_at', { ascending: true })
+        .gte('checkin_date', sevenDaysAgo.toISOString().split('T')[0])
+        .order('checkin_date', { ascending: true })
 
       const dayMap = new Map<string, number>()
-      attendanceData?.forEach(a => {
-        const date = new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      checkinData?.forEach((c: any) => {
+        const date = new Date(c.checkin_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
         dayMap.set(date, (dayMap.get(date) || 0) + 1)
       })
 
       const historicoLast7Days = Array.from(dayMap.entries()).map(([name, value]) => ({ name, value }))
-
-      // Sequência atual (mock - você pode melhorar)
-      const sequenciaAtual = 3
-
-      // Próxima graduação
-      const graduacoes = ['Branca', '1ª Faixa Cinza', '2ª Faixa Cinza', '3ª Faixa Cinza', 'Amarela', 'Laranja', 'Verde', 'Roxa', 'Marrom', 'Preta']
-      const currentGradIndex = graduacoes.indexOf(atleta?.faixa || atleta?.graduacao || 'Branca')
-      const proximaGraduacao = currentGradIndex < graduacoes.length - 1 ? graduacoes[currentGradIndex + 1] : 'Máxima'
-
-      // Próximos eventos (mock - você pode implementar com tabela de event_registrations)
       const proximosEventos: any[] = []
 
       setData({
         atleta,
         totalTreinos: totalTreinos || 0,
         treinosUltimos30Dias: treinosUltimos30Dias || 0,
-        sequenciaAtual,
-        proximaGraduacao,
+        progresso: progressoRes?.error ? null : progressoRes,
         historicoLast7Days,
         proximosEventos
       })
@@ -156,7 +151,7 @@ export default function PortalAtletaPage() {
       ) : data ? (
         <>
           {/* Metrics Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <MetricCard
               title="Total de Treinos"
               value={data.totalTreinos}
@@ -170,15 +165,8 @@ export default function PortalAtletaPage() {
               color="blue"
             />
             <MetricCard
-              title="Sequência Atual"
-              value={`${data.sequenciaAtual} dias`}
-              icon={TrendingUp}
-              color="green"
-              trend={{ value: data.sequenciaAtual, label: 'consecutivos' }}
-            />
-            <MetricCard
               title="Próxima Graduação"
-              value={data.proximaGraduacao}
+              value={data.progresso?.proxima_graduacao?.cor_faixa ?? '—'}
               icon={Target}
               color="orange"
             />
@@ -197,37 +185,45 @@ export default function PortalAtletaPage() {
             )}
 
             {/* Progresso de graduação */}
-            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6">
+            <button
+              onClick={() => router.push('/portal/atleta/desempenho')}
+              className="bg-white/5 backdrop-blur border border-white/10 rounded-2xl p-6 text-left hover:bg-white/10 transition-all group"
+            >
               <div className="flex items-center gap-2 mb-4">
                 <Target className="w-5 h-5 text-orange-400" />
-                <h3 className="text-lg font-semibold text-white">Progresso para {data.proximaGraduacao}</h3>
+                <h3 className="text-lg font-semibold text-white">
+                  Progressão para {data.progresso?.proxima_graduacao?.cor_faixa ?? '—'}
+                </h3>
+                <ChevronRight className="w-4 h-4 text-gray-500 ml-auto group-hover:text-white transition-colors" />
               </div>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-slate-400">Tempo mínimo</span>
-                    <span className="text-white">75%</span>
+              {data.progresso?.has_rules ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-slate-400">Treinos ({data.progresso.checkins}/{data.progresso.min_checkins})</span>
+                      <span className="text-white">{data.progresso.checkins_progress ?? 0}%</span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-2">
+                      <div className={`h-2 rounded-full ${(data.progresso.checkins_progress ?? 0) >= 100 ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-blue-500 to-blue-400'}`} style={{ width: `${Math.min(100, data.progresso.checkins_progress ?? 0)}%` }} />
+                    </div>
                   </div>
-                  <div className="w-full bg-white/10 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-orange-500 to-orange-400 h-2 rounded-full" style={{ width: '75%' }} />
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-slate-400">Tempo na faixa ({data.progresso.months_in_grade}/{data.progresso.min_months} meses)</span>
+                      <span className="text-white">{data.progresso.time_progress ?? 0}%</span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-2">
+                      <div className={`h-2 rounded-full ${(data.progresso.time_progress ?? 0) >= 100 ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-orange-500 to-orange-400'}`} style={{ width: `${Math.min(100, data.progresso.time_progress ?? 0)}%` }} />
+                    </div>
                   </div>
+                  {data.progresso.ready && (
+                    <p className="text-green-400 text-sm font-medium">✓ Elegível para promoção!</p>
+                  )}
                 </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-slate-400">Frequência mínima</span>
-                    <span className="text-white">60%</span>
-                  </div>
-                  <div className="w-full bg-white/10 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-400 h-2 rounded-full" style={{ width: '60%' }} />
-                  </div>
-                </div>
-                <div className="pt-4 border-t border-white/10">
-                  <p className="text-sm text-slate-400">
-                    Continue treinando para atingir os requisitos da próxima graduação!
-                  </p>
-                </div>
-              </div>
-            </div>
+              ) : (
+                <p className="text-slate-400 text-sm">Ver detalhes da progressão →</p>
+              )}
+            </button>
           </div>
 
           {/* Próximos Eventos */}
@@ -245,22 +241,60 @@ export default function PortalAtletaPage() {
       <div className="pt-4">
         <h2 className="text-xl font-semibold text-white mb-4">Acesso Rápido</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Minhas Turmas */}
+          <button
+            onClick={() => router.push('/portal/atleta/turmas')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-purple-500/10 to-purple-600/5
+                     hover:from-purple-500/20 hover:to-purple-600/10 border border-purple-500/20 hover:border-purple-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-600/0
+                          group-hover:from-purple-500/10 group-hover:to-purple-600/5 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <BookOpen className="w-6 h-6 text-purple-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Minhas Turmas</h3>
+              <p className="text-sm text-slate-400">Horários e check-in</p>
+            </div>
+          </button>
+
           {/* Frequência */}
           <button
             onClick={() => router.push('/portal/atleta/frequencia')}
-            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-green-500/10 to-green-600/5 
-                     hover:from-green-500/20 hover:to-green-600/10 border border-green-500/20 hover:border-green-500/40 
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-green-500/10 to-green-600/5
+                     hover:from-green-500/20 hover:to-green-600/10 border border-green-500/20 hover:border-green-500/40
                      transition-all duration-300 text-left"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/0 to-green-600/0 
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/0 to-green-600/0
                           group-hover:from-green-500/10 group-hover:to-green-600/5 transition-all duration-300" />
             <div className="relative z-10">
-              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4 
+              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4
                             group-hover:scale-110 transition-transform">
                 <Calendar className="w-6 h-6 text-green-400" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Frequência</h3>
               <p className="text-sm text-slate-400">Histórico de presença</p>
+            </div>
+          </button>
+
+          {/* Progressão */}
+          <button
+            onClick={() => router.push('/portal/atleta/desempenho')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/5
+                     hover:from-orange-500/20 hover:to-orange-600/10 border border-orange-500/20 hover:border-orange-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/0 to-orange-600/0
+                          group-hover:from-orange-500/10 group-hover:to-orange-600/5 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-6 h-6 text-orange-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Progressão</h3>
+              <p className="text-sm text-slate-400">Progresso para próxima faixa</p>
             </div>
           </button>
 

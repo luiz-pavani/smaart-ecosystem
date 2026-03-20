@@ -274,7 +274,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const { data: atletas, error } = await supabase
+    const page = Math.max(1, parseInt(request.nextUrl.searchParams.get('page') || '1', 10))
+    const perPage = Math.min(100, Math.max(1, parseInt(request.nextUrl.searchParams.get('per_page') || '50', 10)))
+    const from = (page - 1) * perPage
+    const to = from + perPage - 1
+
+    const { data: atletas, error, count } = await supabase
       .from('user_fed_lrsj')
       .select(`
         *,
@@ -282,14 +287,15 @@ export async function GET(request: NextRequest) {
           id,
           nome
         )
-      `)
+      `, { count: 'exact' })
       .order('created_at', { ascending: false })
+      .range(from, to)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json({ atletas })
+    return NextResponse.json({ atletas, total: count ?? 0, page, per_page: perPage })
   } catch (error) {
     console.error('Error fetching atletas:', error)
     return NextResponse.json(

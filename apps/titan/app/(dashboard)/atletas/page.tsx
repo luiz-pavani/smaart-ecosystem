@@ -28,19 +28,23 @@ interface Atleta {
   }
 }
 
+const PER_PAGE = 50
+
 export default function AtletasPage() {
   const [atletas, setAtletas] = useState<Atleta[]>([])
   const [loading, setLoading] = useState(true)
   const [perfil, setPerfil] = useState<any>(null)
   const [columnDialogOpen, setColumnDialogOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
   const supabase = createClient()
   const { columns, isLoaded, moveColumn, resetToDefault } = useColumnOrder()
 
   useEffect(() => {
-    loadAtletas()
-  }, [])
+    loadAtletas(page)
+  }, [page])
 
-  const loadAtletas = async () => {
+  const loadAtletas = async (currentPage: number) => {
     try {
       setLoading(true)
 
@@ -70,6 +74,9 @@ export default function AtletasPage() {
       setPerfil(perfilData)
 
       // Build query based on user role
+      const from = (currentPage - 1) * PER_PAGE
+      const to = from + PER_PAGE - 1
+
       let query = supabase
         .from('stakeholders')
         .select(`
@@ -78,9 +85,10 @@ export default function AtletasPage() {
             id,
             nome
           )
-        `)
+        `, { count: 'exact' })
         .eq('role', 'atleta')
         .order('created_at', { ascending: false })
+        .range(from, to)
 
       // Filter by role
       if (perfilData.role === 'academia_admin' || perfilData.role === 'academia_staff') {
@@ -89,12 +97,13 @@ export default function AtletasPage() {
         query = query.eq('federacao_id', perfilData.federacao_id)
       }
 
-      const { data, error } = await query
+      const { data, error, count } = await query
 
       if (error) {
         console.error('Error fetching atletas:', error)
       } else {
         setAtletas(data || [])
+        setTotal(count ?? 0)
       }
     } finally {
       setLoading(false)
@@ -124,8 +133,7 @@ export default function AtletasPage() {
     }
   }
 
-  // Statistics
-  const total = atletas.length
+  // Statistics (page-local counts for current page; total from server)
   const ativos = atletas.filter(a => a.status === 'ativo').length
   const faixasPreta = atletas.filter(a => a.graduacao.includes('FAIXA PRETA')).length
   const arbitros = atletas.filter(a => a.nivel_arbitragem).length
@@ -190,7 +198,7 @@ export default function AtletasPage() {
             <span className="text-2xl">👥</span>
           </div>
           <div className="text-2xl font-bold text-foreground">{total}</div>
-          <p className="text-xs text-muted-foreground">{ativos} ativos</p>
+          <p className="text-xs text-muted-foreground">{ativos} ativos nesta página</p>
         </div>
 
         <div className="bg-card p-6 rounded-lg shadow border border-border">
@@ -356,6 +364,34 @@ export default function AtletasPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {total > PER_PAGE && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {Math.min((page - 1) * PER_PAGE + 1, total)}–{Math.min(page * PER_PAGE, total)} de {total} atletas
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 text-sm rounded-lg border border-border bg-background text-foreground disabled:opacity-40 hover:bg-muted transition-colors"
+                >
+                  Anterior
+                </button>
+                <span className="px-3 py-1.5 text-sm text-muted-foreground">
+                  Página {page} de {Math.ceil(total / PER_PAGE)}
+                </span>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page * PER_PAGE >= total}
+                  className="px-3 py-1.5 text-sm rounded-lg border border-border bg-background text-foreground disabled:opacity-40 hover:bg-muted transition-colors"
+                >
+                  Próxima
+                </button>
+              </div>
             </div>
           )}
         </div>

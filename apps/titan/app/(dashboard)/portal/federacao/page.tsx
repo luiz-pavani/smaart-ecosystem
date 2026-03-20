@@ -1,11 +1,26 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { TopList } from '@/components/dashboard/TopList'
+
+interface AcademiaHealth {
+  id: string
+  nome: string
+  sigla: string | null
+  responsavel_telefone: string | null
+  total_atletas: number
+  atletas_ativos: number
+  pct_ativos: number
+  anuidade_status: 'ok' | 'vencendo' | 'vencida' | 'indefinida'
+  anualidade_vencimento: string | null
+  dias_vencimento: number | null
+  health_score: number
+  nivel: 'bom' | 'atencao' | 'critico'
+}
 
 interface DashboardData {
   totalAcademias: number
@@ -50,6 +65,7 @@ export default function PortalFederacaoPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<DashboardData | null>(null)
+  const [healthData, setHealthData] = useState<AcademiaHealth[]>([])
 
   useEffect(() => {
     loadDashboardData()
@@ -76,10 +92,17 @@ export default function PortalFederacaoPage() {
       const params = new URLSearchParams()
       if (!isMaster && perfil.federacao_id) params.set('federacao_id', perfil.federacao_id)
 
-      const res = await fetch(`/api/federacao/dashboard?${params}`)
+      const [res, healthRes] = await Promise.all([
+        fetch(`/api/federacao/dashboard?${params}`),
+        fetch('/api/federacao/academias-health'),
+      ])
       if (!res.ok) throw new Error('Erro ao carregar stats')
       const json = await res.json()
       setData(json)
+      if (healthRes.ok) {
+        const h = await healthRes.json()
+        setHealthData(h.academias || [])
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -150,6 +173,19 @@ export default function PortalFederacaoPage() {
             <h3 className="text-lg font-semibold text-white mb-2">Competições</h3>
             <p className="text-sm text-slate-400">Organizar campeonatos</p>
           </button>
+
+          <button
+            onClick={() => router.push('/portal/federacao/relatorios')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5
+                     hover:from-blue-500/20 hover:to-blue-600/10 border border-blue-500/20 hover:border-blue-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <FileText className="w-6 h-6 text-blue-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Relatórios</h3>
+            <p className="text-sm text-slate-400">Exportar relatórios em PDF</p>
+          </button>
         </div>
       </div>
 
@@ -201,6 +237,69 @@ export default function PortalFederacaoPage() {
               valueLabel="atletas"
             />
           </div>
+
+          {/* Saúde das Academias */}
+          {healthData.length > 0 && (
+            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-400" />
+                Saúde das Academias
+              </h3>
+              <p className="text-xs text-gray-500 mb-5">Ordenado por academias que precisam de atenção</p>
+              <div className="space-y-3">
+                {healthData.map((a) => (
+                  <div key={a.id} className={`flex items-center gap-4 rounded-xl border px-4 py-3 transition-all ${
+                    a.nivel === 'critico' ? 'bg-red-500/5 border-red-500/20' :
+                    a.nivel === 'atencao' ? 'bg-amber-500/5 border-amber-500/20' :
+                    'bg-white/3 border-white/8'
+                  }`}>
+                    {/* Ícone de saúde */}
+                    <div className="shrink-0">
+                      {a.nivel === 'bom'
+                        ? <CheckCircle2 className="w-5 h-5 text-green-400" />
+                        : <AlertTriangle className={`w-5 h-5 ${a.nivel === 'critico' ? 'text-red-400' : 'text-amber-400'}`} />
+                      }
+                    </div>
+
+                    {/* Nome + stats */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium text-sm">{a.nome}{a.sigla ? ` (${a.sigla})` : ''}</p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                        <span className="text-xs text-gray-400">{a.atletas_ativos}/{a.total_atletas} atletas ativos ({a.pct_ativos}%)</span>
+                        {a.anuidade_status === 'vencida' && (
+                          <span className="text-xs text-red-400">⚠️ Anuidade vencida</span>
+                        )}
+                        {a.anuidade_status === 'vencendo' && a.dias_vencimento !== null && (
+                          <span className="text-xs text-amber-400">⏳ Anuidade vence em {a.dias_vencimento}d</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Health score */}
+                    <div className="shrink-0 text-right">
+                      <span className={`text-sm font-bold ${a.health_score >= 70 ? 'text-green-400' : a.health_score >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
+                        {a.health_score}
+                      </span>
+                      <p className="text-xs text-gray-500">score</p>
+                    </div>
+
+                    {/* WhatsApp responsável */}
+                    {a.responsavel_telefone && a.nivel !== 'bom' && (
+                      <a
+                        href={`https://wa.me/55${a.responsavel_telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá! Gostaríamos de conversar sobre a situação da academia *${a.nome}* junto à federação. Podemos falar?`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 hover:bg-green-500/30 text-xs font-medium transition-colors"
+                      >
+                        <Phone className="w-3 h-3" />
+                        Contatar
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       ) : null}
     </div>

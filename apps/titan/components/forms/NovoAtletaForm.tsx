@@ -231,31 +231,22 @@ export default function NovoAtletaForm({
 
       const stakeholderId = await resolveStakeholderIdByEmail(formData.email, user.id)
 
-      // Create athlete record
+      // Create athlete record in user_fed_lrsj (primary athlete table)
       const { error } = await supabase
-        .from('atletas')
+        .from('user_fed_lrsj')
         .insert([{
-          user_id: user.id,
           stakeholder_id: stakeholderId,
-          federacao_id: usedFederacaoId,
           academia_id: usedAcademiaId,
           nome_completo: formData.nome_completo,
           cpf: formData.cpf.replace(/\D/g, ''),
-          rg: formData.rg || null,
           data_nascimento: formData.data_nascimento,
           genero: formData.genero,
           email: formData.email || null,
           celular: formData.celular || null,
-          instagram: formData.instagram || null,
-          cidade: formData.cidade || null,
-          estado: formData.estado || null,
           graduacao: formData.graduacao,
-          dan_nivel: formData.dan_nivel || null,
-          data_graduacao: formData.data_graduacao || null,
-          nivel_arbitragem: formData.nivel_arbitragem || null,
           foto_perfil_url: photoUrl,
-          observacoes: formData.observacoes || null,
-          status: 'ativo',
+          status_membro: 'ativo',
+          pais: 'Brasil',
         }])
 
       if (error) throw error
@@ -337,9 +328,23 @@ export default function NovoAtletaForm({
         }
       })
 
+      // Insert into user_fed_lrsj (primary athlete table) with safe field subset
+      const safeRows = processedRows.map(r => ({
+        stakeholder_id: r.stakeholder_id,
+        academia_id: r.academia_id,
+        nome_completo: r.nome_completo,
+        cpf: r.cpf,
+        data_nascimento: r.data_nascimento,
+        genero: r.genero,
+        email: r.email,
+        celular: r.celular,
+        graduacao: r.graduacao,
+        status_membro: 'ativo',
+        pais: 'Brasil',
+      }))
       const { error } = await supabase
-        .from('atletas')
-        .insert(processedRows)
+        .from('user_fed_lrsj')
+        .insert(safeRows)
 
       if (error) throw error
 

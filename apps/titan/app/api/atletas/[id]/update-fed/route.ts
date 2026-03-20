@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { notifyAtletaBoasVindas } from '@/lib/whatsapp/notifications'
 
 export async function PATCH(
   req: NextRequest,
@@ -28,7 +29,7 @@ export async function PATCH(
     // Fetch current athlete record to check status_membro
     const { data: current } = await supabaseAdmin
       .from('user_fed_lrsj')
-      .select('status_membro')
+      .select('status_membro, nome_completo, telefone, academias')
       .eq('stakeholder_id', id)
       .maybeSingle()
 
@@ -74,6 +75,17 @@ export async function PATCH(
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     if (!data) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 })
+
+    // Notificar atleta quando aprovado pela primeira vez
+    const wasNotAceito = statusMembro !== 'aceito'
+    const nowAceito = String(payload.status_membro ?? '').toLowerCase() === 'aceito'
+    if (wasNotAceito && nowAceito && data.telefone) {
+      notifyAtletaBoasVindas({
+        nome_completo: data.nome_completo,
+        telefone: data.telefone,
+        academia: Array.isArray(data.academias) ? data.academias[0] : data.academias,
+      }).catch(() => {}) // fire-and-forget
+    }
 
     return NextResponse.json({ data })
   } catch (err: any) {

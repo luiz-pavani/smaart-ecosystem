@@ -76,22 +76,23 @@ export default function PontosPage() {
   const nivel = getNivel(total)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
-        <div className="max-w-4xl mx-auto px-4">
-          <button
-            onClick={() => router.push('/portal/atleta')}
-            className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Voltar
-          </button>
-          <h1 className="text-3xl font-bold text-white">Meus Pontos</h1>
-          <p className="text-gray-400 mt-1">Ganhe pontos por frequência e engajamento</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Meus Pontos</h1>
+          <p className="text-slate-400">Ganhe pontos por frequência e engajamento</p>
         </div>
+        <button
+          onClick={() => router.push('/portal/atleta')}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10
+                     text-slate-300 hover:text-white transition-all border border-white/10"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          Voltar
+        </button>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <div className="space-y-6">
         {loading ? (
           <div className="flex items-center justify-center h-48">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -203,3 +204,4 @@ export default function PontosPage() {
     </div>
   )
 }
+
