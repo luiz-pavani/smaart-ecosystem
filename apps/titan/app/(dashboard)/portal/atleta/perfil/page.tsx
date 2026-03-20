@@ -1,8 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Settings, Calendar, Clock, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Settings, Calendar, Clock, X, Camera, Check, Pencil } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
 import { RatingStars } from '@/components/RatingStars'
@@ -43,6 +43,16 @@ interface AtletaPerfil {
   tamanho_patch: string | null
 }
 
+interface EditForm {
+  telefone: string
+  email: string
+  cidade: string
+  estado: string
+  pais: string
+  nome_patch: string
+  tamanho_patch: string
+}
+
 const statusColor = (s: string | null) => {
   if (s === 'Válido' || s === 'Aceito') return 'bg-green-500/20 text-green-300 border-green-500/30'
   if (s === 'Vencido' || s === 'Rejeitado') return 'bg-red-500/20 text-red-300 border-red-500/30'
@@ -58,9 +68,31 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
+function InputField({ label, value, onChange, placeholder }: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="text-xs text-gray-400 font-medium">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder || '—'}
+        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/8 transition-colors"
+      />
+    </div>
+  )
+}
+
 export default function PerfilAtletaPage() {
   const router = useRouter()
   const supabase = createClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   interface WaitlistItem {
     class_id: string
     name: string
@@ -74,6 +106,16 @@ export default function PerfilAtletaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [removingWaitlist, setRemovingWaitlist] = useState<string | null>(null)
+
+  // Edit state
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
+  const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [form, setForm] = useState<EditForm>({
+    telefone: '', email: '', cidade: '', estado: '', pais: '', nome_patch: '', tamanho_patch: '',
+  })
 
   useEffect(() => {
     const load = async () => {
@@ -130,6 +172,67 @@ export default function PerfilAtletaPage() {
     load()
   }, [])
 
+  const startEditing = () => {
+    if (!atleta) return
+    setForm({
+      telefone: atleta.telefone || '',
+      email: atleta.email || '',
+      cidade: atleta.cidade || '',
+      estado: atleta.estado || '',
+      pais: atleta.pais || '',
+      nome_patch: atleta.nome_patch || '',
+      tamanho_patch: atleta.tamanho_patch || '',
+    })
+    setFotoPreview(null)
+    setFotoFile(null)
+    setSaveError(null)
+    setEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setEditing(false)
+    setFotoPreview(null)
+    setFotoFile(null)
+    setSaveError(null)
+  }
+
+  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFotoFile(file)
+    setFotoPreview(URL.createObjectURL(file))
+  }
+
+  const saveProfile = async () => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const fd = new FormData()
+      for (const [key, val] of Object.entries(form)) {
+        fd.append(key, val)
+      }
+      if (fotoFile) fd.append('foto', fotoFile)
+
+      const res = await fetch('/api/atletas/self/update-profile', {
+        method: 'PATCH',
+        body: fd,
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erro ao salvar')
+
+      setAtleta(json.data as AtletaPerfil)
+      setEditing(false)
+      setFotoPreview(null)
+      setFotoFile(null)
+    } catch (err: any) {
+      setSaveError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const fotoAtual = fotoPreview || atleta?.url_foto || null
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
@@ -161,20 +264,49 @@ export default function PerfilAtletaPage() {
           </div>
         ) : atleta ? (
           <div className="space-y-6">
-            {/* Header */}
+            {/* Header card */}
             <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-8">
               <div className="flex flex-col sm:flex-row gap-6 items-start">
-                {atleta.url_foto ? (
-                  <img src={atleta.url_foto} alt={atleta.nome_completo || ''} className="w-28 h-28 object-cover rounded-xl border-4 border-white/10 shrink-0" />
-                ) : (
-                  <div className="w-28 h-28 bg-blue-500/20 rounded-xl border-4 border-white/10 flex items-center justify-center shrink-0">
-                    <User className="w-14 h-14 text-blue-300" />
-                  </div>
-                )}
-                <div className="flex-1">
+                {/* Photo */}
+                <div className="relative shrink-0">
+                  {fotoAtual ? (
+                    <img
+                      src={fotoAtual}
+                      alt={atleta.nome_completo || ''}
+                      className="w-28 h-28 object-cover rounded-xl border-4 border-white/10"
+                    />
+                  ) : (
+                    <div className="w-28 h-28 bg-blue-500/20 rounded-xl border-4 border-white/10 flex items-center justify-center">
+                      <User className="w-14 h-14 text-blue-300" />
+                    </div>
+                  )}
+                  {editing && (
+                    <>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute inset-0 rounded-xl bg-black/50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                        title="Trocar foto"
+                      >
+                        <Camera className="w-8 h-8 text-white" />
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFotoChange}
+                      />
+                    </>
+                  )}
+                </div>
+
+                {/* Name + badges */}
+                <div className="flex-1 min-w-0">
                   <h2 className="text-2xl font-bold text-white mb-1">{atleta.nome_completo || '—'}</h2>
-                  {atleta.nome_patch && <p className="text-gray-400 text-sm mb-3">"{atleta.nome_patch}"</p>}
-                  <div className="flex flex-wrap gap-2">
+                  {atleta.nome_patch && !editing && (
+                    <p className="text-gray-400 text-sm mb-3">"{atleta.nome_patch}"</p>
+                  )}
+                  <div className="flex flex-wrap gap-2 mt-2">
                     {kyuDan && (
                       <span className="px-3 py-1 rounded-full text-xs font-medium border bg-blue-500/20 text-blue-300 border-blue-500/30">
                         {kyuDan.icones ? `${kyuDan.icones} ` : ''}{kyuDan.cor_faixa} | {kyuDan.kyu_dan}
@@ -197,14 +329,51 @@ export default function PerfilAtletaPage() {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => router.push('/configuracoes')}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shrink-0"
-                >
-                  <Settings className="w-4 h-4" />
-                  Editar Perfil
-                </button>
+
+                {/* Edit button */}
+                {!editing ? (
+                  <button
+                    onClick={startEditing}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shrink-0"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Editar
+                  </button>
+                ) : (
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={cancelEditing}
+                      disabled={saving}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/15 text-gray-300 text-sm font-medium rounded-lg transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={saveProfile}
+                      disabled={saving}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      Salvar
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {/* Edit hint */}
+              {editing && (
+                <p className="mt-4 text-xs text-gray-500">
+                  Toque na foto para trocar · Preencha os campos abaixo · Clique em Salvar
+                </p>
+              )}
+
+              {saveError && (
+                <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {saveError}
+                </div>
+              )}
             </div>
 
             {/* Documentos */}
@@ -226,7 +395,24 @@ export default function PerfilAtletaPage() {
                 <Row label="Gênero" value={atleta.genero} />
                 <Row label="Data de Nascimento" value={atleta.data_nascimento} />
                 <Row label="Nacionalidade" value={atleta.nacionalidade} />
-                <Row label="Tamanho do Patch" value={atleta.tamanho_patch} />
+                {editing ? (
+                  <div className="pt-2 space-y-3">
+                    <InputField
+                      label="Tamanho do Patch"
+                      value={form.tamanho_patch}
+                      onChange={v => setForm(f => ({ ...f, tamanho_patch: v }))}
+                      placeholder="ex: M, G, GG"
+                    />
+                    <InputField
+                      label="Nome no Patch"
+                      value={form.nome_patch}
+                      onChange={v => setForm(f => ({ ...f, nome_patch: v }))}
+                      placeholder="Apelido ou nome curto"
+                    />
+                  </div>
+                ) : (
+                  <Row label="Tamanho do Patch" value={atleta.tamanho_patch} />
+                )}
               </div>
 
               {/* Contato */}
@@ -234,12 +420,56 @@ export default function PerfilAtletaPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <Mail className="w-4 h-4 text-blue-400" />
                   <h3 className="font-semibold text-white">Contato</h3>
+                  {!editing && (
+                    <button
+                      onClick={startEditing}
+                      className="ml-auto text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Editar
+                    </button>
+                  )}
                 </div>
-                <Row label="Email" value={atleta.email} />
-                <Row label="Telefone" value={atleta.telefone} />
-                <Row label="Cidade" value={atleta.cidade} />
-                <Row label="Estado" value={atleta.estado} />
-                <Row label="País" value={atleta.pais} />
+                {editing ? (
+                  <div className="space-y-3">
+                    <InputField
+                      label="Telefone / WhatsApp"
+                      value={form.telefone}
+                      onChange={v => setForm(f => ({ ...f, telefone: v }))}
+                      placeholder="(99) 99999-9999"
+                    />
+                    <InputField
+                      label="Email"
+                      value={form.email}
+                      onChange={v => setForm(f => ({ ...f, email: v }))}
+                      placeholder="email@exemplo.com"
+                    />
+                    <InputField
+                      label="Cidade"
+                      value={form.cidade}
+                      onChange={v => setForm(f => ({ ...f, cidade: v }))}
+                    />
+                    <InputField
+                      label="Estado"
+                      value={form.estado}
+                      onChange={v => setForm(f => ({ ...f, estado: v }))}
+                      placeholder="ex: SP"
+                    />
+                    <InputField
+                      label="País"
+                      value={form.pais}
+                      onChange={v => setForm(f => ({ ...f, pais: v }))}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <Row label="Email" value={atleta.email} />
+                    <Row label="Telefone" value={atleta.telefone} />
+                    <Row label="Cidade" value={atleta.cidade} />
+                    <Row label="Estado" value={atleta.estado} />
+                    <Row label="País" value={atleta.pais} />
+                  </>
+                )}
               </div>
 
               {/* Graduação */}
@@ -306,6 +536,7 @@ export default function PerfilAtletaPage() {
                 </div>
               )}
             </div>
+
             {/* Fila de Espera */}
             {waitlistItems.length > 0 && (
               <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
