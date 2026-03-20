@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck, ChevronRight, Clock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -66,6 +66,7 @@ export default function PortalFederacaoPage() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<DashboardData | null>(null)
   const [healthData, setHealthData] = useState<AcademiaHealth[]>([])
+  const [filiacoes, setFiliacoes] = useState<{ pendentes: number; vencendo: number; vencidas: number } | null>(null)
 
   useEffect(() => {
     loadDashboardData()
@@ -103,6 +104,15 @@ export default function PortalFederacaoPage() {
         const h = await healthRes.json()
         setHealthData(h.academias || [])
       }
+
+      // Fire-and-forget: filiações pendentes
+      fetch('/api/federacao/filiacoes').then(r => r.ok ? r.json() : null).then(f => {
+        if (f) setFiliacoes({
+          pendentes: f.pendentes?.length ?? 0,
+          vencendo: f.vencendo?.length ?? 0,
+          vencidas: f.vencidas?.length ?? 0,
+        })
+      }).catch(() => {})
     } catch (err) {
       console.error(err)
     } finally {
@@ -162,7 +172,7 @@ export default function PortalFederacaoPage() {
           </button>
 
           <button
-            onClick={() => router.push('/portal/federacao/competicoes')}
+            onClick={() => window.open('https://sul.smoothcomp.com/pt_BR/federation/130/events/upcoming', '_blank', 'noopener')}
             className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5
                      hover:from-yellow-500/20 hover:to-yellow-600/10 border border-yellow-500/20 hover:border-yellow-500/40
                      transition-all duration-300 text-left"
@@ -171,7 +181,7 @@ export default function PortalFederacaoPage() {
               <Trophy className="w-6 h-6 text-yellow-400" />
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">Competições</h3>
-            <p className="text-sm text-slate-400">Organizar campeonatos</p>
+            <p className="text-sm text-slate-400">Eventos no Smoothcomp ↗</p>
           </button>
 
           <button
@@ -201,6 +211,40 @@ export default function PortalFederacaoPage() {
           </button>
         </div>
       </div>
+
+      {/* Widget Filiações */}
+      {filiacoes && (filiacoes.pendentes > 0 || filiacoes.vencendo > 0 || filiacoes.vencidas > 0) && (
+        <button
+          onClick={() => router.push('/portal/federacao/filiacoes')}
+          className="w-full text-left bg-white/5 backdrop-blur border border-white/10 rounded-xl p-5 hover:bg-white/8 transition-all group"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-orange-400" />
+              <h3 className="font-semibold text-white">Filiações — Ação necessária</h3>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors" />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {filiacoes.pendentes > 0 && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                <Clock className="w-3.5 h-3.5" />
+                {filiacoes.pendentes} pendente{filiacoes.pendentes !== 1 ? 's' : ''}
+              </span>
+            )}
+            {filiacoes.vencendo > 0 && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-orange-500/15 border border-orange-500/30 text-orange-300">
+                ⏳ {filiacoes.vencendo} vencendo em 30d
+              </span>
+            )}
+            {filiacoes.vencidas > 0 && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-red-500/15 border border-red-500/30 text-red-300">
+                ⚠️ {filiacoes.vencidas} vencida{filiacoes.vencidas !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </button>
+      )}
 
       {loading ? (
         <div className="text-center py-12 text-slate-400">Carregando dados...</div>

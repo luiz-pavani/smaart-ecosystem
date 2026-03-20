@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen } from 'lucide-react'
+import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen, QrCode } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { TopList } from '@/components/dashboard/TopList'
@@ -390,6 +390,25 @@ export default function PortalAtletaPage() {
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Conta Família</h3>
               <p className="text-sm text-slate-400">Dependentes e membros da família</p>
+            </div>
+          </button>
+
+          {/* Carteirinha */}
+          <button
+            onClick={() => router.push('/portal/atleta/carteira')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5
+                     hover:from-cyan-500/20 hover:to-cyan-600/10 border border-cyan-500/20 hover:border-cyan-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/0 to-cyan-600/0
+                          group-hover:from-cyan-500/10 group-hover:to-cyan-600/5 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <QrCode className="w-6 h-6 text-cyan-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Carteirinha</h3>
+              <p className="text-sm text-slate-400">QR de presença e identidade</p>
             </div>
           </button>
         </div>
