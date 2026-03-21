@@ -91,3 +91,19 @@ export async function notifyAcademiaAnualidadeVencida(academia: {
     academia.nome,
   ])
 }
+
+// Notifica o coordenador da federação sobre nova solicitação de filiação
+// Template: lrsj_fed_novo_cadastro — variáveis: {{1}} nome, {{2}} email_ou_telefone
+export async function notifyFederacaoNovoCadastro(atleta: {
+  nome_completo: string
+  email?: string | null
+  telefone?: string | null
+}) {
+  const coordPhone = process.env.FEDERATION_COORD_PHONE || '5551968340131'
+  const contato = atleta.email || atleta.telefone || 'não informado'
+
+  return sendTemplate(coordPhone, 'lrsj_fed_novo_cadastro', [
+    atleta.nome_completo,
+    contato,
+  ])
+}

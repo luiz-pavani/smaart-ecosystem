@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { notifyFederacaoNovoCadastro } from '@/lib/whatsapp/notifications'
 
 // Public endpoint — no auth required
 // Creates a pending affiliation request (status_membro = 'Em análise')
@@ -50,6 +51,13 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Notify federation coordinator (fire-and-forget — ok if WhatsApp not yet active)
+    notifyFederacaoNovoCadastro({
+      nome_completo,
+      email: email || null,
+      telefone: telefone || null,
+    }).catch(() => {})
 
     return NextResponse.json({ ok: true, id: data.stakeholder_id }, { status: 201 })
   } catch (err: any) {

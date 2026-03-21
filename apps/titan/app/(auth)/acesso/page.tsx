@@ -424,6 +424,16 @@ function AcessoUniversalContent() {
       <p className="text-xs text-muted-foreground mt-4 text-center">
         O sistema usa cadastro universal de stakeholders para gerar ID único de referência.
       </p>
+
+      <div className="mt-5 pt-5 border-t border-border text-center">
+        <p className="text-sm text-muted-foreground mb-2">Novo atleta? Ainda não é filiado?</p>
+        <a
+          href="/filiacao"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+        >
+          🥋 Solicitar filiação à LRSJ
+        </a>
+      </div>
     </div>
 
   )
