@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       status_membro: novoStatus,
       validado_em: new Date().toISOString(),
       validado_por: user.id,
+      ...(action === 'aprovar' ? { dados_validados: true } : {}),
     })
     .in('stakeholder_id', ids)
 

@@ -76,9 +76,17 @@ export async function PATCH(
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     if (!data) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 })
 
-    // Notificar atleta quando aprovado pela primeira vez
+    // Quando aprovado, marcar dados como validados
     const wasNotAceito = statusMembro !== 'aceito'
     const nowAceito = String(payload.status_membro ?? '').toLowerCase() === 'aceito'
+    if (wasNotAceito && nowAceito) {
+      await supabaseAdmin
+        .from('user_fed_lrsj')
+        .update({ dados_validados: true, validado_em: new Date().toISOString(), validado_por: user.id })
+        .eq('stakeholder_id', id)
+    }
+
+    // Notificar atleta quando aprovado pela primeira vez
     if (wasNotAceito && nowAceito && data.telefone) {
       notifyAtletaBoasVindas({
         nome_completo: data.nome_completo,

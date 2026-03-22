@@ -39,6 +39,7 @@ export default function AtletasFedaracaoPage() {
   const [filterSituacao, setFilterSituacao] = useState('')
   const [filterStatusMembro, setFilterStatusMembro] = useState('')
   const [downloadingCSV, setDownloadingCSV] = useState(false)
+  const [downloadingPDF, setDownloadingPDF] = useState(false)
   const [sortBy, setSortBy] = useState<'nome_completo'|'academia'|'graduacao'|'status'|'validade'>('nome_completo')
   const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
   const pageSize = 100
@@ -338,6 +339,57 @@ export default function AtletasFedaracaoPage() {
     }
   }
 
+  const downloadPDF = async () => {
+    if (atletas.length === 0) return
+    setDownloadingPDF(true)
+    try {
+      const { default: jsPDF } = await import('jspdf')
+      const { default: autoTable } = await import('jspdf-autotable')
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+
+      doc.setFontSize(16)
+      doc.setTextColor(30, 30, 30)
+      doc.text('Lista de Filiados — LRSJ', 14, 16)
+      doc.setFontSize(9)
+      doc.setTextColor(120, 120, 120)
+      const filters = [
+        search && `Busca: "${search}"`,
+        filterStatusMembro && `Status: ${filterStatusMembro}`,
+        filterSituacao && `Plano: ${filterSituacao}`,
+        filterAcademia && `Academia: ${filterAcademia}`,
+      ].filter(Boolean).join(' · ')
+      doc.text(
+        `Gerado em ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}${filters ? ' · ' + filters : ''} · ${atletas.length} atletas`,
+        14, 22
+      )
+
+      autoTable(doc, {
+        startY: 27,
+        head: [['Nome', 'Academia', 'Faixa', 'Status Membro', 'Plano', 'Validade']],
+        body: atletas.map(a => [
+          a.nome_completo,
+          a.academia?.nome || '—',
+          a.graduacao || '—',
+          a.statusMembro || '—',
+          a.status_plano || '—',
+          a.validade && a.validade !== '—'
+            ? new Date(a.validade + 'T12:00:00').toLocaleDateString('pt-BR')
+            : '—',
+        ]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 0: { cellWidth: 70 }, 1: { cellWidth: 40 }, 2: { cellWidth: 45 }, 3: { cellWidth: 30 }, 4: { cellWidth: 25 }, 5: { cellWidth: 28 } },
+      })
+
+      doc.save(`filiados_lrsj_${new Date().toISOString().split('T')[0]}.pdf`)
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err)
+    } finally {
+      setDownloadingPDF(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Header */}
@@ -431,17 +483,16 @@ export default function AtletasFedaracaoPage() {
               disabled={totalCount === 0 || downloadingCSV}
               className="flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 hover:border-green-500/50 rounded-lg text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {downloadingCSV ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Baixando...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  Baixar CSV ({totalCount} atletas)
-                </>
-              )}
+              {downloadingCSV ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {downloadingCSV ? 'Baixando...' : `CSV (${totalCount})`}
+            </button>
+            <button
+              onClick={downloadPDF}
+              disabled={atletas.length === 0 || downloadingPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 border border-red-500/30 hover:border-red-500/50 rounded-lg text-red-400 hover:text-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {downloadingPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {downloadingPDF ? 'Gerando...' : `PDF (${atletas.length})`}
             </button>
           </div>
         </div>

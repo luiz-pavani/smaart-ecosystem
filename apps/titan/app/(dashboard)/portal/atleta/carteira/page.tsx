@@ -79,7 +79,7 @@ export default function CarteiraPage() {
     : atleta.status_plano || 'Inativo'
 
   const qrValue = atleta && origin
-    ? `${origin}/portal/atleta/carteira/${atleta.stakeholder_id}`
+    ? `${origin}/carteira/${atleta.stakeholder_id}`
     : ''
 
   const expLabel = atleta?.data_expiracao

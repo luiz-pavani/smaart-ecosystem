@@ -50,21 +50,31 @@ export default function PortalAtletaPage() {
         return
       }
 
-      // Buscar dados do atleta diretamente do stakeholder
+      // Buscar nome do atleta: stakeholders primeiro, fallback para user_fed_lrsj
       let atleta = null
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('stakeholders')
           .select('*')
           .eq('id', user.id)
           .single()
-        if (error) {
-          console.error('Erro ao buscar atleta:', error.message)
-        }
         atleta = data || null
-      } catch (err) {
-        console.error('Erro inesperado ao buscar atleta:', err)
+      } catch {
         atleta = null
+      }
+
+      // Se não tem stakeholder (cadastrado via import/auto-cadastro), busca em user_fed_lrsj
+      if (!atleta?.nome_completo) {
+        try {
+          const { data: fedData } = await supabase
+            .from('user_fed_lrsj')
+            .select('nome_completo')
+            .eq('stakeholder_id', user.id)
+            .maybeSingle()
+          if (fedData?.nome_completo) {
+            atleta = { ...(atleta || {}), nome_completo: fedData.nome_completo }
+          }
+        } catch { /* silent */ }
       }
 
       // Total check-ins
