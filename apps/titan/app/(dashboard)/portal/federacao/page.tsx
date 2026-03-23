@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck, ChevronRight, Clock } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck, ChevronRight, Clock, Tag } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -208,6 +208,19 @@ export default function PortalFederacaoPage() {
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">Filiações</h3>
             <p className="text-sm text-slate-400">Aprovações e renovações</p>
+          </button>
+
+          <button
+            onClick={() => router.push('/portal/federacao/backnumbers')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-purple-500/10 to-purple-600/5
+                     hover:from-purple-500/20 hover:to-purple-600/10 border border-purple-500/20 hover:border-purple-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Tag className="w-6 h-6 text-purple-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Backnumbers</h3>
+            <p className="text-sm text-slate-400">Gerar e baixar BNs em massa</p>
           </button>
         </div>
       </div>
