@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Loader2, MessageSquare, CheckCircle, Phone, Star,
-  AlertCircle, XCircle, Clock, RefreshCw, ShieldCheck,
+  AlertCircle, XCircle, Clock, RefreshCw, ShieldCheck, Send, Users,
 } from 'lucide-react'
 
 interface Template {
@@ -20,6 +20,21 @@ const TEMPLATE_LABELS: Record<string, string> = {
   lrsj_atleta_plano_vencido: 'Plano vencido hoje',
   lrsj_academia_anuidade_vencendo: 'Anuidade da academia vencendo',
   lrsj_academia_anuidade_vencida: 'Anuidade da academia vencida',
+}
+
+// Templates applicable to individual athletes (for mass sending)
+const ATLETA_TEMPLATES = ['lrsj_atleta_boas_vindas', 'lrsj_atleta_plano_vencendo', 'lrsj_atleta_plano_vencido']
+
+const GROUP_OPTIONS = [
+  { value: 'plano_vencendo', label: 'Plano vencendo (próx. 30 dias)' },
+  { value: 'plano_vencido', label: 'Plano vencido' },
+  { value: 'todos', label: 'Todos os atletas da academia' },
+]
+
+const GROUP_TEMPLATE_SUGGESTIONS: Record<string, string> = {
+  plano_vencendo: 'lrsj_atleta_plano_vencendo',
+  plano_vencido: 'lrsj_atleta_plano_vencido',
+  todos: 'lrsj_atleta_boas_vindas',
 }
 
 function TemplateStatusBadge({ status }: { status: string }) {
@@ -73,6 +88,16 @@ export default function WhatsAppPage() {
   const [sent, setSent] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
 
+  // Mass send state
+  const [bulkGroup, setBulkGroup] = useState('plano_vencendo')
+  const [bulkTemplate, setBulkTemplate] = useState('lrsj_atleta_plano_vencendo')
+  const [bulkPreview, setBulkPreview] = useState<{ total: number; com_telefone: number } | null>(null)
+  const [bulkLoading, setBulkLoading] = useState(false)
+  const [bulkSending, setBulkSending] = useState(false)
+  const [bulkResult, setBulkResult] = useState<{ sent: number; skipped: number; errors: number } | null>(null)
+  const [bulkError, setBulkError] = useState<string | null>(null)
+  const [bulkConfirm, setBulkConfirm] = useState(false)
+
   useEffect(() => {
     fetch('/api/whatsapp/instance')
       .then(r => r.json())
@@ -124,8 +149,54 @@ export default function WhatsAppPage() {
     }
   }
 
+  async function loadBulkPreview(group: string) {
+    setBulkLoading(true)
+    setBulkPreview(null)
+    setBulkResult(null)
+    setBulkError(null)
+    setBulkConfirm(false)
+    try {
+      const res = await fetch(`/api/whatsapp/bulk?group=${group}`)
+      const d = await res.json()
+      if (d.error) setBulkError(d.error)
+      else setBulkPreview(d)
+    } catch {
+      setBulkError('Erro ao carregar contagem')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+
+  function handleBulkGroupChange(g: string) {
+    setBulkGroup(g)
+    setBulkTemplate(GROUP_TEMPLATE_SUGGESTIONS[g] || 'lrsj_atleta_boas_vindas')
+    loadBulkPreview(g)
+  }
+
+  async function handleBulkSend() {
+    setBulkSending(true)
+    setBulkResult(null)
+    setBulkError(null)
+    setBulkConfirm(false)
+    try {
+      const res = await fetch('/api/whatsapp/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group: bulkGroup, template: bulkTemplate }),
+      })
+      const d = await res.json()
+      if (d.error) setBulkError(d.error)
+      else setBulkResult(d)
+    } catch {
+      setBulkError('Erro ao enviar mensagens')
+    } finally {
+      setBulkSending(false)
+    }
+  }
+
   const isConnected = status && !status.error && status.display_phone_number
   const approvedCount = templates.filter(t => t.status === 'APPROVED').length
+  const approvedAtletaTemplates = templates.filter(t => t.status === 'APPROVED' && ATLETA_TEMPLATES.includes(t.name))
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -270,6 +341,140 @@ export default function WhatsAppPage() {
               {sending ? 'Enviando...' : sent ? 'Enviado!' : 'Enviar'}
             </button>
           </div>
+        </div>
+
+        {/* Envio em Massa */}
+        <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <Send className="w-5 h-5 text-green-400" />
+            <h2 className="text-lg font-semibold text-white">Envio em Massa</h2>
+          </div>
+          <p className="text-gray-400 text-sm -mt-2">
+            Envie um template aprovado para um grupo de atletas da sua academia.
+          </p>
+
+          {approvedAtletaTemplates.length === 0 && !loadingTemplates && (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 text-yellow-400 text-sm">
+              Nenhum template de atleta aprovado pela Meta. Aguarde aprovação para usar o envio em massa.
+            </div>
+          )}
+
+          {(approvedAtletaTemplates.length > 0 || loadingTemplates) && (
+            <>
+              {/* Group selector */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Grupo de destinatários</label>
+                <div className="grid gap-2">
+                  {GROUP_OPTIONS.map(opt => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors ${
+                        bulkGroup === opt.value
+                          ? 'border-green-500/50 bg-green-500/10'
+                          : 'border-white/10 bg-white/3 hover:bg-white/5'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="bulkGroup"
+                        value={opt.value}
+                        checked={bulkGroup === opt.value}
+                        onChange={() => handleBulkGroupChange(opt.value)}
+                        className="accent-green-500"
+                      />
+                      <span className="text-sm text-white">{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Template selector */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Template</label>
+                <select
+                  value={bulkTemplate}
+                  onChange={e => setBulkTemplate(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-green-500 transition-colors"
+                >
+                  {approvedAtletaTemplates.map(t => (
+                    <option key={t.name} value={t.name} className="bg-slate-800">
+                      {TEMPLATE_LABELS[t.name] ?? t.name}
+                    </option>
+                  ))}
+                  {approvedAtletaTemplates.length === 0 && (
+                    <option value="" className="bg-slate-800">Carregando templates...</option>
+                  )}
+                </select>
+              </div>
+
+              {/* Preview */}
+              {bulkLoading && (
+                <div className="flex items-center gap-2 text-gray-400 text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Contando destinatários...
+                </div>
+              )}
+              {bulkPreview && !bulkLoading && (
+                <div className="flex items-center gap-3 bg-white/5 rounded-lg px-4 py-3">
+                  <Users className="w-5 h-5 text-blue-400 shrink-0" />
+                  <div>
+                    <p className="text-white text-sm font-semibold">{bulkPreview.com_telefone} destinatários com telefone</p>
+                    <p className="text-gray-400 text-xs">{bulkPreview.total} atletas no grupo • {bulkPreview.total - bulkPreview.com_telefone} sem número cadastrado</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Errors */}
+              {bulkError && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">{bulkError}</div>
+              )}
+
+              {/* Result */}
+              {bulkResult && (
+                <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 space-y-1">
+                  <p className="text-green-400 font-semibold text-sm flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" /> Envio concluído
+                  </p>
+                  <p className="text-gray-400 text-xs">
+                    {bulkResult.sent} enviados · {bulkResult.skipped} sem telefone · {bulkResult.errors} erros
+                  </p>
+                </div>
+              )}
+
+              {/* Confirm / Send */}
+              {!bulkConfirm ? (
+                <button
+                  onClick={() => { loadBulkPreview(bulkGroup); setBulkConfirm(true) }}
+                  disabled={bulkSending || approvedAtletaTemplates.length === 0}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 text-sm"
+                >
+                  <Send className="w-4 h-4" />
+                  Preparar envio
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-4 py-3 text-yellow-300 text-sm">
+                    Tem certeza? Isso enviará mensagens WhatsApp para <strong>{bulkPreview?.com_telefone ?? '?'} atleta(s)</strong>.
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setBulkConfirm(false)}
+                      className="flex-1 px-4 py-2.5 border border-white/20 text-gray-300 hover:text-white rounded-lg transition-colors text-sm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleBulkSend}
+                      disabled={bulkSending}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 text-sm"
+                    >
+                      {bulkSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      {bulkSending ? 'Enviando...' : 'Confirmar e enviar'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Info */}
