@@ -3,10 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen, QrCode } from 'lucide-react'
+import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen, QrCode, AlertTriangle, X } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { TopList } from '@/components/dashboard/TopList'
+
+interface Notificacao {
+  tipo: string
+  titulo: string
+  mensagem: string
+  urgencia: 'info' | 'warning' | 'danger'
+}
 
 interface Progresso {
   graduacao_atual: { cor_faixa: string; kyu_dan: string } | null
@@ -36,9 +43,15 @@ export default function PortalAtletaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<DashboardData | null>(null)
+  const [notificacoes, setNotificacoes] = useState<Notificacao[]>([])
+  const [dismissedNots, setDismissedNots] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadDashboardData()
+    fetch('/api/atletas/self/notificacoes')
+      .then(r => r.json())
+      .then(d => setNotificacoes(d.notificacoes || []))
+      .catch(() => {})
   }, [])
 
   async function loadDashboardData() {
@@ -125,6 +138,27 @@ export default function PortalAtletaPage() {
 
   return (
     <div className="space-y-6">
+      {/* Notificações in-app */}
+      {notificacoes.filter(n => !dismissedNots.has(n.tipo)).map(n => {
+        const colors = {
+          danger:  'bg-red-500/10 border-red-500/30 text-red-300',
+          warning: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300',
+          info:    'bg-blue-500/10 border-blue-500/30 text-blue-300',
+        }
+        return (
+          <div key={n.tipo} className={`flex items-start gap-3 border rounded-xl px-4 py-3 text-sm ${colors[n.urgencia]}`}>
+            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <span className="font-semibold">{n.titulo}: </span>
+              {n.mensagem}
+            </div>
+            <button onClick={() => setDismissedNots(prev => new Set([...prev, n.tipo]))}>
+              <X className="w-4 h-4 opacity-60 hover:opacity-100 transition-opacity" />
+            </button>
+          </div>
+        )
+      })}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

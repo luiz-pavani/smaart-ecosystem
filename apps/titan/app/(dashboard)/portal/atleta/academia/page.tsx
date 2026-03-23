@@ -45,7 +45,6 @@ export default function AcademiaAtletaPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      {/* Header */}
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-4xl mx-auto px-4">
           <button
@@ -60,7 +59,6 @@ export default function AcademiaAtletaPage() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-12">
         {loading ? (
           <div className="flex items-center justify-center h-64">
@@ -68,52 +66,57 @@ export default function AcademiaAtletaPage() {
           </div>
         ) : academia ? (
           <div className="space-y-6">
-            {/* Main Card */}
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-8 text-white">
               <h2 className="text-3xl font-bold mb-2">{academia.nome}</h2>
-              <p className="text-purple-100">{academia.sigla}</p>
+              {academia.sigla && <p className="text-purple-100">{academia.sigla}</p>}
             </div>
 
-            {/* Info Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Location */}
               <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <MapPin className="w-6 h-6 text-purple-400" />
                   <h3 className="font-semibold text-white">Localização</h3>
                 </div>
-                <p className="text-gray-300 text-sm">
-                  {academia.endereco}, {academia.numero}
-                </p>
-                <p className="text-gray-400 text-sm">
-                  {academia.cidade}, {academia.estado} - {academia.cep}
-                </p>
+                {(academia.endereco_rua || academia.endereco) ? (
+                  <>
+                    <p className="text-gray-300 text-sm">
+                      {academia.endereco_rua || academia.endereco}{academia.endereco_numero ? `, ${academia.endereco_numero}` : ''}
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      {[academia.endereco_cidade || academia.cidade, academia.endereco_estado || academia.estado].filter(Boolean).join(', ')}
+                      {(academia.endereco_cep || academia.cep) ? ` - ${academia.endereco_cep || academia.cep}` : ''}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-500 text-sm italic">Endereço não cadastrado</p>
+                )}
               </div>
 
-              {/* Contact */}
               <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <Users className="w-6 h-6 text-purple-400" />
                   <h3 className="font-semibold text-white">Contato</h3>
                 </div>
-                <p className="text-gray-300 text-sm">{academia.email}</p>
-                <p className="text-gray-300 text-sm">{academia.telefone}</p>
+                {academia.email && <p className="text-gray-300 text-sm">{academia.email}</p>}
+                {academia.telefone && <p className="text-gray-300 text-sm">{academia.telefone}</p>}
+                {!academia.email && !academia.telefone && (
+                  <p className="text-gray-500 text-sm italic">Contato não cadastrado</p>
+                )}
               </div>
             </div>
 
-            {/* Schedule */}
             <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Clock className="w-6 h-6 text-purple-400" />
                 <h3 className="font-semibold text-white">Horários de Aulas</h3>
               </div>
-              <div className="text-gray-400 text-sm">
-                <p>Segunda a Sexta: 18:00 - 22:00</p>
-                <p>Sábado: 09:00 - 13:00</p>
-              </div>
+              {academia.horario_funcionamento ? (
+                <p className="text-gray-300 text-sm whitespace-pre-line">{academia.horario_funcionamento}</p>
+              ) : (
+                <p className="text-gray-500 text-sm italic">Horários não cadastrados</p>
+              )}
             </div>
 
-            {/* Instructor */}
             {academia.responsavel_nome && (
               <div className="bg-white/5 backdrop-blur border border-white/10 rounded-lg p-6">
                 <div className="flex items-center gap-3 mb-4">
@@ -121,7 +124,7 @@ export default function AcademiaAtletaPage() {
                   <h3 className="font-semibold text-white">Responsável</h3>
                 </div>
                 <p className="text-gray-300 font-semibold">{academia.responsavel_nome}</p>
-                <p className="text-gray-400 text-sm">{academia.responsavel_email}</p>
+                {academia.responsavel_email && <p className="text-gray-400 text-sm">{academia.responsavel_email}</p>}
               </div>
             )}
           </div>

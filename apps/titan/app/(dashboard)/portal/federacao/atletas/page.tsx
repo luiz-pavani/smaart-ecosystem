@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Search, Loader2, Download, X } from 'lucide-react'
+import { ArrowLeft, Search, Loader2, Download, X, CheckCircle, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -40,22 +40,22 @@ export default function AtletasFedaracaoPage() {
   const [filterStatusMembro, setFilterStatusMembro] = useState('')
   const [downloadingCSV, setDownloadingCSV] = useState(false)
   const [downloadingPDF, setDownloadingPDF] = useState(false)
+  const [aprovando, setAprovando] = useState<string | null>(null)
+  const [academiasOptions, setAcademiasOptions] = useState<{ id: string; sigla: string; nome: string }[]>([])
   const [sortBy, setSortBy] = useState<'nome_completo'|'academia'|'graduacao'|'status'|'validade'>('nome_completo')
   const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
   const pageSize = 100
 
   useEffect(() => {
-    const loadGraduacoes = async () => {
-      const { data } = await supabase
-        .from('kyu_dan')
-        .select('id, cor_faixa, kyu_dan, icones')
-        .eq('ativo', true)
-        .order('ordem', { ascending: true })
-
-      setGraduacoes((data as KyuDanOption[]) || [])
+    const loadOptions = async () => {
+      const [gradRes, acadRes] = await Promise.all([
+        supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan, icones').eq('ativo', true).order('ordem', { ascending: true }),
+        supabase.from('academias').select('id, sigla, nome').order('sigla', { ascending: true }),
+      ])
+      setGraduacoes((gradRes.data as KyuDanOption[]) || [])
+      setAcademiasOptions(acadRes.data || [])
     }
-
-    loadGraduacoes()
+    loadOptions()
   }, [supabase])
 
   useEffect(() => {
@@ -187,6 +187,29 @@ export default function AtletasFedaracaoPage() {
 
     load()
   }, [supabase, page, search, filterGraduacao, filterAcademia, filterSituacao, filterStatusMembro])
+
+  async function atualizarStatus(atletaId: string, novoStatus: 'Aceito' | 'Rejeitado') {
+    if (!atletaId) return
+    setAprovando(atletaId + novoStatus)
+    try {
+      const res = await fetch(`/api/atletas/${atletaId}/update-fed`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status_membro: novoStatus }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        alert(d.error || 'Erro ao atualizar status')
+        return
+      }
+      // Atualiza local sem reload completo
+      setAtletas(prev => prev.map(a =>
+        a.id === atletaId ? { ...a, statusMembro: novoStatus } : a
+      ))
+    } finally {
+      setAprovando(null)
+    }
+  }
 
   const clearFilters = () => {
     setSearch('')
@@ -428,10 +451,9 @@ export default function AtletasFedaracaoPage() {
               className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
             >
               <option value="">Todas Academias</option>
-              <option value="Santa Maria">Santa Maria</option>
-              <option value="CaJu">CaJu</option>
-              <option value="Castelo Branco">Castelo Branco</option>
-              <option value="OSL">OSL</option>
+              {academiasOptions.map(a => (
+                <option key={a.id} value={a.sigla || a.nome}>{a.sigla || a.nome}</option>
+              ))}
             </select>
 
             <select
@@ -453,9 +475,9 @@ export default function AtletasFedaracaoPage() {
               className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500 transition-colors"
             >
               <option value="">Todas Situações</option>
-              <option value="Active">Active</option>
-              <option value="Expired">Expired</option>
-              <option value="Pending">Pending</option>
+              <option value="Válido">Válido</option>
+              <option value="Vencido">Vencido</option>
+              <option value="Pendente">Pendente</option>
             </select>
 
             <select
@@ -523,6 +545,7 @@ export default function AtletasFedaracaoPage() {
                     <th className="px-3 py-3 text-center text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('status');setSortOrder(sortOrder==='asc'?'desc':'asc')}} title="Status do Plano">$</th>
                     <th className="px-3 py-3 text-center text-sm font-semibold text-white" title="Status do Membro">👤</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-white cursor-pointer" onClick={() => {setSortBy('validade');setSortOrder(sortOrder==='asc'?'desc':'asc')}}>VENCIMENTO</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-white">AÇÃO</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -564,6 +587,30 @@ export default function AtletasFedaracaoPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-gray-300">{atleta.validade}</td>
+                      <td className="px-4 py-4">
+                        {atleta.statusMembro !== 'Aceito' && (
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              title="Aprovar"
+                              disabled={aprovando === atleta.id + 'Aceito'}
+                              onClick={() => atualizarStatus(atleta.id, 'Aceito')}
+                              className="p-1.5 rounded-lg bg-green-500/20 hover:bg-green-500/40 text-green-400 transition-colors disabled:opacity-50"
+                            >
+                              {aprovando === atleta.id + 'Aceito' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                            </button>
+                            {atleta.statusMembro !== 'Rejeitado' && (
+                              <button
+                                title="Rejeitar"
+                                disabled={aprovando === atleta.id + 'Rejeitado'}
+                                onClick={() => atualizarStatus(atleta.id, 'Rejeitado')}
+                                className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-colors disabled:opacity-50"
+                              >
+                                {aprovando === atleta.id + 'Rejeitado' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
