@@ -4,7 +4,10 @@ const BASE = `https://graph.facebook.com/v22.0`
 
 function normalize(phone: string) {
   const digits = phone.replace(/\D/g, '')
-  return digits.startsWith('55') ? digits : `55${digits}`
+  // Brazilian E.164: 55 + 2-digit area code + 8/9-digit number = 12 or 13 digits
+  // If already has country code (starts with 55 AND has ≥12 digits), keep as-is
+  if (digits.startsWith('55') && digits.length >= 12) return digits
+  return `55${digits}`
 }
 
 // Apenas para uso dentro da janela de sessão de 24h (ex: resposta a mensagem do usuário)

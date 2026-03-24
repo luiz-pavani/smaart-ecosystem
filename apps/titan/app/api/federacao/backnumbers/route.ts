@@ -58,21 +58,22 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // For athletes without siglas, fall back to academias.sigla
-  // Collect distinct academia_ids that need lookup
-  const acadIdsNeedingSigla = [...new Set(
+  // Batch lookup academias for nome + sigla fallback
+  const acadIds = [...new Set(
     (data ?? [])
-      .filter((a: any) => !a.siglas && a.academia_id)
+      .filter((a: any) => a.academia_id)
       .map((a: any) => a.academia_id as string)
   )]
 
+  const acadNomeMap: Record<string, string> = {}
   const acadSiglaMap: Record<string, string> = {}
-  if (acadIdsNeedingSigla.length > 0) {
+  if (acadIds.length > 0) {
     const { data: acads } = await supabaseAdmin
       .from('academias')
-      .select('id, sigla')
-      .in('id', acadIdsNeedingSigla)
+      .select('id, nome, sigla')
+      .in('id', acadIds)
     for (const ac of acads ?? []) {
+      if ((ac as any).nome) acadNomeMap[(ac as any).id] = (ac as any).nome
       if ((ac as any).sigla) acadSiglaMap[(ac as any).id] = (ac as any).sigla
     }
   }
@@ -82,9 +83,10 @@ export async function GET(req: NextRequest) {
     stakeholder_id: a.stakeholder_id as string,
     nome_completo: a.nome_completo as string,
     nome_patch: (a.nome_patch || a.nome_completo) as string,
-    academia: (a.academias || '—') as string,
+    // academia name: from academias table (real name) → text column fallback → '—'
+    academia: (acadNomeMap[a.academia_id] || a.academias || '—') as string,
     academia_id: a.academia_id as string | null,
-    // sigla: athlete override → academia fallback → '???'
+    // sigla: athlete override → academia fallback → ''
     sigla: (a.siglas || acadSiglaMap[a.academia_id] || '') as string,
     tamanho: ((a.tamanho_patch as string) || 'P') as 'P' | 'M' | 'G',
     cor: ((a.cor_patch as string) || 'azul') as 'azul' | 'rosa',
