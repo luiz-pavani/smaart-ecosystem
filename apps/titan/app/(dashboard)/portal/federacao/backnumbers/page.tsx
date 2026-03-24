@@ -4,80 +4,86 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Download, Loader2, Search, CheckSquare, Square,
-  Tag, Filter, RefreshCw, Image, AlertTriangle, ChevronDown,
-  Users,
+  Tag, Filter, RefreshCw, AlertTriangle, ChevronDown, Users, Eye,
 } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BN Layout Configuration
-// Atualizar quando o template for fornecido.
-// Coordenadas relativas à dimensão do canvas (BN_W × BN_H).
+// CONFIGURAÇÃO DE IMPRESSÃO
+// Template base: quadrado a 300 DPI
+//   P = 28×28cm = 3307×3307px
+//   M = 34×34cm = 4016×4016px
+//   G = 41×41cm = 4844×4844px
+//
+// FONTES: faça upload dos arquivos .ttf para o Supabase Storage e preencha:
+const FONT_CONDENSED_URL = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/fundos/fonts/highway-gothic-condensed.ttf'
+const FONT_EXPANDED_URL  = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/fundos/fonts/highway-gothic-expanded.ttf'
 // ─────────────────────────────────────────────────────────────────────────────
-const BN_W = 800   // largura do canvas (px) — ajustar ao template
-const BN_H = 1000  // altura do canvas (px) — ajustar ao template
 
-interface TextField {
-  x: number
-  y: number
-  maxWidth?: number
-  fontSize: number
-  fontFamily?: string
-  fontWeight?: string
-  color: string
-  align: CanvasTextAlign
-  text: (a: BNAtleta) => string
+const PX_PER_CM = 300 / 2.54   // ≈ 118.11px/cm  (300 DPI)
+const PX_PER_MM = 300 / 25.4   // ≈ 11.811px/mm
+
+// Canvas size (px) por tamanho físico
+const SIZE_PX: Record<string, number> = {
+  P: Math.round(28 * PX_PER_CM),  // 3307
+  M: Math.round(34 * PX_PER_CM),  // 4016
+  G: Math.round(41 * PX_PER_CM),  // 4844
 }
 
-// Campos sobrepostos no BN — TODOS os valores são placeholder até o template chegar
-const BN_FIELDS: TextField[] = [
-  {
-    // Número de filiação (grande, no centro-superior)
-    x: BN_W / 2,
-    y: 320,
-    fontSize: 130,
-    fontWeight: 'bold',
-    fontFamily: 'Arial',
-    color: '#FFFFFF',
-    align: 'center',
-    text: (a) => String(a.id).padStart(4, '0'),
-  },
-  {
-    // Nome no patch (nome de guerra do atleta)
-    x: BN_W / 2,
-    y: 590,
-    maxWidth: BN_W - 80,
-    fontSize: 54,
-    fontWeight: 'bold',
-    fontFamily: 'Arial',
-    color: '#FFFFFF',
-    align: 'center',
-    text: (a) => (a.nome_patch || a.nome_completo).toUpperCase(),
-  },
-  {
-    // Academia
-    x: BN_W / 2,
-    y: 660,
-    maxWidth: BN_W - 80,
-    fontSize: 30,
-    fontFamily: 'Arial',
-    color: '#CCCCCC',
-    align: 'center',
-    text: (a) => a.academia.toUpperCase(),
-  },
-  {
-    // Graduação
-    x: BN_W / 2,
-    y: 710,
-    maxWidth: BN_W - 80,
-    fontSize: 26,
-    fontFamily: 'Arial',
-    color: '#BBBBBB',
-    align: 'center',
-    text: (a) => a.graduacao ? a.graduacao.toUpperCase() : '',
-  },
-]
-// ─────────────────────────────────────────────────────────────────────────────
+// Cores de topo
+const TOP_COLORS: Record<string, string> = {
+  azul: '#0030a4',
+  rosa: '#b751b8',
+}
 
+// Nomes de fonte (dependem do upload dos arquivos acima)
+const F_CONDENSED = `'Highway Gothic Condensed', 'Arial Narrow', Arial, sans-serif`
+const F_EXPANDED  = `'Highway Gothic Expanded', Arial, 'Helvetica Neue', sans-serif`
+
+// Gera a config de layout escalada para o tamanho dado
+function buildLayout(size: string, cor: string) {
+  const dim = SIZE_PX[size] ?? SIZE_PX.P
+  const s   = dim / SIZE_PX.P          // escala relativa a P
+  const cx  = dim / 2                   // centro horizontal
+  const accent = TOP_COLORS[cor] ?? TOP_COLORS.azul
+
+  const fNome     = Math.round(41  * PX_PER_MM * s)   // 484px em P
+  const fSigla    = Math.round(90  * PX_PER_MM * s)   // 1063px em P
+  const fAcademia = Math.round(8   * PX_PER_MM * s)   // 95px em P
+
+  // VA (tracking) convertido de 1/1000em para px
+  const lsNome     = Math.round(-0.025 * fNome)         // VA -25
+  const lsAcademia = Math.round( 0.075 * fAcademia)     // VA +75
+
+  return {
+    dim,
+    nome: {
+      x: cx,
+      y: Math.round(3.57 * PX_PER_CM * s),    // 422px em P
+      font: `bold ${fNome}px ${F_CONDENSED}`,
+      color: '#ffffff',
+      letterSpacing: `${lsNome}px`,
+      maxWidth: Math.round(dim * 0.90),
+    },
+    sigla: {
+      x: cx,
+      y: Math.round(12 * PX_PER_CM * s),      // 1417px em P
+      font: `bold ${fSigla}px ${F_EXPANDED}`,
+      color: accent,
+      letterSpacing: '0px',
+      maxWidth: Math.round(dim * 0.92),
+    },
+    academia: {
+      x: cx,
+      y: Math.round(16.2 * PX_PER_CM * s),    // 1913px em P
+      font: `bold ${fAcademia}px ${F_EXPANDED}`,
+      color: accent,
+      letterSpacing: `${lsAcademia}px`,
+      maxWidth: Math.round(dim * 0.88),
+    },
+  }
+}
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 interface BNAtleta {
   id: number
   stakeholder_id: string
@@ -85,24 +91,17 @@ interface BNAtleta {
   nome_patch: string
   academia: string
   academia_id: string | null
-  genero: string | null
+  sigla: string
+  tamanho: 'P' | 'M' | 'G'
+  cor: 'azul' | 'rosa'
   status_plano: string | null
-  status_membro: string | null
   data_expiracao: string | null
-  graduacao: string | null
-  cor_faixa: string | null
-  kyu_dan_id: number | null
 }
 
-interface BNTemplate {
-  background_url: string
-  field_config: Record<string, unknown> | null
-}
-
-// Cache de imagens já carregadas para não recarregar a cada BN
+// ─── Cache de imagens / fontes ────────────────────────────────────────────────
 const imgCache: Record<string, HTMLImageElement> = {}
 
-async function loadImage(url: string): Promise<HTMLImageElement> {
+async function loadImg(url: string): Promise<HTMLImageElement> {
   if (imgCache[url]) return imgCache[url]
   return new Promise((resolve, reject) => {
     const img = new window.Image()
@@ -113,82 +112,141 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
-async function generateBNCanvas(
+let fontsLoaded = false
+async function ensureFonts() {
+  if (fontsLoaded) return
+  const loads: Promise<void>[] = []
+  if (FONT_CONDENSED_URL) {
+    loads.push(
+      new FontFace('Highway Gothic Condensed', `url(${FONT_CONDENSED_URL})`).load()
+        .then(f => document.fonts.add(f))
+        .catch(() => { /* fallback to Arial Narrow */ })
+    )
+  }
+  if (FONT_EXPANDED_URL) {
+    loads.push(
+      new FontFace('Highway Gothic Expanded', `url(${FONT_EXPANDED_URL})`).load()
+        .then(f => document.fonts.add(f))
+        .catch(() => { /* fallback to Arial */ })
+    )
+  }
+  await Promise.allSettled(loads)
+  fontsLoaded = true
+}
+
+// ─── Geração do canvas ────────────────────────────────────────────────────────
+async function generateBN(
   atleta: BNAtleta,
   bgImage: HTMLImageElement | null,
 ): Promise<Blob> {
+  const layout = buildLayout(atleta.tamanho, atleta.cor)
+  const { dim } = layout
+
   const canvas = document.createElement('canvas')
-  canvas.width = BN_W
-  canvas.height = BN_H
+  canvas.width  = dim
+  canvas.height = dim
   const ctx = canvas.getContext('2d')!
 
+  // Background
   if (bgImage) {
-    ctx.drawImage(bgImage, 0, 0, BN_W, BN_H)
+    ctx.drawImage(bgImage, 0, 0, dim, dim)
   } else {
-    // Placeholder background quando não há template
-    ctx.fillStyle = '#1a1a2e'
-    ctx.fillRect(0, 0, BN_W, BN_H)
-    // Borda
-    ctx.strokeStyle = '#3a3a5e'
-    ctx.lineWidth = 4
-    ctx.strokeRect(8, 8, BN_W - 16, BN_H - 16)
+    // Placeholder: top colorido, meio branco, rodapé cinza
+    const accent = TOP_COLORS[atleta.cor] ?? TOP_COLORS.azul
+    ctx.fillStyle = accent
+    ctx.fillRect(0, 0, dim, Math.round(dim * 0.22))
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, Math.round(dim * 0.18), dim, Math.round(dim * 0.52))
+    ctx.fillStyle = '#5e5e5e'
+    ctx.fillRect(0, Math.round(dim * 0.68), dim, dim)
   }
 
-  for (const field of BN_FIELDS) {
-    const text = field.text(atleta)
-    if (!text) continue
+  // Helper para desenhar texto com letterSpacing
+  const drawText = (
+    text: string,
+    field: { x: number; y: number; font: string; color: string; letterSpacing: string; maxWidth: number },
+  ) => {
+    if (!text) return
     ctx.save()
-    ctx.font = `${field.fontWeight ?? 'normal'} ${field.fontSize}px ${field.fontFamily ?? 'Arial'}`
+    ctx.font = field.font
     ctx.fillStyle = field.color
-    ctx.textAlign = field.align
+    ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    if (field.maxWidth) {
-      ctx.fillText(text, field.x, field.y, field.maxWidth)
-    } else {
-      ctx.fillText(text, field.x, field.y)
+    // ctx.letterSpacing suportado em Chrome 99+, Edge 99+, Safari 17+
+    if ('letterSpacing' in ctx) {
+      (ctx as any).letterSpacing = field.letterSpacing
     }
+    ctx.fillText(text.toUpperCase(), field.x, field.y, field.maxWidth)
     ctx.restore()
   }
 
-  return new Promise<Blob>((resolve, reject) =>
-    canvas.toBlob(b => b ? resolve(b) : reject(new Error('canvas.toBlob falhou')), 'image/png'),
+  drawText(atleta.nome_patch || atleta.nome_completo, layout.nome)
+  drawText(atleta.sigla, layout.sigla)
+  drawText(atleta.academia, layout.academia)
+
+  return new Promise<Blob>((res, rej) =>
+    canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob falhou')), 'image/png'),
   )
 }
 
+// ─── Componente ───────────────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
-  { value: '', label: 'Todos os status' },
-  { value: 'Válido', label: 'Plano válido' },
-  { value: 'Vencido', label: 'Plano vencido' },
+  { value: '',       label: 'Todos os status' },
+  { value: 'Válido', label: 'Plano válido'    },
+  { value: 'Vencido',label: 'Plano vencido'   },
 ]
+
+const TAMANHO_OPTIONS = [
+  { value: '', label: 'Todos os tamanhos' },
+  { value: 'P', label: 'P — 28×28cm' },
+  { value: 'M', label: 'M — 34×34cm' },
+  { value: 'G', label: 'G — 41×41cm' },
+]
+
+function StatusBadge({ v }: { v: string | null }) {
+  if (v === 'Válido') return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/15 text-green-400 border border-green-500/20">Válido</span>
+  )
+  if (v === 'Vencido') return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/20">Vencido</span>
+  )
+  return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-500/15 text-slate-400 border border-slate-500/20">{v ?? '—'}</span>
+  )
+}
 
 export default function BacknumbersPage() {
   const router = useRouter()
 
-  const [atletas, setAtletas] = useState<BNAtleta[]>([])
-  const [template, setTemplate] = useState<BNTemplate | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
+  const [atletas, setAtletas]           = useState<BNAtleta[]>([])
+  const [templateUrls, setTemplateUrls] = useState<Record<string, string>>({})
+  const [loading, setLoading]           = useState(true)
+
+  const [search, setSearch]           = useState('')
   const [statusFilter, setStatusFilter] = useState('Válido')
+  const [tamanhoFilter, setTamanhoFilter] = useState('')
+
   const [selected, setSelected] = useState<Set<number>>(new Set())
 
   const [generating, setGenerating] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [progressTotal, setProgressTotal] = useState(0)
-  const [genError, setGenError] = useState<string | null>(null)
+  const [progress, setProgress]     = useState(0)
+  const [progTotal, setProgTotal]   = useState(0)
+  const [genError, setGenError]     = useState<string | null>(null)
 
   const searchTimer = useRef<NodeJS.Timeout | null>(null)
 
+  // ── Carregamento ──────────────────────────────────────────────────────────
   const load = useCallback(async (q: string, st: string) => {
     setLoading(true)
     setSelected(new Set())
     try {
-      const p = new URLSearchParams()
-      if (st) p.set('status', st)
-      if (q) p.set('search', q)
-      const res = await fetch(`/api/federacao/backnumbers?${p}`)
-      const d = await res.json()
+      const params = new URLSearchParams()
+      if (st) params.set('status', st)
+      if (q)  params.set('search', q)
+      const res = await fetch(`/api/federacao/backnumbers?${params}`)
+      const d   = await res.json()
       setAtletas(d.atletas ?? [])
-      setTemplate(d.template ?? null)
+      setTemplateUrls(d.templates ?? {})
     } catch {
       setAtletas([])
     } finally {
@@ -196,9 +254,7 @@ export default function BacknumbersPage() {
     }
   }, [])
 
-  useEffect(() => {
-    load(search, statusFilter)
-  }, [statusFilter])  // eslint-disable-line
+  useEffect(() => { load(search, statusFilter) }, [statusFilter]) // eslint-disable-line
 
   const handleSearchChange = (v: string) => {
     setSearch(v)
@@ -206,65 +262,73 @@ export default function BacknumbersPage() {
     searchTimer.current = setTimeout(() => load(v, statusFilter), 350)
   }
 
-  const toggleOne = (id: number) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
-  }
+  // ── Seleção ───────────────────────────────────────────────────────────────
+  const visibleAtletas = tamanhoFilter
+    ? atletas.filter(a => a.tamanho === tamanhoFilter)
+    : atletas
 
-  const toggleAll = () => {
-    if (selected.size === atletas.length) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(atletas.map(a => a.id)))
-    }
-  }
+  const toggleOne = (id: number) =>
+    setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
 
+  const toggleAll = () =>
+    setSelected(
+      selected.size === visibleAtletas.length
+        ? new Set()
+        : new Set(visibleAtletas.map(a => a.id))
+    )
+
+  const allSelected  = visibleAtletas.length > 0 && selected.size === visibleAtletas.length
+  const someSelected = selected.size > 0 && selected.size < visibleAtletas.length
+
+  // ── Geração ───────────────────────────────────────────────────────────────
   const handleGenerate = async () => {
-    const toGenerate = atletas.filter(a => selected.has(a.id))
-    if (toGenerate.length === 0) return
+    const toGen = visibleAtletas.filter(a => selected.has(a.id))
+    if (!toGen.length) return
 
     setGenerating(true)
     setGenError(null)
     setProgress(0)
-    setProgressTotal(toGenerate.length)
-
-    let bgImage: HTMLImageElement | null = null
-    if (template?.background_url) {
-      try {
-        bgImage = await loadImage(template.background_url)
-      } catch {
-        // Continua sem background — ainda gera com placeholder
-      }
-    }
+    setProgTotal(toGen.length)
 
     try {
-      const JSZip = (await import('jszip')).default
-      const zip = new JSZip()
+      await ensureFonts()
 
-      for (let i = 0; i < toGenerate.length; i++) {
-        const atleta = toGenerate[i]
-        try {
-          const blob = await generateBNCanvas(atleta, bgImage)
-          const filename = `BN_${String(atleta.id).padStart(4, '0')}_${atleta.nome_completo.replace(/[^a-zA-Z0-9]/g, '_')}.png`
-          zip.file(filename, blob)
-        } catch {
-          // Pula atleta com erro, continua os demais
+      // Pré-carrega backgrounds necessários
+      const bgMap: Record<string, HTMLImageElement | null> = {}
+      for (const cor of ['azul', 'rosa'] as const) {
+        const url = templateUrls[cor]
+        if (url) {
+          try { bgMap[cor] = await loadImg(url) }
+          catch { bgMap[cor] = null }
+        } else {
+          bgMap[cor] = null
         }
+      }
+
+      const JSZip = (await import('jszip')).default
+      const zip   = new JSZip()
+
+      // Organiza por pasta tamanho/cor
+      for (let i = 0; i < toGen.length; i++) {
+        const a = toGen[i]
+        try {
+          const blob = await generateBN(a, bgMap[a.cor])
+          const folder = `${a.tamanho}_${a.cor}`
+          const fname  = `BN_${folder}_${String(a.id).padStart(4, '0')}_${(a.nome_patch || a.nome_completo).replace(/[^a-zA-Z0-9]/g, '_')}.png`
+          zip.file(`${folder}/${fname}`, blob)
+        } catch { /* pula atleta com erro */ }
         setProgress(i + 1)
       }
 
       const zipBlob = await zip.generateAsync({ type: 'blob' })
-      const url = URL.createObjectURL(zipBlob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `backnumbers_${new Date().toISOString().split('T')[0]}.zip`
+      const url     = URL.createObjectURL(zipBlob)
+      const a       = document.createElement('a')
+      a.href        = url
+      a.download    = `backnumbers_${new Date().toISOString().split('T')[0]}.zip`
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {
-      setGenError('Erro ao gerar o arquivo ZIP. Tente novamente.')
+      setGenError('Erro ao gerar ZIP. Verifique o console para detalhes.')
       console.error(err)
     } finally {
       setGenerating(false)
@@ -273,31 +337,26 @@ export default function BacknumbersPage() {
   }
 
   const handlePreviewOne = async (atleta: BNAtleta) => {
-    let bgImage: HTMLImageElement | null = null
-    if (template?.background_url) {
-      try { bgImage = await loadImage(template.background_url) } catch { /* noop */ }
-    }
-    const blob = await generateBNCanvas(atleta, bgImage)
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
-    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    await ensureFonts()
+    const url = templateUrls[atleta.cor]
+    let bg: HTMLImageElement | null = null
+    if (url) { try { bg = await loadImg(url) } catch { /* noop */ } }
+    const blob = await generateBN(atleta, bg)
+    const objUrl = URL.createObjectURL(blob)
+    window.open(objUrl, '_blank')
+    setTimeout(() => URL.revokeObjectURL(objUrl), 15_000)
   }
 
-  const allSelected = atletas.length > 0 && selected.size === atletas.length
-  const someSelected = selected.size > 0 && selected.size < atletas.length
-  const pct = progressTotal > 0 ? Math.round((progress / progressTotal) * 100) : 0
+  const hasTemplates  = Object.keys(templateUrls).length > 0
+  const pct           = progTotal > 0 ? Math.round((progress / progTotal) * 100) : 0
+  const selectedCount = visibleAtletas.filter(a => selected.has(a.id)).length
 
-  function StatusBadge({ status }: { status: string | null }) {
-    if (status === 'Válido') return (
-      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-500/15 text-green-400 border border-green-500/20">Válido</span>
-    )
-    if (status === 'Vencido') return (
-      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/15 text-red-400 border border-red-500/20">Vencido</span>
-    )
-    return (
-      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-500/15 text-slate-400 border border-slate-500/20">{status ?? '—'}</span>
-    )
-  }
+  // Contagem por variante para o footer
+  const countByVariant = visibleAtletas.reduce((acc, a) => {
+    const k = `${a.tamanho}_${a.cor}`
+    acc[k] = (acc[k] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -309,34 +368,27 @@ export default function BacknumbersPage() {
             onClick={() => router.push('/portal/federacao')}
             className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
-            Voltar
+            <ArrowLeft className="w-5 h-5" /> Voltar
           </button>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <Tag className="w-8 h-8 text-purple-400" />
               <div>
                 <h1 className="text-3xl font-bold text-white">Backnumbers</h1>
-                <p className="text-gray-400 mt-0.5">Geração em massa para impressão</p>
+                <p className="text-gray-400 mt-0.5">Circuito Sul de Judô 2026 — geração em massa para impressão</p>
               </div>
             </div>
 
-            {selected.size > 0 && (
+            {selectedCount > 0 && (
               <button
                 onClick={handleGenerate}
                 disabled={generating}
                 className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-semibold rounded-xl transition-all disabled:opacity-60 shadow-lg"
               >
                 {generating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {progress}/{progressTotal} — {pct}%
-                  </>
+                  <><Loader2 className="w-4 h-4 animate-spin" />{progress}/{progTotal} — {pct}%</>
                 ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Baixar {selected.size} BN{selected.size !== 1 ? 's' : ''} (.zip)
-                  </>
+                  <><Download className="w-4 h-4" />Baixar {selectedCount} BN{selectedCount !== 1 ? 's' : ''} (.zip)</>
                 )}
               </button>
             )}
@@ -346,34 +398,52 @@ export default function BacknumbersPage() {
 
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-5">
 
-        {/* Template status */}
-        {!template && !loading && (
+        {/* Alertas */}
+        {!hasTemplates && !loading && (
           <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-5 py-4">
             <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
             <div>
-              <p className="text-yellow-300 font-semibold text-sm">Template de backnumber não configurado</p>
+              <p className="text-yellow-300 font-semibold text-sm">Fundos de template não configurados</p>
               <p className="text-yellow-400/70 text-xs mt-1">
-                Os BNs serão gerados com fundo escuro placeholder. Para usar o template oficial,
-                cadastre um registro em <span className="font-mono">document_templates</span> com{' '}
-                <span className="font-mono">template_type = &apos;backnumber&apos;</span>.
+                BNs serão gerados com fundo placeholder. Para usar os fundos oficiais, faça upload para o Supabase Storage
+                e registre em <span className="font-mono">document_templates</span> com tipos{' '}
+                <span className="font-mono">backnumber_azul</span> e <span className="font-mono">backnumber_rosa</span>.
               </p>
             </div>
           </div>
         )}
 
-        {template && (
-          <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-xl px-5 py-3">
-            <Image className="w-4 h-4 text-green-400" />
-            <p className="text-green-300 text-sm font-medium">Template carregado — pronto para geração</p>
+        {hasTemplates && (
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(templateUrls).map(([cor]) => (
+              <span key={cor} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-500/10 border border-green-500/20 text-green-300">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TOP_COLORS[cor] }} />
+                Template {cor} carregado
+              </span>
+            ))}
           </div>
         )}
 
-        {/* Progress bar */}
+        {/* Fontes */}
+        {(!FONT_CONDENSED_URL || !FONT_EXPANDED_URL) && (
+          <div className="flex items-center gap-3 bg-blue-500/8 border border-blue-500/15 rounded-xl px-5 py-3">
+            <AlertTriangle className="w-4 h-4 text-blue-400 shrink-0" />
+            <p className="text-blue-300/80 text-xs">
+              Fontes Highway Gothic não configuradas — usando Arial como fallback.
+              Faça upload de <span className="font-mono">HighwayGothicCondensed.ttf</span> e{' '}
+              <span className="font-mono">HighwayGothicExpanded.ttf</span> e preencha as constantes
+              <span className="font-mono"> FONT_CONDENSED_URL</span> /{' '}
+              <span className="font-mono">FONT_EXPANDED_URL</span> no topo do arquivo.
+            </p>
+          </div>
+        )}
+
+        {/* Barra de progresso */}
         {generating && (
           <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-4">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-gray-400">Gerando backnumbers...</span>
-              <span className="text-white font-semibold">{progress} / {progressTotal}</span>
+              <span className="text-white font-semibold">{progress} / {progTotal}</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
               <div
@@ -388,9 +458,9 @@ export default function BacknumbersPage() {
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-5 py-4 text-red-400 text-sm">{genError}</div>
         )}
 
-        {/* Filters */}
+        {/* Filtros */}
         <div className="flex flex-wrap gap-3">
-          <div className="relative flex-1 min-w-[220px]">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
@@ -401,67 +471,86 @@ export default function BacknumbersPage() {
             />
           </div>
 
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="pl-10 pr-8 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-300 focus:outline-none focus:border-purple-500 transition-colors text-sm appearance-none"
-            >
-              {STATUS_OPTIONS.map(o => (
-                <option key={o.value} value={o.value} className="bg-slate-800">{o.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          </div>
+          {[
+            { val: statusFilter, opts: STATUS_OPTIONS,  set: setStatusFilter,  id: 'status' },
+            { val: tamanhoFilter, opts: TAMANHO_OPTIONS, set: setTamanhoFilter, id: 'tam' },
+          ].map(f => (
+            <div key={f.id} className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <select
+                value={f.val}
+                onChange={e => { f.set(e.target.value); if (f.id === 'status') setStatusFilter(e.target.value) }}
+                className="pl-10 pr-7 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-300 focus:outline-none focus:border-purple-500 transition-colors text-sm appearance-none"
+              >
+                {f.opts.map(o => (
+                  <option key={o.value} value={o.value} className="bg-slate-800">{o.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          ))}
 
           <button
             onClick={() => load(search, statusFilter)}
             className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-colors text-sm"
           >
-            <RefreshCw className="w-4 h-4" />
-            Atualizar
+            <RefreshCw className="w-4 h-4" /> Atualizar
           </button>
         </div>
 
-        {/* Table */}
+        {/* Contagem por variante */}
+        {!loading && visibleAtletas.length > 0 && (
+          <div className="flex flex-wrap gap-2 text-xs">
+            {Object.entries(countByVariant).sort().map(([v, n]) => {
+              const [tam, cor] = v.split('_')
+              return (
+                <span key={v} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-400">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TOP_COLORS[cor] }} />
+                  {tam} {cor}: {n} atleta{n !== 1 ? 's' : ''}
+                </span>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Tabela */}
         <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl overflow-hidden">
 
-          {/* Table header */}
+          {/* Cabeçalho */}
           <div className="flex items-center gap-4 px-5 py-3 border-b border-white/10 bg-white/3">
             <button onClick={toggleAll} className="shrink-0 text-gray-400 hover:text-white transition-colors">
-              {allSelected ? (
-                <CheckSquare className="w-5 h-5 text-purple-400" />
-              ) : someSelected ? (
-                <CheckSquare className="w-5 h-5 text-purple-300 opacity-60" />
-              ) : (
-                <Square className="w-5 h-5" />
-              )}
+              {allSelected
+                ? <CheckSquare className="w-5 h-5 text-purple-400" />
+                : someSelected
+                ? <CheckSquare className="w-5 h-5 text-purple-300 opacity-60" />
+                : <Square className="w-5 h-5" />
+              }
             </button>
             <div className="flex-1 grid grid-cols-12 gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
               <span className="col-span-1">#</span>
-              <span className="col-span-4">Atleta</span>
+              <span className="col-span-3">Nome / Patch</span>
+              <span className="col-span-2">Sigla</span>
               <span className="col-span-3">Academia</span>
-              <span className="col-span-2">Graduação</span>
-              <span className="col-span-1">Status</span>
-              <span className="col-span-1 text-right">BN</span>
+              <span className="col-span-1 text-center">Tam.</span>
+              <span className="col-span-1 text-center">Cor</span>
+              <span className="col-span-1 text-right">Ações</span>
             </div>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center gap-3 py-20 text-gray-400">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Carregando atletas...
+              <Loader2 className="w-5 h-5 animate-spin" /> Carregando atletas...
             </div>
-          ) : atletas.length === 0 ? (
+          ) : visibleAtletas.length === 0 ? (
             <div className="py-20 text-center text-gray-500">
               <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              Nenhum atleta encontrado com os filtros aplicados.
+              Nenhum atleta encontrado.
             </div>
           ) : (
             <div className="divide-y divide-white/5">
-              {atletas.map(atleta => {
+              {visibleAtletas.map(atleta => {
                 const isSelected = selected.has(atleta.id)
+                const accentColor = TOP_COLORS[atleta.cor] ?? TOP_COLORS.azul
                 return (
                   <div
                     key={atleta.id}
@@ -483,24 +572,36 @@ export default function BacknumbersPage() {
                       <span className="col-span-1 text-gray-500 text-xs font-mono">
                         {String(atleta.id).padStart(4, '0')}
                       </span>
-                      <div className="col-span-4 min-w-0">
+                      <div className="col-span-3 min-w-0">
                         <p className="text-white text-sm font-medium truncate">{atleta.nome_completo}</p>
-                        {atleta.nome_patch && atleta.nome_patch !== atleta.nome_completo && (
+                        {atleta.nome_patch !== atleta.nome_completo && (
                           <p className="text-purple-400 text-xs truncate">{atleta.nome_patch}</p>
                         )}
                       </div>
-                      <p className="col-span-3 text-gray-400 text-xs truncate">{atleta.academia}</p>
-                      <div className="col-span-2 flex items-center gap-1.5 min-w-0">
-                        {atleta.cor_faixa && (
+                      <div className="col-span-2">
+                        {atleta.sigla ? (
                           <span
-                            className="w-3 h-3 rounded-full shrink-0 border border-white/10"
-                            style={{ backgroundColor: atleta.cor_faixa }}
-                          />
+                            className="text-sm font-bold truncate"
+                            style={{ color: accentColor }}
+                          >
+                            {atleta.sigla}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">sem sigla</span>
                         )}
-                        <span className="text-gray-400 text-xs truncate">{atleta.graduacao ?? '—'}</span>
                       </div>
-                      <div className="col-span-1">
-                        <StatusBadge status={atleta.status_plano} />
+                      <p className="col-span-3 text-gray-400 text-xs truncate">{atleta.academia}</p>
+                      <div className="col-span-1 flex justify-center">
+                        <span className="text-xs font-semibold text-white bg-white/10 rounded-full px-2 py-0.5">
+                          {atleta.tamanho}
+                        </span>
+                      </div>
+                      <div className="col-span-1 flex justify-center">
+                        <span
+                          className="w-5 h-5 rounded-full border-2 border-white/20"
+                          style={{ backgroundColor: accentColor }}
+                          title={atleta.cor}
+                        />
                       </div>
                       <div className="col-span-1 flex justify-end">
                         <button
@@ -508,7 +609,7 @@ export default function BacknumbersPage() {
                           title="Prévia individual"
                           className="p-1.5 rounded-lg text-gray-500 hover:text-purple-400 hover:bg-purple-500/10 transition-colors"
                         >
-                          <Tag className="w-3.5 h-3.5" />
+                          <Eye className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -518,25 +619,47 @@ export default function BacknumbersPage() {
             </div>
           )}
 
-          {/* Footer */}
-          {atletas.length > 0 && (
+          {/* Footer da tabela */}
+          {visibleAtletas.length > 0 && (
             <div className="flex items-center justify-between px-5 py-3 border-t border-white/10 text-xs text-gray-500">
-              <span>{atletas.length} atleta{atletas.length !== 1 ? 's' : ''} listado{atletas.length !== 1 ? 's' : ''}</span>
-              <span>{selected.size} selecionado{selected.size !== 1 ? 's' : ''}</span>
+              <span>{visibleAtletas.length} atleta{visibleAtletas.length !== 1 ? 's' : ''} listado{visibleAtletas.length !== 1 ? 's' : ''}</span>
+              <span>{selectedCount} selecionado{selectedCount !== 1 ? 's' : ''}</span>
             </div>
           )}
         </div>
 
-        {/* Info */}
-        <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
-          <h3 className="text-blue-300 font-semibold text-sm mb-2">Como funciona</h3>
-          <ul className="text-gray-400 text-sm space-y-1.5">
-            <li>• Selecione os atletas desejados e clique em "Baixar BNs (.zip)"</li>
-            <li>• Cada BN é gerado no navegador como PNG ({BN_W}×{BN_H}px)</li>
-            <li>• O arquivo ZIP contém um PNG por atleta, nomeado com o número de filiação</li>
-            <li>• Para configurar o template de fundo, cadastre em <span className="font-mono text-blue-300">document_templates</span> com <span className="font-mono text-blue-300">template_type = &apos;backnumber&apos;</span></li>
-            <li>• O ícone <Tag className="w-3 h-3 inline" /> na linha do atleta gera uma prévia individual</li>
-          </ul>
+        {/* Especificações técnicas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+            <h3 className="text-blue-300 font-semibold text-sm mb-3">Especificações de Impressão</h3>
+            <table className="text-xs w-full">
+              <thead>
+                <tr className="text-gray-500 border-b border-white/10">
+                  <th className="text-left pb-1">Tamanho</th>
+                  <th className="text-right pb-1">Físico</th>
+                  <th className="text-right pb-1">Pixels (300dpi)</th>
+                  <th className="text-right pb-1">Cores</th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-400">
+                <tr><td className="py-0.5">P</td><td className="text-right">28×28cm</td><td className="text-right">3307×3307</td><td className="text-right">azul, rosa</td></tr>
+                <tr><td className="py-0.5">M</td><td className="text-right">34×34cm</td><td className="text-right">4016×4016</td><td className="text-right">azul</td></tr>
+                <tr><td className="py-0.5">G</td><td className="text-right">41×41cm</td><td className="text-right">4844×4844</td><td className="text-right">azul</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
+            <h3 className="text-blue-300 font-semibold text-sm mb-3">Como usar</h3>
+            <ul className="text-gray-400 text-xs space-y-1.5">
+              <li>• Selecione atletas → "Baixar BNs (.zip)"</li>
+              <li>• O ZIP organiza por pasta: <span className="font-mono">P_azul/</span>, <span className="font-mono">P_rosa/</span>, <span className="font-mono">M_azul/</span>, <span className="font-mono">G_azul/</span></li>
+              <li>• Ícone <Eye className="w-3 h-3 inline" /> gera prévia individual em nova aba</li>
+              <li>• Coluna <span className="font-mono">siglas</span> em <span className="font-mono">user_fed_lrsj</span> define a sigla (fallback: <span className="font-mono">academias.sigla</span>)</li>
+              <li>• Coluna <span className="font-mono">tamanho_patch</span>: P / M / G</li>
+              <li>• Coluna <span className="font-mono">cor_patch</span>: azul / rosa</li>
+            </ul>
+          </div>
         </div>
 
       </div>

@@ -3,17 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 // GET /api/federacao/backnumbers
-// Returns all athletes with the data needed for backnumber generation.
-// Query params:
-//   status  — 'Válido' | 'Vencido' | 'Aceito' (optional, comma-separated)
-//   search  — text search on nome_completo (optional)
-//   academia_id — filter by academy UUID (optional)
+// Returns athletes with all data needed for backnumber generation.
+// Query params: status, search, academia_id
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Role check — must be federation or master
   const { data: perfil } = await supabaseAdmin
     .from('stakeholders')
     .select('role, federacao_id')
@@ -25,7 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   const p = req.nextUrl.searchParams
-  const statusFilter = p.get('status')   // e.g. 'Válido' or 'Válido,Aceito'
+  const statusFilter = p.get('status') || ''
   const search = p.get('search') || ''
   const academiaId = p.get('academia_id') || ''
 
@@ -38,15 +34,12 @@ export async function GET(req: NextRequest) {
       nome_patch,
       academias,
       academia_id,
-      genero,
+      siglas,
+      tamanho_patch,
+      cor_patch,
       status_plano,
       status_membro,
-      data_expiracao,
-      kyu_dan:kyu_dan_id (
-        id,
-        nome,
-        cor_faixa
-      )
+      data_expiracao
     `)
     .eq('federacao_id', 1)
     .order('nome_completo', { ascending: true })
@@ -59,47 +52,58 @@ export async function GET(req: NextRequest) {
       query = query.in('status_plano', statuses)
     }
   }
-
-  if (search) {
-    query = query.ilike('nome_completo', `%${search}%`)
-  }
-
-  if (academiaId) {
-    query = query.eq('academia_id', academiaId)
-  }
+  if (search) query = query.ilike('nome_completo', `%${search}%`)
+  if (academiaId) query = query.eq('academia_id', academiaId)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Normalize kyu_dan (Supabase returns array for FK joins)
-  const atletas = (data ?? []).map((a: any) => {
-    const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
-    return {
-      id: a.id,
-      stakeholder_id: a.stakeholder_id,
-      nome_completo: a.nome_completo,
-      nome_patch: a.nome_patch || a.nome_completo,
-      academia: a.academias || '—',
-      academia_id: a.academia_id,
-      genero: a.genero,
-      status_plano: a.status_plano,
-      status_membro: a.status_membro,
-      data_expiracao: a.data_expiracao,
-      graduacao: kd?.nome || null,
-      cor_faixa: kd?.cor_faixa || null,
-      kyu_dan_id: kd?.id || null,
+  // For athletes without siglas, fall back to academias.sigla
+  // Collect distinct academia_ids that need lookup
+  const acadIdsNeedingSigla = [...new Set(
+    (data ?? [])
+      .filter((a: any) => !a.siglas && a.academia_id)
+      .map((a: any) => a.academia_id as string)
+  )]
+
+  const acadSiglaMap: Record<string, string> = {}
+  if (acadIdsNeedingSigla.length > 0) {
+    const { data: acads } = await supabaseAdmin
+      .from('academias')
+      .select('id, sigla')
+      .in('id', acadIdsNeedingSigla)
+    for (const ac of acads ?? []) {
+      if ((ac as any).sigla) acadSiglaMap[(ac as any).id] = (ac as any).sigla
     }
-  })
+  }
 
-  // Also return the active backnumber template (if configured)
-  const { data: template } = await supabaseAdmin
+  const atletas = (data ?? []).map((a: any) => ({
+    id: a.id as number,
+    stakeholder_id: a.stakeholder_id as string,
+    nome_completo: a.nome_completo as string,
+    nome_patch: (a.nome_patch || a.nome_completo) as string,
+    academia: (a.academias || '—') as string,
+    academia_id: a.academia_id as string | null,
+    // sigla: athlete override → academia fallback → '???'
+    sigla: (a.siglas || acadSiglaMap[a.academia_id] || '') as string,
+    tamanho: ((a.tamanho_patch as string) || 'P') as 'P' | 'M' | 'G',
+    cor: ((a.cor_patch as string) || 'azul') as 'azul' | 'rosa',
+    status_plano: a.status_plano as string | null,
+    data_expiracao: a.data_expiracao as string | null,
+  }))
+
+  // Fetch both backnumber templates (azul + rosa)
+  const { data: templates } = await supabaseAdmin
     .from('document_templates')
-    .select('background_url, field_config')
-    .eq('template_type', 'backnumber')
+    .select('template_type, background_url')
+    .in('template_type', ['backnumber_azul', 'backnumber_rosa'])
     .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
 
-  return NextResponse.json({ atletas, template: template || null })
+  const templateUrls: Record<string, string> = {}
+  for (const t of templates ?? []) {
+    const key = (t as any).template_type.replace('backnumber_', '')
+    templateUrls[key] = (t as any).background_url
+  }
+
+  return NextResponse.json({ atletas, templates: templateUrls })
 }
