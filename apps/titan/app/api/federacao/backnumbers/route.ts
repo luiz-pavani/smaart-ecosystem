@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin
     .from('user_fed_lrsj')
     .select(`
-      id,
       stakeholder_id,
       nome_completo,
       nome_patch,
@@ -79,8 +78,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const atletas = (data ?? []).map((a: any) => ({
-    id: a.id as number,
+  const atletas = (data ?? []).map((a: any, idx: number) => ({
+    id: idx + 1,
     stakeholder_id: a.stakeholder_id as string,
     nome_completo: a.nome_completo as string,
     nome_patch: (a.nome_patch || a.nome_completo) as string,
