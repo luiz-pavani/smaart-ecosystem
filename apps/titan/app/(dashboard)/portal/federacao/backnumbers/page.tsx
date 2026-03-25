@@ -38,46 +38,33 @@ const TOP_COLORS: Record<string, string> = {
 const F_CONDENSED = `'Highway Gothic Condensed', 'Arial Narrow', Arial, sans-serif`
 const F_EXPANDED  = `'Highway Gothic Expanded', Arial, 'Helvetica Neue', sans-serif`
 
+// Posições e fontes calibradas no fundo master G (4843×4843px)
+// Todos os valores escalam proporcionalmente para M e P.
+const G_LAYOUT = {
+  nome:     { x: 2430, y: 610,  fontMM: 55,  font: F_CONDENSED, color: '#ffffff' as const },
+  sigla:    { x: 2430, y: 2000, fontMM: 110, font: F_EXPANDED,  color: null /* accent */ },
+  academia: { x: 2430, y: 2700, fontMM: 11,  font: F_EXPANDED,  color: null /* accent */ },
+}
+
 function buildLayout(size: string, cor: string) {
-  const dim = SIZE_PX[size] ?? SIZE_PX.G
-  const s   = dim / SIZE_PX.G          // escala relativa ao fundo master G
-  const cx  = dim / 2
+  const dim    = SIZE_PX[size] ?? SIZE_PX.G
+  const s      = dim / SIZE_PX.G          // escala relativa ao fundo master G
   const accent = TOP_COLORS[cor] ?? TOP_COLORS.AZUL
 
-  const fNome     = Math.round(41  * PX_PER_MM * s)
-  const fSigla    = Math.round(90  * PX_PER_MM * s)
-  const fAcademia = Math.round(8   * PX_PER_MM * s)
-
-  const lsNome     = Math.round(-0.025 * fNome)
-  const lsAcademia = Math.round( 0.075 * fAcademia)
-
-  return {
-    dim,
-    nome: {
-      x: cx,
-      y: Math.round(3.57 * PX_PER_CM * s),
-      font: `bold ${fNome}px ${F_CONDENSED}`,
-      color: '#ffffff',
-      letterSpacing: `${lsNome}px`,
-      maxWidth: Math.round(dim * 0.90),
-    },
-    sigla: {
-      x: cx,
-      y: Math.round(12 * PX_PER_CM * s),
-      font: `bold ${fSigla}px ${F_EXPANDED}`,
-      color: accent,
+  const field = (key: keyof typeof G_LAYOUT) => {
+    const g = G_LAYOUT[key]
+    const fPx = Math.round(g.fontMM * PX_PER_MM * s)
+    return {
+      x:           Math.round(g.x * s),
+      y:           Math.round(g.y * s),
+      font:        `bold ${fPx}px ${g.font}`,
+      color:       g.color ?? accent,
       letterSpacing: '0px',
-      maxWidth: Math.round(dim * 0.92),
-    },
-    academia: {
-      x: cx,
-      y: Math.round(16.2 * PX_PER_CM * s),
-      font: `bold ${fAcademia}px ${F_EXPANDED}`,
-      color: accent,
-      letterSpacing: `${lsAcademia}px`,
-      maxWidth: Math.round(dim * 0.88),
-    },
+      maxWidth:    Math.round(dim * 0.92),
+    }
   }
+
+  return { dim, nome: field('nome'), sigla: field('sigla'), academia: field('academia') }
 }
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
