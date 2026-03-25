@@ -84,9 +84,11 @@ export default function WhatsAppPage() {
   const [templateError, setTemplateError] = useState<string | null>(null)
 
   const [testPhone, setTestPhone] = useState('')
+  const [testTemplate, setTestTemplate] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  const [sendRaw, setSendRaw] = useState<string | null>(null)
 
   // Mass send state
   const [bulkGroup, setBulkGroup] = useState('plano_vencendo')
@@ -122,25 +124,23 @@ export default function WhatsAppPage() {
   }
 
   const handleTestSend = async () => {
-    if (!testPhone) return
+    if (!testPhone || !testTemplate) return
     setSending(true)
     setSent(false)
     setSendError(null)
+    setSendRaw(null)
     try {
       const res = await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: testPhone,
-          text: 'Teste de integração SMAART PRO — Meta WhatsApp Business API.',
-        }),
+        body: JSON.stringify({ to: testPhone, template: testTemplate }),
       })
       const data = await res.json()
+      setSendRaw(JSON.stringify(data, null, 2))
       if (data?.messages?.[0]?.id) {
         setSent(true)
-        setTimeout(() => setSent(false), 4000)
       } else {
-        setSendError(data?.error?.message || 'Erro ao enviar. Verifique o número.')
+        setSendError(data?.error?.message || data?.error?.type || 'Erro ao enviar.')
       }
     } catch {
       setSendError('Erro ao enviar mensagem')
@@ -314,33 +314,60 @@ export default function WhatsAppPage() {
           )}
         </div>
 
-        {/* Teste de Envio */}
+        {/* Teste de Template */}
         <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-white">Teste de Sessão</h2>
+          <h2 className="text-lg font-semibold text-white">Teste de Envio</h2>
           <p className="text-gray-400 text-sm">
-            Envia mensagem de texto livre — funciona apenas dentro da janela de 24h após o contato do usuário.
-            Para notificações proativas, use os templates acima.
+            Envia um template aprovado para um número específico. Funciona de forma proativa, sem necessidade de janela de sessão.
           </p>
+
+          {/* Template selector */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Template</label>
+            <select
+              value={testTemplate}
+              onChange={e => setTestTemplate(e.target.value)}
+              className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-green-500 transition-colors"
+            >
+              <option value="" className="bg-slate-800">Selecione um template aprovado...</option>
+              {templates.filter(t => t.status === 'APPROVED').map(t => (
+                <option key={t.name} value={t.name} className="bg-slate-800">
+                  {TEMPLATE_LABELS[t.name] ?? t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Phone input */}
+          <div>
+            <label className="block text-xs text-gray-400 mb-1.5 font-medium uppercase tracking-wide">Número de destino</label>
+            <input
+              type="text"
+              placeholder="DDD + número (ex: 51999887766)"
+              value={testPhone}
+              onChange={e => setTestPhone(e.target.value)}
+              className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors text-sm"
+            />
+          </div>
+
+          {/* Error */}
           {sendError && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">{sendError}</div>
           )}
-          <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="Número com DDD (ex: 51999887766)"
-              value={testPhone}
-              onChange={e => setTestPhone(e.target.value)}
-              className="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500 transition-colors text-sm"
-            />
-            <button
-              onClick={handleTestSend}
-              disabled={sending || !testPhone}
-              className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 text-sm whitespace-nowrap"
-            >
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : sent ? <CheckCircle className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
-              {sending ? 'Enviando...' : sent ? 'Enviado!' : 'Enviar'}
-            </button>
-          </div>
+
+          {/* Raw API response */}
+          {sendRaw && (
+            <pre className="bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">{sendRaw}</pre>
+          )}
+
+          <button
+            onClick={handleTestSend}
+            disabled={sending || !testPhone || !testTemplate}
+            className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 text-sm"
+          >
+            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : sent ? <CheckCircle className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+            {sending ? 'Enviando...' : sent ? 'Enviado com sucesso!' : 'Enviar template de teste'}
+          </button>
         </div>
 
         {/* Envio em Massa */}
