@@ -10,10 +10,10 @@ async function requireFedAuth() {
   if (!user) return null
   const { data } = await supabaseAdmin
     .from('stakeholders')
-    .select('master_access, role')
+    .select('role, federacao_id')
     .eq('id', user.id)
     .maybeSingle()
-  if (!data?.master_access && data?.role !== 'federacao') return null
+  if (!data || (data.role !== 'master_access' && !data.federacao_id)) return null
   return user
 }
 
