@@ -77,12 +77,15 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Nenhum campo para atualizar' }, { status: 400 })
   }
 
-  const { error } = await supabaseAdmin
+  const { data: updated, error } = await supabaseAdmin
     .from('user_fed_lrsj')
     .update(updates)
     .eq('stakeholder_id', atleta_id)
-    .eq('federacao_id', FED_ID)
+    .select('stakeholder_id')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!updated || updated.length === 0) {
+    return NextResponse.json({ error: 'Atleta não encontrado' }, { status: 404 })
+  }
   return NextResponse.json({ ok: true })
 }
