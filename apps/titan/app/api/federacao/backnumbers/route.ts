@@ -12,11 +12,11 @@ export async function GET(req: NextRequest) {
 
   const { data: perfil } = await supabaseAdmin
     .from('stakeholders')
-    .select('role, federacao_id')
+    .select('role, federacao_id, master_access')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!perfil || (perfil.role !== 'master_access' && !perfil.federacao_id)) {
+  if (!perfil || (!perfil.master_access && !perfil.federacao_id)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
