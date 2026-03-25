@@ -119,14 +119,14 @@ async function ensureFonts() {
   if (FONT_CONDENSED_URL) {
     loads.push(
       new FontFace('Highway Gothic Condensed', `url(${FONT_CONDENSED_URL})`).load()
-        .then(f => document.fonts.add(f))
+        .then(f => { document.fonts.add(f) })
         .catch(() => { /* fallback to Arial Narrow */ })
     )
   }
   if (FONT_EXPANDED_URL) {
     loads.push(
       new FontFace('Highway Gothic Expanded', `url(${FONT_EXPANDED_URL})`).load()
-        .then(f => document.fonts.add(f))
+        .then(f => { document.fonts.add(f) })
         .catch(() => { /* fallback to Arial */ })
     )
   }
