@@ -55,20 +55,31 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, novo_lote: data.lote_atual, ...data })
 }
 
-// PATCH /api/federacao/lote — atualizar lote de um atleta individualmente
-// Body: { atleta_id: string, lote_id: string }
+// PATCH /api/federacao/lote — atualizar campos BN de um atleta individualmente
+// Body: { atleta_id: string, lote_id?: string, tamanho_patch?: string, cor_patch?: string }
 export async function PATCH(req: NextRequest) {
   const user = await requireFedAuth()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { atleta_id, lote_id } = await req.json()
-  if (!atleta_id || !lote_id) {
-    return NextResponse.json({ error: 'atleta_id e lote_id são obrigatórios' }, { status: 400 })
+  const body = await req.json()
+  const { atleta_id, lote_id, tamanho_patch, cor_patch } = body
+
+  if (!atleta_id) {
+    return NextResponse.json({ error: 'atleta_id é obrigatório' }, { status: 400 })
+  }
+
+  const updates: Record<string, string> = {}
+  if (lote_id !== undefined)      updates.lote_id      = lote_id
+  if (tamanho_patch !== undefined) updates.tamanho_patch = tamanho_patch
+  if (cor_patch !== undefined)     updates.cor_patch     = cor_patch
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'Nenhum campo para atualizar' }, { status: 400 })
   }
 
   const { error } = await supabaseAdmin
     .from('user_fed_lrsj')
-    .update({ lote_id })
+    .update(updates)
     .eq('stakeholder_id', atleta_id)
     .eq('federacao_id', FED_ID)
 
