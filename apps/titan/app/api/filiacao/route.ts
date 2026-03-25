@@ -32,6 +32,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Fetch current active lote
+    const { data: loteConfig } = await supabaseAdmin
+      .from('federacao_lote_config')
+      .select('lote_atual')
+      .eq('federacao_id', 1)
+      .maybeSingle()
+    const lote_id = loteConfig?.lote_atual ?? 'N2026 1'
+
     const { data, error } = await supabaseAdmin
       .from('user_fed_lrsj')
       .insert({
@@ -46,6 +54,7 @@ export async function POST(req: NextRequest) {
         academias: body.academias || null,
         status_membro: 'Em análise',
         dados_validados: false,
+        lote_id,
       })
       .select('stakeholder_id')
       .single()

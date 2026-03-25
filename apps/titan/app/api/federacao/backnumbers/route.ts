@@ -39,7 +39,8 @@ export async function GET(req: NextRequest) {
       cor_patch,
       status_plano,
       status_membro,
-      data_expiracao
+      data_expiracao,
+      lote_id
     `)
     .eq('federacao_id', 1)
     .order('nome_completo', { ascending: true })
@@ -92,6 +93,7 @@ export async function GET(req: NextRequest) {
     cor: ((a.cor_patch as string) || 'azul') as 'azul' | 'rosa',
     status_plano: a.status_plano as string | null,
     data_expiracao: a.data_expiracao as string | null,
+    lote_id: (a.lote_id || null) as string | null,
   }))
 
   // Fetch both backnumber templates (azul + rosa)

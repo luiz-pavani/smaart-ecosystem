@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Download, Loader2, Search, CheckSquare, Square,
   Tag, Filter, RefreshCw, AlertTriangle, ChevronDown, Users, Eye,
+  Lock, Pencil, Check, X,
 } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,43 +23,38 @@ const FONT_EXPANDED_URL  = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/
 const PX_PER_CM = 300 / 2.54   // ≈ 118.11px/cm  (300 DPI)
 const PX_PER_MM = 300 / 25.4   // ≈ 11.811px/mm
 
-// Canvas size (px) por tamanho físico
 const SIZE_PX: Record<string, number> = {
   P: Math.round(28 * PX_PER_CM),  // 3307
   M: Math.round(34 * PX_PER_CM),  // 4016
   G: Math.round(41 * PX_PER_CM),  // 4844
 }
 
-// Cores de topo
 const TOP_COLORS: Record<string, string> = {
   azul: '#0030a4',
   rosa: '#b751b8',
 }
 
-// Nomes de fonte (dependem do upload dos arquivos acima)
 const F_CONDENSED = `'Highway Gothic Condensed', 'Arial Narrow', Arial, sans-serif`
 const F_EXPANDED  = `'Highway Gothic Expanded', Arial, 'Helvetica Neue', sans-serif`
 
-// Gera a config de layout escalada para o tamanho dado
 function buildLayout(size: string, cor: string) {
   const dim = SIZE_PX[size] ?? SIZE_PX.P
-  const s   = dim / SIZE_PX.P          // escala relativa a P
-  const cx  = dim / 2                   // centro horizontal
+  const s   = dim / SIZE_PX.P
+  const cx  = dim / 2
   const accent = TOP_COLORS[cor] ?? TOP_COLORS.azul
 
-  const fNome     = Math.round(41  * PX_PER_MM * s)   // 484px em P
-  const fSigla    = Math.round(90  * PX_PER_MM * s)   // 1063px em P
-  const fAcademia = Math.round(8   * PX_PER_MM * s)   // 95px em P
+  const fNome     = Math.round(41  * PX_PER_MM * s)
+  const fSigla    = Math.round(90  * PX_PER_MM * s)
+  const fAcademia = Math.round(8   * PX_PER_MM * s)
 
-  // VA (tracking) convertido de 1/1000em para px
-  const lsNome     = Math.round(-0.025 * fNome)         // VA -25
-  const lsAcademia = Math.round( 0.075 * fAcademia)     // VA +75
+  const lsNome     = Math.round(-0.025 * fNome)
+  const lsAcademia = Math.round( 0.075 * fAcademia)
 
   return {
     dim,
     nome: {
       x: cx,
-      y: Math.round(3.57 * PX_PER_CM * s),    // 422px em P
+      y: Math.round(3.57 * PX_PER_CM * s),
       font: `bold ${fNome}px ${F_CONDENSED}`,
       color: '#ffffff',
       letterSpacing: `${lsNome}px`,
@@ -66,7 +62,7 @@ function buildLayout(size: string, cor: string) {
     },
     sigla: {
       x: cx,
-      y: Math.round(12 * PX_PER_CM * s),      // 1417px em P
+      y: Math.round(12 * PX_PER_CM * s),
       font: `bold ${fSigla}px ${F_EXPANDED}`,
       color: accent,
       letterSpacing: '0px',
@@ -74,7 +70,7 @@ function buildLayout(size: string, cor: string) {
     },
     academia: {
       x: cx,
-      y: Math.round(16.2 * PX_PER_CM * s),    // 1913px em P
+      y: Math.round(16.2 * PX_PER_CM * s),
       font: `bold ${fAcademia}px ${F_EXPANDED}`,
       color: accent,
       letterSpacing: `${lsAcademia}px`,
@@ -96,6 +92,13 @@ interface BNAtleta {
   cor: 'azul' | 'rosa'
   status_plano: string | null
   data_expiracao: string | null
+  lote_id: string | null
+}
+
+interface LoteConfig {
+  lote_atual: string
+  ano: number
+  sequencia: number
 }
 
 // ─── Cache de imagens / fontes ────────────────────────────────────────────────
@@ -147,11 +150,9 @@ async function generateBN(
   canvas.height = dim
   const ctx = canvas.getContext('2d')!
 
-  // Background
   if (bgImage) {
     ctx.drawImage(bgImage, 0, 0, dim, dim)
   } else {
-    // Placeholder: top colorido, meio branco, rodapé cinza
     const accent = TOP_COLORS[atleta.cor] ?? TOP_COLORS.azul
     ctx.fillStyle = accent
     ctx.fillRect(0, 0, dim, Math.round(dim * 0.22))
@@ -161,7 +162,6 @@ async function generateBN(
     ctx.fillRect(0, Math.round(dim * 0.68), dim, dim)
   }
 
-  // Helper para desenhar texto com letterSpacing
   const drawText = (
     text: string,
     field: { x: number; y: number; font: string; color: string; letterSpacing: string; maxWidth: number },
@@ -172,7 +172,6 @@ async function generateBN(
     ctx.fillStyle = field.color
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    // ctx.letterSpacing suportado em Chrome 99+, Edge 99+, Safari 17+
     if ('letterSpacing' in ctx) {
       (ctx as any).letterSpacing = field.letterSpacing
     }
@@ -185,7 +184,7 @@ async function generateBN(
   drawText(atleta.academia, layout.academia)
 
   return new Promise<Blob>((res, rej) =>
-    canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob falhou')), 'image/png'),
+    canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob falhou')), 'image/jpeg', 0.92),
   )
 }
 
@@ -215,12 +214,76 @@ function StatusBadge({ v }: { v: string | null }) {
   )
 }
 
+// ─── Edição inline de lote ────────────────────────────────────────────────────
+function LoteBadge({
+  atleta,
+  onSave,
+}: {
+  atleta: BNAtleta
+  onSave: (atletaId: string, novoLote: string) => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue]     = useState(atleta.lote_id ?? '')
+  const [saving, setSaving]   = useState(false)
+
+  const handleSave = async () => {
+    if (!value.trim()) return
+    setSaving(true)
+    await onSave(atleta.stakeholder_id, value.trim())
+    setSaving(false)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setEditing(false) }}
+          className="w-24 px-2 py-0.5 text-xs bg-slate-700 border border-purple-500 rounded text-white focus:outline-none"
+        />
+        <button onClick={handleSave} disabled={saving} className="text-green-400 hover:text-green-300 disabled:opacity-50">
+          {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+        </button>
+        <button onClick={() => setEditing(false)} className="text-red-400 hover:text-red-300">
+          <X className="w-3 h-3" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 group">
+      <span className={`text-xs font-mono px-2 py-0.5 rounded-full border ${
+        atleta.lote_id === 'ANT'
+          ? 'bg-slate-500/15 border-slate-500/20 text-slate-400'
+          : 'bg-purple-500/15 border-purple-500/20 text-purple-300'
+      }`}>
+        {atleta.lote_id ?? '—'}
+      </span>
+      <button
+        onClick={() => { setValue(atleta.lote_id ?? ''); setEditing(true) }}
+        className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-purple-400 transition-opacity"
+        title="Editar lote"
+      >
+        <Pencil className="w-3 h-3" />
+      </button>
+    </div>
+  )
+}
+
 export default function BacknumbersPage() {
   const router = useRouter()
 
   const [atletas, setAtletas]           = useState<BNAtleta[]>([])
   const [templateUrls, setTemplateUrls] = useState<Record<string, string>>({})
   const [loading, setLoading]           = useState(true)
+
+  const [lote, setLote]             = useState<LoteConfig | null>(null)
+  const [fechandoLote, setFechando] = useState(false)
+  const [confirmarFechar, setConfirmarFechar] = useState(false)
 
   const [search, setSearch]           = useState('')
   const [statusFilter, setStatusFilter] = useState('Válido')
@@ -243,10 +306,15 @@ export default function BacknumbersPage() {
       const params = new URLSearchParams()
       if (st) params.set('status', st)
       if (q)  params.set('search', q)
-      const res = await fetch(`/api/federacao/backnumbers?${params}`)
-      const d   = await res.json()
+      const [bnRes, loteRes] = await Promise.all([
+        fetch(`/api/federacao/backnumbers?${params}`),
+        fetch('/api/federacao/lote'),
+      ])
+      const d = await bnRes.json()
+      const l = await loteRes.json()
       setAtletas(d.atletas ?? [])
       setTemplateUrls(d.templates ?? {})
+      setLote(l)
     } catch {
       setAtletas([])
     } finally {
@@ -260,6 +328,31 @@ export default function BacknumbersPage() {
     setSearch(v)
     if (searchTimer.current) clearTimeout(searchTimer.current)
     searchTimer.current = setTimeout(() => load(v, statusFilter), 350)
+  }
+
+  // ── Fechar lote ───────────────────────────────────────────────────────────
+  const handleFecharLote = async () => {
+    setFechando(true)
+    try {
+      const res = await fetch('/api/federacao/lote', { method: 'POST' })
+      const d = await res.json()
+      if (d.ok) setLote({ lote_atual: d.novo_lote, ano: d.ano, sequencia: d.sequencia })
+    } finally {
+      setFechando(false)
+      setConfirmarFechar(false)
+    }
+  }
+
+  // ── Editar lote individual ────────────────────────────────────────────────
+  const handleSaveLote = async (atletaId: string, novoLote: string) => {
+    await fetch('/api/federacao/lote', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ atleta_id: atletaId, lote_id: novoLote }),
+    })
+    setAtletas(prev => prev.map(a =>
+      a.stakeholder_id === atletaId ? { ...a, lote_id: novoLote } : a
+    ))
   }
 
   // ── Seleção ───────────────────────────────────────────────────────────────
@@ -293,7 +386,6 @@ export default function BacknumbersPage() {
     try {
       await ensureFonts()
 
-      // Pré-carrega backgrounds necessários
       const bgMap: Record<string, HTMLImageElement | null> = {}
       for (const cor of ['azul', 'rosa'] as const) {
         const url = templateUrls[cor]
@@ -308,13 +400,12 @@ export default function BacknumbersPage() {
       const JSZip = (await import('jszip')).default
       const zip   = new JSZip()
 
-      // Organiza por pasta tamanho/cor
       for (let i = 0; i < toGen.length; i++) {
         const a = toGen[i]
         try {
           const blob = await generateBN(a, bgMap[a.cor])
           const folder = `${a.tamanho}_${a.cor}`
-          const fname  = `BN_${folder}_${String(a.id).padStart(4, '0')}_${(a.nome_patch || a.nome_completo).replace(/[^a-zA-Z0-9]/g, '_')}.png`
+          const fname  = `BN_${folder}_${String(a.id).padStart(4, '0')}_${(a.nome_patch || a.nome_completo).replace(/[^a-zA-Z0-9]/g, '_')}.jpg`
           zip.file(`${folder}/${fname}`, blob)
         } catch { /* pula atleta com erro */ }
         setProgress(i + 1)
@@ -351,7 +442,6 @@ export default function BacknumbersPage() {
   const pct           = progTotal > 0 ? Math.round((progress / progTotal) * 100) : 0
   const selectedCount = visibleAtletas.filter(a => selected.has(a.id)).length
 
-  // Contagem por variante para o footer
   const countByVariant = visibleAtletas.reduce((acc, a) => {
     const k = `${a.tamanho}_${a.cor}`
     acc[k] = (acc[k] || 0) + 1
@@ -379,19 +469,53 @@ export default function BacknumbersPage() {
               </div>
             </div>
 
-            {selectedCount > 0 && (
-              <button
-                onClick={handleGenerate}
-                disabled={generating}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-semibold rounded-xl transition-all disabled:opacity-60 shadow-lg"
-              >
-                {generating ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" />{progress}/{progTotal} — {pct}%</>
-                ) : (
-                  <><Download className="w-4 h-4" />Baixar {selectedCount} BN{selectedCount !== 1 ? 's' : ''} (.zip)</>
-                )}
-              </button>
-            )}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Lote atual + botão fechar */}
+              {lote && (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                    <Tag className="w-4 h-4 text-purple-400" />
+                    <span className="text-purple-300 text-sm font-semibold">Lote ativo: {lote.lote_atual}</span>
+                  </div>
+                  {!confirmarFechar ? (
+                    <button
+                      onClick={() => setConfirmarFechar(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 text-orange-300 font-semibold rounded-xl transition-all text-sm"
+                    >
+                      <Lock className="w-4 h-4" /> Lote Fechado
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-orange-500/15 border border-orange-500/30 rounded-xl">
+                      <span className="text-orange-300 text-xs">Fechar {lote.lote_atual} e abrir próximo?</span>
+                      <button
+                        onClick={handleFecharLote}
+                        disabled={fechandoLote}
+                        className="text-xs px-2 py-1 bg-orange-500 hover:bg-orange-400 text-white rounded-lg font-semibold disabled:opacity-60"
+                      >
+                        {fechandoLote ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirmar'}
+                      </button>
+                      <button onClick={() => setConfirmarFechar(false)} className="text-gray-400 hover:text-white">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {selectedCount > 0 && (
+                <button
+                  onClick={handleGenerate}
+                  disabled={generating}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white font-semibold rounded-xl transition-all disabled:opacity-60 shadow-lg"
+                >
+                  {generating ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" />{progress}/{progTotal} — {pct}%</>
+                  ) : (
+                    <><Download className="w-4 h-4" />Baixar {selectedCount} BN{selectedCount !== 1 ? 's' : ''} (.zip)</>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -424,16 +548,11 @@ export default function BacknumbersPage() {
           </div>
         )}
 
-        {/* Fontes */}
         {(!FONT_CONDENSED_URL || !FONT_EXPANDED_URL) && (
           <div className="flex items-center gap-3 bg-blue-500/8 border border-blue-500/15 rounded-xl px-5 py-3">
             <AlertTriangle className="w-4 h-4 text-blue-400 shrink-0" />
             <p className="text-blue-300/80 text-xs">
               Fontes Highway Gothic não configuradas — usando Arial como fallback.
-              Faça upload de <span className="font-mono">HighwayGothicCondensed.ttf</span> e{' '}
-              <span className="font-mono">HighwayGothicExpanded.ttf</span> e preencha as constantes
-              <span className="font-mono"> FONT_CONDENSED_URL</span> /{' '}
-              <span className="font-mono">FONT_EXPANDED_URL</span> no topo do arquivo.
             </p>
           </div>
         )}
@@ -442,7 +561,7 @@ export default function BacknumbersPage() {
         {generating && (
           <div className="bg-white/5 border border-white/10 rounded-xl px-5 py-4">
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-400">Gerando backnumbers...</span>
+              <span className="text-gray-400">Gerando backnumbers (.jpg)...</span>
               <span className="text-white font-semibold">{progress} / {progTotal}</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -528,9 +647,10 @@ export default function BacknumbersPage() {
             </button>
             <div className="flex-1 grid grid-cols-12 gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
               <span className="col-span-1">#</span>
-              <span className="col-span-3">Nome / Patch</span>
+              <span className="col-span-2">Nome / Patch</span>
               <span className="col-span-2">Sigla</span>
-              <span className="col-span-3">Academia</span>
+              <span className="col-span-2">Academia</span>
+              <span className="col-span-2">Lote</span>
               <span className="col-span-1 text-center">Tam.</span>
               <span className="col-span-1 text-center">Cor</span>
               <span className="col-span-1 text-right">Ações</span>
@@ -572,7 +692,7 @@ export default function BacknumbersPage() {
                       <span className="col-span-1 text-gray-500 text-xs font-mono">
                         {String(atleta.id).padStart(4, '0')}
                       </span>
-                      <div className="col-span-3 min-w-0">
+                      <div className="col-span-2 min-w-0">
                         <p className="text-white text-sm font-medium truncate">{atleta.nome_completo}</p>
                         {atleta.nome_patch !== atleta.nome_completo && (
                           <p className="text-purple-400 text-xs truncate">{atleta.nome_patch}</p>
@@ -580,17 +700,17 @@ export default function BacknumbersPage() {
                       </div>
                       <div className="col-span-2">
                         {atleta.sigla ? (
-                          <span
-                            className="text-sm font-bold truncate"
-                            style={{ color: accentColor }}
-                          >
+                          <span className="text-sm font-bold truncate" style={{ color: accentColor }}>
                             {atleta.sigla}
                           </span>
                         ) : (
                           <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">sem sigla</span>
                         )}
                       </div>
-                      <p className="col-span-3 text-gray-400 text-xs truncate">{atleta.academia}</p>
+                      <p className="col-span-2 text-gray-400 text-xs truncate">{atleta.academia}</p>
+                      <div className="col-span-2">
+                        <LoteBadge atleta={atleta} onSave={handleSaveLote} />
+                      </div>
                       <div className="col-span-1 flex justify-center">
                         <span className="text-xs font-semibold text-white bg-white/10 rounded-full px-2 py-0.5">
                           {atleta.tamanho}
@@ -619,7 +739,6 @@ export default function BacknumbersPage() {
             </div>
           )}
 
-          {/* Footer da tabela */}
           {visibleAtletas.length > 0 && (
             <div className="flex items-center justify-between px-5 py-3 border-t border-white/10 text-xs text-gray-500">
               <span>{visibleAtletas.length} atleta{visibleAtletas.length !== 1 ? 's' : ''} listado{visibleAtletas.length !== 1 ? 's' : ''}</span>
@@ -649,15 +768,14 @@ export default function BacknumbersPage() {
             </table>
           </div>
 
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
-            <h3 className="text-blue-300 font-semibold text-sm mb-3">Como usar</h3>
+          <div className="bg-purple-500/5 border border-purple-500/20 rounded-xl p-5">
+            <h3 className="text-purple-300 font-semibold text-sm mb-3">Lógica de Lotes</h3>
             <ul className="text-gray-400 text-xs space-y-1.5">
-              <li>• Selecione atletas → "Baixar BNs (.zip)"</li>
-              <li>• O ZIP organiza por pasta: <span className="font-mono">P_azul/</span>, <span className="font-mono">P_rosa/</span>, <span className="font-mono">M_azul/</span>, <span className="font-mono">G_azul/</span></li>
-              <li>• Ícone <Eye className="w-3 h-3 inline" /> gera prévia individual em nova aba</li>
-              <li>• Coluna <span className="font-mono">siglas</span> em <span className="font-mono">user_fed_lrsj</span> define a sigla (fallback: <span className="font-mono">academias.sigla</span>)</li>
-              <li>• Coluna <span className="font-mono">tamanho_patch</span>: P / M / G</li>
-              <li>• Coluna <span className="font-mono">cor_patch</span>: azul / rosa</li>
+              <li>• Registros históricos recebem lote <span className="font-mono text-slate-300">ANT</span></li>
+              <li>• Novos cadastros e renovações recebem o lote ativo automaticamente</li>
+              <li>• <span className="font-mono text-orange-300">Lote Fechado</span> incrementa a sequência (ex: N2026 1 → N2026 2)</li>
+              <li>• Passe o mouse sobre o lote de um atleta para editar individualmente</li>
+              <li>• Arquivos exportados em <span className="font-mono">.jpg</span> (qualidade 92%)</li>
             </ul>
           </div>
         </div>
