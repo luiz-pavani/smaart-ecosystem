@@ -11,23 +11,28 @@ function normalizePhone(phone: string | null | undefined): string | null {
 }
 
 // Resolve variables for each template based on athlete data
+// Template param structure (confirmed from Meta API):
+// lrsj_atleta_boas_vindas:    {{1}}=nome
+// lrsj_atleta_plano_vencendo: {{1}}=nome, {{2}}=data_vencimento
+// lrsj_atleta_plano_vencido:  {{1}}=nome, {{2}}=data_vencimento
 function buildVariables(
   template: string,
   atleta: { nome_completo: string; data_expiracao: string | null },
   hoje: Date,
 ): string[] {
+  const dataVenc = atleta.data_expiracao
+    ? new Date(atleta.data_expiracao + 'T12:00:00').toLocaleDateString('pt-BR')
+    : '—'
+
   if (template === 'lrsj_atleta_boas_vindas') {
-    return [atleta.nome_completo, 'LRSJ']
-  }
-  if (template === 'lrsj_atleta_plano_vencendo' && atleta.data_expiracao) {
-    const venc = new Date(atleta.data_expiracao + 'T12:00:00')
-    const dias = Math.max(1, Math.ceil((venc.getTime() - hoje.getTime()) / 86400000))
-    return [atleta.nome_completo, String(dias), venc.toLocaleDateString('pt-BR')]
-  }
-  if (template === 'lrsj_atleta_plano_vencido') {
     return [atleta.nome_completo]
   }
-  // Generic fallback — just send the name as first variable
+  if (template === 'lrsj_atleta_plano_vencendo') {
+    return [atleta.nome_completo, dataVenc]
+  }
+  if (template === 'lrsj_atleta_plano_vencido') {
+    return [atleta.nome_completo, dataVenc]
+  }
   return [atleta.nome_completo]
 }
 

@@ -14,13 +14,18 @@ interface Template {
   quality_score: string | null
 }
 
-// Test variables — placeholder values matching each template's expected params
+// Test variables — matches exact template body params confirmed from Meta API
+// lrsj_atleta_boas_vindas:         "Olá, {{1}}! Seja bem-vindo(a)..."               → 1 param
+// lrsj_atleta_plano_vencendo:      "Olá, {{1}}! Seu plano vence em {{2}}..."        → 2 params
+// lrsj_atleta_plano_vencido:       "Olá, {{1}}! Seu plano está vencido desde {{2}}" → 2 params
+// lrsj_academia_anuidade_vencendo: "Olá, {{1}}! A anuidade da academia {{2}} vence em {{3}}" → 3 params
+// lrsj_academia_anuidade_vencida:  "Olá, {{1}}! A anuidade da academia {{2}} está vencida desde {{3}}" → 3 params
 const TEMPLATE_TEST_VARIABLES: Record<string, string[]> = {
-  lrsj_atleta_boas_vindas:         ['Atleta Teste', 'LRSJ'],
-  lrsj_atleta_plano_vencendo:      ['Atleta Teste', '7', '01/04/2026'],
-  lrsj_atleta_plano_vencido:       ['Atleta Teste'],
-  lrsj_academia_anuidade_vencendo: ['Academia Teste', '7', '01/04/2026'],
-  lrsj_academia_anuidade_vencida:  ['Academia Teste'],
+  lrsj_atleta_boas_vindas:         ['Atleta Teste'],
+  lrsj_atleta_plano_vencendo:      ['Atleta Teste', '01/04/2026'],
+  lrsj_atleta_plano_vencido:       ['Atleta Teste', '01/03/2026'],
+  lrsj_academia_anuidade_vencendo: ['Responsável Teste', 'Academia Teste', '01/04/2026'],
+  lrsj_academia_anuidade_vencida:  ['Responsável Teste', 'Academia Teste', '01/03/2026'],
 }
 
 const TEMPLATE_LABELS: Record<string, string> = {
