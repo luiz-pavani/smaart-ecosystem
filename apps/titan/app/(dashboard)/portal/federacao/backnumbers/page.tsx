@@ -10,10 +10,10 @@ import {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIGURAÇÃO DE IMPRESSÃO
-// Template base: quadrado a 300 DPI
-//   P = 28×28cm = 3307×3307px
-//   M = 34×34cm = 4016×4016px
-//   G = 41×41cm = 4844×4844px
+// Template base: quadrado a 300 DPI — fundo master = G (4843×4843px)
+//   G = 41×41cm = 4843×4843px  (fundo master)
+//   M = 37×37cm = 4370×4370px  (escala do G)
+//   P = 30×30cm = 3543×3543px  (escala do G)
 //
 // FONTES: faça upload dos arquivos .ttf para o Supabase Storage e preencha:
 const FONT_CONDENSED_URL = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/object/public/fundos/fonts/highway-gothic-condensed.ttf'
@@ -23,25 +23,26 @@ const FONT_EXPANDED_URL  = 'https://risvafrrbnozyjquxvzi.supabase.co/storage/v1/
 const PX_PER_CM = 300 / 2.54   // ≈ 118.11px/cm  (300 DPI)
 const PX_PER_MM = 300 / 25.4   // ≈ 11.811px/mm
 
+// G é o fundo master (4843px). M e P escalam proporcionalmente.
 const SIZE_PX: Record<string, number> = {
-  P: Math.round(28 * PX_PER_CM),  // 3307
-  M: Math.round(34 * PX_PER_CM),  // 4016
-  G: Math.round(41 * PX_PER_CM),  // 4844
+  G: 4843,                         // 41cm @ 300DPI (fundo master)
+  M: Math.round(37 * PX_PER_CM),  // 4370px
+  P: Math.round(30 * PX_PER_CM),  // 3543px
 }
 
 const TOP_COLORS: Record<string, string> = {
-  azul: '#0030a4',
-  rosa: '#b751b8',
+  AZUL: '#0030a4',
+  ROSA: '#b751b8',
 }
 
 const F_CONDENSED = `'Highway Gothic Condensed', 'Arial Narrow', Arial, sans-serif`
 const F_EXPANDED  = `'Highway Gothic Expanded', Arial, 'Helvetica Neue', sans-serif`
 
 function buildLayout(size: string, cor: string) {
-  const dim = SIZE_PX[size] ?? SIZE_PX.P
-  const s   = dim / SIZE_PX.P
+  const dim = SIZE_PX[size] ?? SIZE_PX.G
+  const s   = dim / SIZE_PX.G          // escala relativa ao fundo master G
   const cx  = dim / 2
-  const accent = TOP_COLORS[cor] ?? TOP_COLORS.azul
+  const accent = TOP_COLORS[cor] ?? TOP_COLORS.AZUL
 
   const fNome     = Math.round(41  * PX_PER_MM * s)
   const fSigla    = Math.round(90  * PX_PER_MM * s)
@@ -89,7 +90,7 @@ interface BNAtleta {
   academia_id: string | null
   sigla: string
   tamanho: 'P' | 'M' | 'G'
-  cor: 'azul' | 'rosa'
+  cor: 'AZUL' | 'ROSA'
   status_plano: string | null
   data_expiracao: string | null
   lote_id: string | null
@@ -197,8 +198,8 @@ const STATUS_OPTIONS = [
 
 const TAMANHO_OPTIONS = [
   { value: '', label: 'Todos os tamanhos' },
-  { value: 'P', label: 'P — 28×28cm' },
-  { value: 'M', label: 'M — 34×34cm' },
+  { value: 'P', label: 'P — 30×30cm' },
+  { value: 'M', label: 'M — 37×37cm' },
   { value: 'G', label: 'G — 41×41cm' },
 ]
 
@@ -288,6 +289,7 @@ export default function BacknumbersPage() {
   const [search, setSearch]           = useState('')
   const [statusFilter, setStatusFilter] = useState('Válido')
   const [tamanhoFilter, setTamanhoFilter] = useState('')
+  const [loteFilter, setLoteFilter]   = useState('')
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
 
@@ -356,9 +358,13 @@ export default function BacknumbersPage() {
   }
 
   // ── Seleção ───────────────────────────────────────────────────────────────
-  const visibleAtletas = tamanhoFilter
-    ? atletas.filter(a => a.tamanho === tamanhoFilter)
-    : atletas
+  const visibleAtletas = atletas.filter(a => {
+    if (tamanhoFilter && a.tamanho !== tamanhoFilter) return false
+    if (loteFilter && a.lote_id !== loteFilter) return false
+    return true
+  })
+
+  const lotesDisponiveis = [...new Set(atletas.map(a => a.lote_id ?? '').filter(Boolean))].sort()
 
   const toggleOne = (id: number) =>
     setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
@@ -387,7 +393,7 @@ export default function BacknumbersPage() {
       await ensureFonts()
 
       const bgMap: Record<string, HTMLImageElement | null> = {}
-      for (const cor of ['azul', 'rosa'] as const) {
+      for (const cor of ['AZUL', 'ROSA'] as const) {
         const url = templateUrls[cor]
         if (url) {
           try { bgMap[cor] = await loadImg(url) }
@@ -438,7 +444,7 @@ export default function BacknumbersPage() {
     setTimeout(() => URL.revokeObjectURL(objUrl), 15_000)
   }
 
-  const hasTemplates  = Object.keys(templateUrls).length > 0
+  const hasTemplates = !!(templateUrls['AZUL'] || templateUrls['ROSA'])
   const pct           = progTotal > 0 ? Math.round((progress / progTotal) * 100) : 0
   const selectedCount = visibleAtletas.filter(a => selected.has(a.id)).length
 
@@ -541,7 +547,7 @@ export default function BacknumbersPage() {
           <div className="flex flex-wrap gap-2">
             {Object.entries(templateUrls).map(([cor]) => (
               <span key={cor} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-500/10 border border-green-500/20 text-green-300">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TOP_COLORS[cor] }} />
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TOP_COLORS[cor.toUpperCase()] ?? TOP_COLORS.AZUL }} />
                 Template {cor} carregado
               </span>
             ))}
@@ -609,6 +615,21 @@ export default function BacknumbersPage() {
             </div>
           ))}
 
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <select
+              value={loteFilter}
+              onChange={e => setLoteFilter(e.target.value)}
+              className="pl-10 pr-7 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-300 focus:outline-none focus:border-purple-500 transition-colors text-sm appearance-none"
+            >
+              <option value="" className="bg-slate-800">Todos os lotes</option>
+              {lotesDisponiveis.map(l => (
+                <option key={l} value={l} className="bg-slate-800">{l}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+
           <button
             onClick={() => load(search, statusFilter)}
             className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:text-white transition-colors text-sm"
@@ -624,7 +645,7 @@ export default function BacknumbersPage() {
               const [tam, cor] = v.split('_')
               return (
                 <span key={v} className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-400">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TOP_COLORS[cor] }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: TOP_COLORS[cor.toUpperCase()] ?? TOP_COLORS.AZUL }} />
                   {tam} {cor}: {n} atleta{n !== 1 ? 's' : ''}
                 </span>
               )
@@ -761,9 +782,9 @@ export default function BacknumbersPage() {
                 </tr>
               </thead>
               <tbody className="text-gray-400">
-                <tr><td className="py-0.5">P</td><td className="text-right">28×28cm</td><td className="text-right">3307×3307</td><td className="text-right">azul, rosa</td></tr>
-                <tr><td className="py-0.5">M</td><td className="text-right">34×34cm</td><td className="text-right">4016×4016</td><td className="text-right">azul</td></tr>
-                <tr><td className="py-0.5">G</td><td className="text-right">41×41cm</td><td className="text-right">4844×4844</td><td className="text-right">azul</td></tr>
+                <tr><td className="py-0.5">G</td><td className="text-right">41×41cm</td><td className="text-right">4843×4843</td><td className="text-right">AZUL, ROSA</td></tr>
+                <tr><td className="py-0.5">M</td><td className="text-right">37×37cm</td><td className="text-right">4370×4370</td><td className="text-right">AZUL, ROSA</td></tr>
+                <tr><td className="py-0.5">P</td><td className="text-right">30×30cm</td><td className="text-right">3543×3543</td><td className="text-right">AZUL, ROSA</td></tr>
               </tbody>
             </table>
           </div>

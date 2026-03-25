@@ -88,8 +88,8 @@ export async function GET(req: NextRequest) {
     academia_id: a.academia_id as string | null,
     // sigla: athlete override → academia fallback → ''
     sigla: (a.siglas || acadSiglaMap[a.academia_id] || '') as string,
-    tamanho: ((a.tamanho_patch as string) || 'P') as 'P' | 'M' | 'G',
-    cor: ((a.cor_patch as string) || 'azul') as 'azul' | 'rosa',
+    tamanho: ((a.tamanho_patch as string) || 'G') as 'P' | 'M' | 'G',
+    cor: ((a.cor_patch as string)?.toUpperCase() || 'AZUL') as 'AZUL' | 'ROSA',
     status_plano: a.status_plano as string | null,
     data_expiracao: a.data_expiracao as string | null,
     lote_id: (a.lote_id || null) as string | null,
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
 
   const templateUrls: Record<string, string> = {}
   for (const t of templates ?? []) {
-    const key = (t as any).template_type.replace('backnumber_', '')
+    const key = (t as any).template_type.replace('backnumber_', '').toUpperCase()
     templateUrls[key] = (t as any).background_url
   }
 
