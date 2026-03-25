@@ -57,7 +57,7 @@ function buildLayout(size: string, cor: string) {
     return {
       x:           Math.round(g.x * s),
       y:           Math.round(g.y * s),
-      font:        `bold ${fPx}px ${g.font}`,
+      font:        `${fPx}px ${g.font}`,
       color:       g.color ?? accent,
       letterSpacing: '0px',
       maxWidth:    Math.round(dim * 0.92),
