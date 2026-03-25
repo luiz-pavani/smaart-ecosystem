@@ -10,12 +10,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { to, text, template } = await req.json()
+  const { to, text, template, variables } = await req.json()
 
   if (!to) return NextResponse.json({ error: 'to é obrigatório' }, { status: 400 })
 
   if (template) {
-    const data = await sendTemplate(to, template)
+    const data = await sendTemplate(to, template, variables ?? [])
     return NextResponse.json(data)
   }
 

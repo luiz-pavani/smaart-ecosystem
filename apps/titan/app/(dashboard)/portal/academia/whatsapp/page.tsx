@@ -14,6 +14,15 @@ interface Template {
   quality_score: string | null
 }
 
+// Test variables — placeholder values matching each template's expected params
+const TEMPLATE_TEST_VARIABLES: Record<string, string[]> = {
+  lrsj_atleta_boas_vindas:         ['Atleta Teste', 'LRSJ'],
+  lrsj_atleta_plano_vencendo:      ['Atleta Teste', '7', '01/04/2026'],
+  lrsj_atleta_plano_vencido:       ['Atleta Teste'],
+  lrsj_academia_anuidade_vencendo: ['Academia Teste', '7', '01/04/2026'],
+  lrsj_academia_anuidade_vencida:  ['Academia Teste'],
+}
+
 const TEMPLATE_LABELS: Record<string, string> = {
   lrsj_atleta_boas_vindas: 'Boas-vindas ao atleta',
   lrsj_atleta_plano_vencendo: 'Plano vencendo em breve',
@@ -133,7 +142,7 @@ export default function WhatsAppPage() {
       const res = await fetch('/api/whatsapp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: testPhone, template: testTemplate }),
+        body: JSON.stringify({ to: testPhone, template: testTemplate, variables: TEMPLATE_TEST_VARIABLES[testTemplate] ?? [] }),
       })
       const data = await res.json()
       setSendRaw(JSON.stringify(data, null, 2))
