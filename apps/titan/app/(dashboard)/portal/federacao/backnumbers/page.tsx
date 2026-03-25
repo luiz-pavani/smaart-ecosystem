@@ -32,7 +32,7 @@ const SIZE_PX: Record<string, number> = {
 
 const TOP_COLORS: Record<string, string> = {
   AZUL: '#0030a4',
-  ROSA: '#b751b8',
+  ROSA: '#ca44cb',
 }
 
 const F_CONDENSED = `'Highway Gothic Condensed', 'Arial Narrow', Arial, sans-serif`

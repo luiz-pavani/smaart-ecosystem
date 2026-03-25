@@ -3,10 +3,10 @@
  * Auto-updated with each release
  */
 
-export const APP_VERSION = '84.0.0'
-export const APP_VERSION_NAME = 'Beta 84'
+export const APP_VERSION = '85.0.0'
+export const APP_VERSION_NAME = 'Beta 85'
 export const APP_RELEASE_DATE = '2026-03-25'
-export const APP_BUILD = 'BN inline edit tamanho + cor - Beta 84'
+export const APP_BUILD = 'BN cor ROSA #ca44cb - Beta 85'
 
 export const getVersionString = () => {
   return `${APP_VERSION_NAME} (v${APP_VERSION})`
