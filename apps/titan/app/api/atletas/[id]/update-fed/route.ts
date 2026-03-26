@@ -91,7 +91,6 @@ export async function PATCH(
       notifyAtletaBoasVindas({
         nome_completo: data.nome_completo,
         telefone: data.telefone,
-        academia: Array.isArray(data.academias) ? data.academias[0] : data.academias,
       }).catch(() => {}) // fire-and-forget
     }
 

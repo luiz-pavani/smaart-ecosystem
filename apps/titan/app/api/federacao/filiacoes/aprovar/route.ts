@@ -54,7 +54,6 @@ export async function POST(req: NextRequest) {
         notifyAtletaBoasVindas({
           nome_completo: a.nome_completo,
           telefone: a.telefone,
-          academia: Array.isArray(a.academias) ? a.academias[0] : a.academias,
         }).catch(() => {})
       }
     }
