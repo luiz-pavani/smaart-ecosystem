@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck, ChevronRight, Clock, Tag } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck, ChevronRight, Clock, Tag, XCircle, AlertOctagon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -67,6 +67,7 @@ export default function PortalFederacaoPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [healthData, setHealthData] = useState<AcademiaHealth[]>([])
   const [filiacoes, setFiliacoes] = useState<{ pendentes: number; vencendo: number; vencidas: number } | null>(null)
+  const [metricas, setMetricas] = useState<{ total: number; ativos: number; vencidos: number; vencendo: number; lotes: { lote: string; count: number }[] } | null>(null)
 
   useEffect(() => {
     loadDashboardData()
@@ -112,6 +113,11 @@ export default function PortalFederacaoPage() {
           vencendo: f.vencendo?.length ?? 0,
           vencidas: f.vencidas?.length ?? 0,
         })
+      }).catch(() => {})
+
+      // Fire-and-forget: métricas de filiados + lotes
+      fetch('/api/federacao/metricas').then(r => r.ok ? r.json() : null).then(m => {
+        if (m) setMetricas(m)
       }).catch(() => {})
     } catch (err) {
       console.error(err)
@@ -257,6 +263,60 @@ export default function PortalFederacaoPage() {
             )}
           </div>
         </button>
+      )}
+
+      {/* Métricas de Planos */}
+      {metricas && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-white">Filiados — Status dos Planos</h2>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+              <p className="text-xs text-gray-400 mb-1">Total de filiados</p>
+              <p className="text-3xl font-bold text-white">{metricas.total.toLocaleString('pt-BR')}</p>
+            </div>
+            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+              <p className="text-xs text-green-400 mb-1 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Plano ativo</p>
+              <p className="text-3xl font-bold text-green-400">{metricas.ativos.toLocaleString('pt-BR')}</p>
+              <p className="text-xs text-gray-500 mt-1">{metricas.total > 0 ? Math.round(metricas.ativos / metricas.total * 100) : 0}% do total</p>
+            </div>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+              <p className="text-xs text-amber-400 mb-1 flex items-center gap-1"><AlertOctagon className="w-3 h-3" /> Vencendo em 30d</p>
+              <p className="text-3xl font-bold text-amber-400">{metricas.vencendo.toLocaleString('pt-BR')}</p>
+              <button onClick={() => router.push('/portal/federacao/backnumbers?status=Válido')} className="text-xs text-amber-400/60 hover:text-amber-400 mt-1 transition-colors">Ver atletas →</button>
+            </div>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+              <p className="text-xs text-red-400 mb-1 flex items-center gap-1"><XCircle className="w-3 h-3" /> Plano vencido</p>
+              <p className="text-3xl font-bold text-red-400">{metricas.vencidos.toLocaleString('pt-BR')}</p>
+              <button onClick={() => router.push('/portal/federacao/backnumbers?status=Vencido')} className="text-xs text-red-400/60 hover:text-red-400 mt-1 transition-colors">Ver atletas →</button>
+            </div>
+          </div>
+
+          {/* Distribuição por Lote */}
+          {metricas.lotes.length > 0 && (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                <Tag className="w-4 h-4 text-purple-400" />
+                Distribuição por Lote
+              </h3>
+              <div className="space-y-2">
+                {metricas.lotes.map(({ lote, count }) => {
+                  const pct = metricas.total > 0 ? Math.round(count / metricas.total * 100) : 0
+                  return (
+                    <div key={lote}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-300 font-mono">{lote}</span>
+                        <span className="text-sm font-semibold text-white tabular-nums">{count} <span className="text-gray-500 font-normal text-xs">({pct}%)</span></span>
+                      </div>
+                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {loading ? (
