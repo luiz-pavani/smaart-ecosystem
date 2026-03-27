@@ -59,7 +59,7 @@ export async function sendTemplate(
 }
 
 export async function checkStatus() {
-  const res = await fetch(`${BASE}/${PHONE_NUMBER_ID}?fields=display_phone_number,verified_name,quality_rating`, {
+  const res = await fetch(`${BASE}/${PHONE_NUMBER_ID}?fields=display_phone_number,verified_name,quality_rating,name_status,status`, {
     headers: { 'Authorization': `Bearer ${TOKEN}` },
   })
   return res.json()

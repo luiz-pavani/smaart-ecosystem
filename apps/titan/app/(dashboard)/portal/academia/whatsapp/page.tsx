@@ -114,13 +114,17 @@ export default function WhatsAppPage() {
   const [bulkError, setBulkError] = useState<string | null>(null)
   const [bulkConfirm, setBulkConfirm] = useState(false)
 
-  useEffect(() => {
+  function fetchStatus() {
+    setLoadingStatus(true)
     fetch('/api/whatsapp/instance')
       .then(r => r.json())
       .then(d => setStatus(d))
       .catch(() => {})
       .finally(() => setLoadingStatus(false))
+  }
 
+  useEffect(() => {
+    fetchStatus()
     fetchTemplates()
   }, [])
 
@@ -257,6 +261,34 @@ export default function WhatsAppPage() {
                   <p className="text-xs text-gray-400 mb-1 flex items-center gap-1"><Star className="w-3 h-3" /> Nome verificado</p>
                   <p className="text-white font-semibold text-sm">{status.verified_name || '—'}</p>
                 </div>
+              </div>
+              {/* Nome status */}
+              <div className={`mt-3 flex items-center justify-between rounded-lg px-4 py-3 border ${
+                status.name_status === 'APPROVED'
+                  ? 'bg-green-500/10 border-green-500/20'
+                  : status.name_status === 'DECLINED'
+                  ? 'bg-red-500/10 border-red-500/20'
+                  : 'bg-yellow-500/10 border-yellow-500/20'
+              }`}>
+                <div>
+                  <p className="text-xs text-gray-400 mb-0.5">Status do nome de exibição</p>
+                  <p className={`text-sm font-bold ${
+                    status.name_status === 'APPROVED' ? 'text-green-400' :
+                    status.name_status === 'DECLINED' ? 'text-red-400' : 'text-yellow-400'
+                  }`}>
+                    {status.name_status === 'APPROVED' ? '✅ Aprovado — envios habilitados' :
+                     status.name_status === 'DECLINED' ? '❌ Rejeitado — envios bloqueados' :
+                     status.name_status === 'PENDING_REVIEW' ? '⏳ Em análise pela Meta' :
+                     status.name_status || '—'}
+                  </p>
+                </div>
+                <button
+                  onClick={fetchStatus}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+                  title="Verificar agora"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingStatus ? 'animate-spin' : ''}`} />
+                </button>
               </div>
             </div>
           ) : (
