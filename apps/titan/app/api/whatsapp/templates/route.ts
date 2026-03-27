@@ -6,11 +6,12 @@ const WABA_ID = process.env.WHATSAPP_WABA_ID!
 const BASE = 'https://graph.facebook.com/v22.0'
 
 const OUR_TEMPLATES = [
-  'lrsj_atleta_boas_vindas',
-  'lrsj_atleta_plano_vencendo',
+  'lrsj_atleta_boas_vindas_v2',
+  'lrsj_atleta_plano_vencendo_v2',
   'lrsj_atleta_plano_vencido',
-  'lrsj_academia_anuidade_vencendo',
-  'lrsj_academia_anuidade_vencida',
+  'lrsj_academia_anuidade_vencendo_v2',
+  'lrsj_academia_anuidade_vencida_v2',
+  'lrsj_fed_novo_cadastro',
 ]
 
 export async function GET(_req: NextRequest) {

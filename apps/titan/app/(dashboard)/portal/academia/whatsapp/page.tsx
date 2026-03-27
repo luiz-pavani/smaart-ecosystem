@@ -15,32 +15,32 @@ interface Template {
 }
 
 // Test variables — matches exact template body params confirmed from Meta API
-// lrsj_atleta_boas_vindas:         "Olá, {{1}}! Seja bem-vindo(a)..."               → 1 param
-// lrsj_atleta_plano_vencendo:      "Olá, {{1}}! Seu plano vence em {{2}}..."        → 2 params
-// lrsj_atleta_plano_vencido:       "Olá, {{1}}! Seu plano está vencido desde {{2}}" → 2 params
-// lrsj_academia_anuidade_vencendo: "Olá, {{1}}! A anuidade da academia {{2}} vence em {{3}}" → 3 params
-// lrsj_academia_anuidade_vencida:  "Olá, {{1}}! A anuidade da academia {{2}} está vencida desde {{3}}" → 3 params
-// lrsj_fed_novo_cadastro:          "{{1}} solicitou filiação. Contato: {{2}}"       → 2 params
+// lrsj_atleta_boas_vindas_v2:         "Olá, {{1}}! Seja bem-vindo(a)..."               → 1 param
+// lrsj_atleta_plano_vencendo_v2:      "Olá, {{1}}! Seu plano vence em {{2}}..."        → 2 params
+// lrsj_atleta_plano_vencido:          "Olá, {{1}}! Seu plano está vencido desde {{2}}" → 2 params
+// lrsj_academia_anuidade_vencendo_v2: "Olá, {{1}}! A anuidade da academia {{2}} vence em {{3}}" → 3 params
+// lrsj_academia_anuidade_vencida_v2:  "Olá, {{1}}! A anuidade da academia {{2}} está vencida desde {{3}}" → 3 params
+// lrsj_fed_novo_cadastro:             "Nova solicitação de filiação: {{1}} solicitou cadastro na LRSJ. Contato informado: {{2}}. Acesse o painel para revisar." → 2 params
 const TEMPLATE_TEST_VARIABLES: Record<string, string[]> = {
-  lrsj_atleta_boas_vindas:         ['Atleta Teste'],
-  lrsj_atleta_plano_vencendo:      ['Atleta Teste', '01/04/2026'],
-  lrsj_atleta_plano_vencido:       ['Atleta Teste', '01/03/2026'],
-  lrsj_academia_anuidade_vencendo: ['Responsável Teste', 'Academia Teste', '01/04/2026'],
-  lrsj_academia_anuidade_vencida:  ['Responsável Teste', 'Academia Teste', '01/03/2026'],
-  lrsj_fed_novo_cadastro:          ['Atleta Teste', 'atleta@teste.com'],
+  lrsj_atleta_boas_vindas_v2:         ['Atleta Teste'],
+  lrsj_atleta_plano_vencendo_v2:      ['Atleta Teste', '01/04/2026'],
+  lrsj_atleta_plano_vencido:          ['Atleta Teste', '01/03/2026'],
+  lrsj_academia_anuidade_vencendo_v2: ['Responsável Teste', 'Academia Teste', '01/04/2026'],
+  lrsj_academia_anuidade_vencida_v2:  ['Responsável Teste', 'Academia Teste', '01/03/2026'],
+  lrsj_fed_novo_cadastro:             ['Atleta Teste', 'atleta@teste.com'],
 }
 
 const TEMPLATE_LABELS: Record<string, string> = {
-  lrsj_atleta_boas_vindas: 'Boas-vindas ao atleta',
-  lrsj_atleta_plano_vencendo: 'Plano vencendo em breve',
+  lrsj_atleta_boas_vindas_v2: 'Boas-vindas ao atleta',
+  lrsj_atleta_plano_vencendo_v2: 'Plano vencendo em breve',
   lrsj_atleta_plano_vencido: 'Plano vencido hoje',
-  lrsj_academia_anuidade_vencendo: 'Anuidade da academia vencendo',
-  lrsj_academia_anuidade_vencida: 'Anuidade da academia vencida',
+  lrsj_academia_anuidade_vencendo_v2: 'Anuidade da academia vencendo',
+  lrsj_academia_anuidade_vencida_v2: 'Anuidade da academia vencida',
   lrsj_fed_novo_cadastro: 'Novo cadastro para a federação',
 }
 
 // Templates applicable to individual athletes (for mass sending)
-const ATLETA_TEMPLATES = ['lrsj_atleta_boas_vindas', 'lrsj_atleta_plano_vencendo', 'lrsj_atleta_plano_vencido']
+const ATLETA_TEMPLATES = ['lrsj_atleta_boas_vindas_v2', 'lrsj_atleta_plano_vencendo_v2', 'lrsj_atleta_plano_vencido']
 
 const GROUP_OPTIONS = [
   { value: 'plano_vencendo', label: 'Plano vencendo (próx. 30 dias)' },
@@ -49,9 +49,9 @@ const GROUP_OPTIONS = [
 ]
 
 const GROUP_TEMPLATE_SUGGESTIONS: Record<string, string> = {
-  plano_vencendo: 'lrsj_atleta_plano_vencendo',
+  plano_vencendo: 'lrsj_atleta_plano_vencendo_v2',
   plano_vencido: 'lrsj_atleta_plano_vencido',
-  todos: 'lrsj_atleta_boas_vindas',
+  todos: 'lrsj_atleta_boas_vindas_v2',
 }
 
 function TemplateStatusBadge({ status }: { status: string }) {
@@ -109,7 +109,7 @@ export default function WhatsAppPage() {
 
   // Mass send state
   const [bulkGroup, setBulkGroup] = useState('plano_vencendo')
-  const [bulkTemplate, setBulkTemplate] = useState('lrsj_atleta_plano_vencendo')
+  const [bulkTemplate, setBulkTemplate] = useState('lrsj_atleta_plano_vencendo_v2')
   const [bulkPreview, setBulkPreview] = useState<{ total: number; com_telefone: number } | null>(null)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [bulkSending, setBulkSending] = useState(false)
@@ -190,7 +190,7 @@ export default function WhatsAppPage() {
 
   function handleBulkGroupChange(g: string) {
     setBulkGroup(g)
-    setBulkTemplate(GROUP_TEMPLATE_SUGGESTIONS[g] || 'lrsj_atleta_boas_vindas')
+    setBulkTemplate(GROUP_TEMPLATE_SUGGESTIONS[g] || 'lrsj_atleta_boas_vindas_v2')
     loadBulkPreview(g)
   }
 

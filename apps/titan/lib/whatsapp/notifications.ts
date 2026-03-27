@@ -22,7 +22,7 @@ export async function notifyAtletaBoasVindas(atleta: {
 }) {
   const phone = normalizePhone(atleta.telefone)
   if (!phone) return null
-  return sendTemplate(phone, 'lrsj_atleta_boas_vindas', [atleta.nome_completo])
+  return sendTemplate(phone, 'lrsj_atleta_boas_vindas_v2', [atleta.nome_completo])
 }
 
 export async function notifyAtletaPlanoVencendo(atleta: {
@@ -33,7 +33,7 @@ export async function notifyAtletaPlanoVencendo(atleta: {
   const phone = normalizePhone(atleta.telefone)
   if (!phone) return null
   const dataFormatada = new Date(atleta.data_expiracao + 'T12:00:00').toLocaleDateString('pt-BR')
-  return sendTemplate(phone, 'lrsj_atleta_plano_vencendo', [atleta.nome_completo, dataFormatada])
+  return sendTemplate(phone, 'lrsj_atleta_plano_vencendo_v2', [atleta.nome_completo, dataFormatada])
 }
 
 export async function notifyAtletaPlanoVencido(atleta: {
@@ -57,7 +57,7 @@ export async function notifyAcademiaAnualidadeVencendo(academia: {
   if (!phone) return null
   const dataFormatada = new Date(academia.anualidade_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')
   const responsavel = academia.responsavel_nome || academia.nome
-  return sendTemplate(phone, 'lrsj_academia_anuidade_vencendo', [responsavel, academia.nome, dataFormatada])
+  return sendTemplate(phone, 'lrsj_academia_anuidade_vencendo_v2', [responsavel, academia.nome, dataFormatada])
 }
 
 export async function notifyAcademiaAnualidadeVencida(academia: {
@@ -70,7 +70,7 @@ export async function notifyAcademiaAnualidadeVencida(academia: {
   if (!phone) return null
   const dataFormatada = new Date(academia.anualidade_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')
   const responsavel = academia.responsavel_nome || academia.nome
-  return sendTemplate(phone, 'lrsj_academia_anuidade_vencida', [responsavel, academia.nome, dataFormatada])
+  return sendTemplate(phone, 'lrsj_academia_anuidade_vencida_v2', [responsavel, academia.nome, dataFormatada])
 }
 
 // Notifica o coordenador da federação sobre nova solicitação de filiação

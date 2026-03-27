@@ -24,10 +24,10 @@ function buildVariables(
     ? new Date(atleta.data_expiracao + 'T12:00:00').toLocaleDateString('pt-BR')
     : '—'
 
-  if (template === 'lrsj_atleta_boas_vindas') {
+  if (template === 'lrsj_atleta_boas_vindas_v2') {
     return [atleta.nome_completo]
   }
-  if (template === 'lrsj_atleta_plano_vencendo') {
+  if (template === 'lrsj_atleta_plano_vencendo_v2') {
     return [atleta.nome_completo, dataVenc]
   }
   if (template === 'lrsj_atleta_plano_vencido') {
