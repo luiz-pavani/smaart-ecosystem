@@ -3,10 +3,11 @@
 import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { LogIn, UserPlus, Loader2 } from 'lucide-react'
+import { LogIn, UserPlus, Loader2, MessageSquare, Phone } from 'lucide-react'
 
 type FuncaoStakeholder = 'FEDERACAO' | 'ACADEMIA' | 'ATLETA'
 type ModoTela = 'login' | 'cadastro'
+type OtpStep = 'idle' | 'sending' | 'sent' | 'verifying'
 
 interface StakeholderDraft {
   funcao: FuncaoStakeholder
@@ -35,6 +36,18 @@ function AcessoUniversalContent() {
   const [nomeUsuario, setNomeUsuario] = useState('')
   const [cadastroEmail, setCadastroEmail] = useState('')
   const [cadastroSenha, setCadastroSenha] = useState('')
+
+  // WhatsApp OTP state
+  const [cadastroTelefone, setCadastroTelefone] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [otpStep, setOtpStep] = useState<OtpStep>('idle')
+  const [otpPhone, setOtpPhone] = useState('')
+
+  // Login via WhatsApp state
+  const [loginTelefone, setLoginTelefone] = useState('')
+  const [loginOtpCode, setLoginOtpCode] = useState('')
+  const [loginOtpStep, setLoginOtpStep] = useState<OtpStep>('idle')
+  const [loginOtpPhone, setLoginOtpPhone] = useState('')
 
   const [precisaCompletarCadastro, setPrecisaCompletarCadastro] = useState(false)
 
@@ -139,7 +152,7 @@ function AcessoUniversalContent() {
       .maybeSingle()
 
     if (error) throw error
-    if (!data?.email) throw new Error('Usuário sem email/senha. Use login com Google para esta conta.')
+    if (!data?.email) throw new Error('Usuário sem email/senha. Use login com Google ou WhatsApp para esta conta.')
 
     return data.email
   }
@@ -166,6 +179,65 @@ function AcessoUniversalContent() {
       setErro(err.message || 'Falha no login')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // --- Login via WhatsApp OTP ---
+  const handleLoginSendOtp = async () => {
+    setErro(null)
+    setMensagem(null)
+    if (!loginTelefone.trim()) {
+      setErro('Informe seu número de WhatsApp')
+      return
+    }
+    setLoginOtpStep('sending')
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: loginTelefone }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setLoginOtpPhone(data.telefone)
+      setLoginOtpStep('sent')
+      setMensagem('Código enviado para seu WhatsApp!')
+    } catch (err: any) {
+      setErro(err.message || 'Erro ao enviar código')
+      setLoginOtpStep('idle')
+    }
+  }
+
+  const handleLoginVerifyOtp = async () => {
+    setErro(null)
+    setMensagem(null)
+    if (!loginOtpCode.trim()) {
+      setErro('Digite o código recebido')
+      return
+    }
+    setLoginOtpStep('verifying')
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: loginOtpPhone, code: loginOtpCode }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      if (data.access_token && data.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        })
+        router.push('/portal')
+        router.refresh()
+      } else {
+        throw new Error('Conta não encontrada. Faça o cadastro primeiro.')
+      }
+    } catch (err: any) {
+      setErro(err.message || 'Código inválido')
+      setLoginOtpStep('sent')
     }
   }
 
@@ -221,6 +293,74 @@ function AcessoUniversalContent() {
     }
   }
 
+  // --- Cadastro via WhatsApp OTP ---
+  const handleCadastroSendOtp = async () => {
+    setErro(null)
+    setMensagem(null)
+    try {
+      validarBaseCadastro()
+      if (!cadastroTelefone.trim()) {
+        throw new Error('Informe seu número de WhatsApp')
+      }
+    } catch (err: any) {
+      setErro(err.message)
+      return
+    }
+    setOtpStep('sending')
+    try {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telefone: cadastroTelefone }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setOtpPhone(data.telefone)
+      setOtpStep('sent')
+      setMensagem('Código enviado para seu WhatsApp!')
+    } catch (err: any) {
+      setErro(err.message || 'Erro ao enviar código')
+      setOtpStep('idle')
+    }
+  }
+
+  const handleCadastroVerifyOtp = async () => {
+    setErro(null)
+    setMensagem(null)
+    if (!otpCode.trim()) {
+      setErro('Digite o código recebido')
+      return
+    }
+    setOtpStep('verifying')
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telefone: otpPhone,
+          code: otpCode,
+          nomeCompleto: nomeCompleto.trim(),
+          nomeUsuario: sanitizeUsername(nomeUsuario),
+          funcao,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      if (data.access_token && data.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+        })
+        router.push('/portal')
+        router.refresh()
+      }
+    } catch (err: any) {
+      setErro(err.message || 'Código inválido')
+      setOtpStep('sent')
+    }
+  }
+
   const handleGoogleAuth = async () => {
     setErro(null)
     setMensagem(null)
@@ -251,6 +391,9 @@ function AcessoUniversalContent() {
       setErro(err.message || 'Falha no login com Google')
     }
   }
+
+  const inputClass = 'w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all'
+  const labelClass = 'block text-sm font-medium text-foreground mb-2'
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-8">
@@ -283,126 +426,244 @@ function AcessoUniversalContent() {
       {mensagem && <div className="mb-4 bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-lg text-sm">{mensagem}</div>}
 
       {modo === 'login' ? (
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label htmlFor="identifier" className="block text-sm font-medium text-foreground mb-2">
-              Usuário ou Email
-            </label>
-            <input
-              id="identifier"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              placeholder="seu.usuario ou email"
-            />
-          </div>
+        <>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label htmlFor="identifier" className={labelClass}>Usuário ou Email</label>
+              <input
+                id="identifier"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                required
+                className={inputClass}
+                placeholder="seu.usuario ou email"
+              />
+            </div>
 
-          <div>
-            <label htmlFor="loginPassword" className="block text-sm font-medium text-foreground mb-2">
-              Senha
-            </label>
-            <input
-              id="loginPassword"
-              type="password"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              placeholder="••••••••"
-            />
-          </div>
+            <div>
+              <label htmlFor="loginPassword" className={labelClass}>Senha</label>
+              <input
+                id="loginPassword"
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                required
+                className={inputClass}
+                placeholder="••••••••"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleCadastroComEmail} className="space-y-4">
-          <div>
-            <label htmlFor="funcao" className="block text-sm font-medium text-foreground mb-2">
-              Função
-            </label>
-            <select
-              id="funcao"
-              value={funcao}
-              onChange={(e) => setFuncao(e.target.value as FuncaoStakeholder)}
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="FEDERACAO">Federação</option>
-              <option value="ACADEMIA">Academia</option>
-              <option value="ATLETA">Atleta</option>
-            </select>
+              {loading ? 'Entrando...' : 'Entrar'}
+            </button>
+          </form>
+
+          {/* Login via WhatsApp */}
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px bg-border flex-1" />
+            <span className="text-xs text-muted-foreground">ou entre via WhatsApp</span>
+            <div className="h-px bg-border flex-1" />
           </div>
 
-          <div>
-            <label htmlFor="nomeCompleto" className="block text-sm font-medium text-foreground mb-2">
-              Nome completo
-            </label>
-            <input
-              id="nomeCompleto"
-              value={nomeCompleto}
-              onChange={(e) => setNomeCompleto(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              placeholder="Nome completo"
-            />
+          <div className="space-y-3">
+            {loginOtpStep === 'idle' || loginOtpStep === 'sending' ? (
+              <>
+                <div>
+                  <label htmlFor="loginTelefone" className={labelClass}>WhatsApp</label>
+                  <input
+                    id="loginTelefone"
+                    type="tel"
+                    value={loginTelefone}
+                    onChange={(e) => setLoginTelefone(e.target.value)}
+                    className={inputClass}
+                    placeholder="DDD + número (ex: 55984085000)"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLoginSendOtp}
+                  disabled={loginOtpStep === 'sending'}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50"
+                >
+                  {loginOtpStep === 'sending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                  {loginOtpStep === 'sending' ? 'Enviando...' : 'Receber código via WhatsApp'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">Código enviado para seu WhatsApp. Digite abaixo:</p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={loginOtpCode}
+                  onChange={(e) => setLoginOtpCode(e.target.value.replace(/\D/g, ''))}
+                  className={`${inputClass} text-center text-2xl tracking-[0.5em] font-mono`}
+                  placeholder="000000"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleLoginVerifyOtp}
+                  disabled={loginOtpStep === 'verifying' || loginOtpCode.length < 6}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50"
+                >
+                  {loginOtpStep === 'verifying' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
+                  {loginOtpStep === 'verifying' ? 'Verificando...' : 'Verificar e entrar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLoginOtpStep('idle'); setLoginOtpCode('') }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Reenviar código
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <form onSubmit={handleCadastroComEmail} className="space-y-4">
+            <div>
+              <label htmlFor="funcao" className={labelClass}>Função</label>
+              <select
+                id="funcao"
+                value={funcao}
+                onChange={(e) => setFuncao(e.target.value as FuncaoStakeholder)}
+                className={inputClass}
+              >
+                <option value="FEDERACAO">Federação</option>
+                <option value="ACADEMIA">Academia</option>
+                <option value="ATLETA">Atleta</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="nomeCompleto" className={labelClass}>Nome completo</label>
+              <input
+                id="nomeCompleto"
+                value={nomeCompleto}
+                onChange={(e) => setNomeCompleto(e.target.value)}
+                required
+                className={inputClass}
+                placeholder="Nome completo"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="nomeUsuario" className={labelClass}>Nome de usuário (único)</label>
+              <input
+                id="nomeUsuario"
+                value={nomeUsuario}
+                onChange={(e) => setNomeUsuario(e.target.value)}
+                required
+                className={inputClass}
+                placeholder="usuario_unico"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="cadastroEmail" className={labelClass}>Email (opcional)</label>
+              <input
+                id="cadastroEmail"
+                type="email"
+                value={cadastroEmail}
+                onChange={(e) => setCadastroEmail(e.target.value)}
+                className={inputClass}
+                placeholder="email@dominio.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="cadastroSenha" className={labelClass}>Senha (opcional)</label>
+              <input
+                id="cadastroSenha"
+                type="password"
+                value={cadastroSenha}
+                onChange={(e) => setCadastroSenha(e.target.value)}
+                className={inputClass}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Criando...' : 'Cadastrar com Email/Senha'}
+            </button>
+          </form>
+
+          {/* Cadastro via WhatsApp */}
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px bg-border flex-1" />
+            <span className="text-xs text-muted-foreground">ou cadastre via WhatsApp</span>
+            <div className="h-px bg-border flex-1" />
           </div>
 
-          <div>
-            <label htmlFor="nomeUsuario" className="block text-sm font-medium text-foreground mb-2">
-              Nome de usuário (único)
-            </label>
-            <input
-              id="nomeUsuario"
-              value={nomeUsuario}
-              onChange={(e) => setNomeUsuario(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              placeholder="usuario_unico"
-            />
+          <div className="space-y-3">
+            {otpStep === 'idle' || otpStep === 'sending' ? (
+              <>
+                <div>
+                  <label htmlFor="cadastroTelefone" className={labelClass}>WhatsApp</label>
+                  <input
+                    id="cadastroTelefone"
+                    type="tel"
+                    value={cadastroTelefone}
+                    onChange={(e) => setCadastroTelefone(e.target.value)}
+                    className={inputClass}
+                    placeholder="DDD + número (ex: 55984085000)"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCadastroSendOtp}
+                  disabled={otpStep === 'sending'}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50"
+                >
+                  {otpStep === 'sending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
+                  {otpStep === 'sending' ? 'Enviando...' : 'Cadastrar via WhatsApp'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">Código enviado para seu WhatsApp. Digite abaixo:</p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  className={`${inputClass} text-center text-2xl tracking-[0.5em] font-mono`}
+                  placeholder="000000"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleCadastroVerifyOtp}
+                  disabled={otpStep === 'verifying' || otpCode.length < 6}
+                  className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50"
+                >
+                  {otpStep === 'verifying' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Phone className="w-4 h-4" />}
+                  {otpStep === 'verifying' ? 'Verificando...' : 'Verificar e criar conta'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setOtpStep('idle'); setOtpCode('') }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Reenviar código
+                </button>
+              </>
+            )}
           </div>
-
-          <div>
-            <label htmlFor="cadastroEmail" className="block text-sm font-medium text-foreground mb-2">
-              Email (opcional para Google)
-            </label>
-            <input
-              id="cadastroEmail"
-              type="email"
-              value={cadastroEmail}
-              onChange={(e) => setCadastroEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              placeholder="email@dominio.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="cadastroSenha" className="block text-sm font-medium text-foreground mb-2">
-              Senha (opcional para Google)
-            </label>
-            <input
-              id="cadastroSenha"
-              type="password"
-              value={cadastroSenha}
-              onChange={(e) => setCadastroSenha(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-4 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Criando...' : 'Cadastrar com Email/Senha'}
-          </button>
-        </form>
+        </>
       )}
 
       <div className="my-5 flex items-center gap-3">
@@ -431,7 +692,7 @@ function AcessoUniversalContent() {
           href="/filiacao"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
         >
-          🥋 Solicitar filiação à LRSJ
+          Solicitar filiação à LRSJ
         </a>
       </div>
     </div>
