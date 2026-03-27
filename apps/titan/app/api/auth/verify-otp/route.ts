@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     if (email) {
       // Setar senha temporária e fazer login com ela
       const tempPassword = generateInternalPassword()
-      await supabaseAdmin.auth.admin.updateUser(existingStakeholder.id, { password: tempPassword })
+      await supabaseAdmin.auth.admin.updateUserById(existingStakeholder.id, { password: tempPassword })
 
       const { data: session, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
         email,
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       const existing = users?.users?.find((u: any) => u.email === fakeEmail)
       if (existing) {
         const tempPassword = generateInternalPassword()
-        await supabaseAdmin.auth.admin.updateUser(existing.id, { password: tempPassword })
+        await supabaseAdmin.auth.admin.updateUserById(existing.id, { password: tempPassword })
         const { data: session } = await supabaseAdmin.auth.signInWithPassword({
           email: fakeEmail,
           password: tempPassword,
