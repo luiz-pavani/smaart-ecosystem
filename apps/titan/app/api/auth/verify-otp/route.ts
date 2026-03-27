@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import crypto from 'crypto'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,11 @@ function normalizePhone(phone: string): string | null {
   const digits = phone.replace(/\D/g, '')
   if (digits.length < 10) return null
   return digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`
+}
+
+// Gera uma senha segura interna (o usuário nunca a vê — login é sempre via OTP)
+function generateInternalPassword(): string {
+  return crypto.randomBytes(32).toString('hex')
 }
 
 // POST — verifica OTP e cria/autentica o usuário
@@ -45,6 +51,8 @@ export async function POST(req: NextRequest) {
     .update({ used: true })
     .eq('id', otp.id)
 
+  const fakeEmail = `${phone}@whatsapp.titan.app`
+
   // Verificar se já existe stakeholder com este telefone
   const { data: existingStakeholder } = await supabaseAdmin
     .from('stakeholders')
@@ -53,26 +61,29 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (existingStakeholder) {
-    // Usuário já existe — gerar magic link para login
-    // Buscar email do auth.users via admin
+    // Usuário já existe — buscar auth user e gerar sessão
     const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(existingStakeholder.id)
+    const email = authUser?.user?.email
 
-    if (authUser?.user?.email) {
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
-        email: authUser.user.email,
+    if (email) {
+      // Setar senha temporária e fazer login com ela
+      const tempPassword = generateInternalPassword()
+      await supabaseAdmin.auth.admin.updateUser(existingStakeholder.id, { password: tempPassword })
+
+      const { data: session, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+        email,
+        password: tempPassword,
       })
 
-      if (linkError) {
+      if (signInError || !session.session) {
         return NextResponse.json({ error: 'Erro ao gerar sessão' }, { status: 500 })
       }
 
-      // Retornar token properties para login direto no cliente
       return NextResponse.json({
         ok: true,
         action: 'login',
-        access_token: linkData.properties?.access_token,
-        refresh_token: linkData.properties?.refresh_token,
+        access_token: session.session.access_token,
+        refresh_token: session.session.refresh_token,
       })
     }
   }
@@ -96,11 +107,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Criar usuário no Supabase Auth (email fictício baseado no telefone)
-  const fakeEmail = `${phone}@whatsapp.titan.app`
+  const internalPassword = generateInternalPassword()
 
   const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email: fakeEmail,
-    email_confirm: true, // auto-confirma (verificação foi via WhatsApp)
+    password: internalPassword,
+    email_confirm: true,
     user_metadata: {
       full_name: nomeCompleto.trim(),
       username: sanitizedUsername,
@@ -113,18 +125,22 @@ export async function POST(req: NextRequest) {
     // Se já existe com este email fictício, é login
     if (createError.message?.includes('already been registered')) {
       const { data: users } = await supabaseAdmin.auth.admin.listUsers()
-      const existing = users?.users?.find(u => u.email === fakeEmail)
+      const existing = users?.users?.find((u: any) => u.email === fakeEmail)
       if (existing) {
-        const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'magiclink',
+        const tempPassword = generateInternalPassword()
+        await supabaseAdmin.auth.admin.updateUser(existing.id, { password: tempPassword })
+        const { data: session } = await supabaseAdmin.auth.signInWithPassword({
           email: fakeEmail,
+          password: tempPassword,
         })
-        return NextResponse.json({
-          ok: true,
-          action: 'login',
-          access_token: linkData?.properties?.access_token,
-          refresh_token: linkData?.properties?.refresh_token,
-        })
+        if (session?.session) {
+          return NextResponse.json({
+            ok: true,
+            action: 'login',
+            access_token: session.session.access_token,
+            refresh_token: session.session.refresh_token,
+          })
+        }
       }
     }
     return NextResponse.json({ error: createError.message }, { status: 500 })
@@ -146,20 +162,20 @@ export async function POST(req: NextRequest) {
     console.error('Stakeholder upsert error:', stakeholderError)
   }
 
-  // Gerar sessão para o novo usuário
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'magiclink',
+  // Login com o novo usuário
+  const { data: session, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
     email: fakeEmail,
+    password: internalPassword,
   })
 
-  if (linkError) {
+  if (signInError || !session.session) {
     return NextResponse.json({ error: 'Conta criada mas erro ao gerar sessão' }, { status: 500 })
   }
 
   return NextResponse.json({
     ok: true,
     action: 'signup',
-    access_token: linkData.properties?.access_token,
-    refresh_token: linkData.properties?.refresh_token,
+    access_token: session.session.access_token,
+    refresh_token: session.session.refresh_token,
   })
 }
