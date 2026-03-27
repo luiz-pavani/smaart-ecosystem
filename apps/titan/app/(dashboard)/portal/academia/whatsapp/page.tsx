@@ -20,12 +20,14 @@ interface Template {
 // lrsj_atleta_plano_vencido:       "Olá, {{1}}! Seu plano está vencido desde {{2}}" → 2 params
 // lrsj_academia_anuidade_vencendo: "Olá, {{1}}! A anuidade da academia {{2}} vence em {{3}}" → 3 params
 // lrsj_academia_anuidade_vencida:  "Olá, {{1}}! A anuidade da academia {{2}} está vencida desde {{3}}" → 3 params
+// lrsj_fed_novo_cadastro:          "{{1}} solicitou filiação. Contato: {{2}}"       → 2 params
 const TEMPLATE_TEST_VARIABLES: Record<string, string[]> = {
   lrsj_atleta_boas_vindas:         ['Atleta Teste'],
   lrsj_atleta_plano_vencendo:      ['Atleta Teste', '01/04/2026'],
   lrsj_atleta_plano_vencido:       ['Atleta Teste', '01/03/2026'],
   lrsj_academia_anuidade_vencendo: ['Responsável Teste', 'Academia Teste', '01/04/2026'],
   lrsj_academia_anuidade_vencida:  ['Responsável Teste', 'Academia Teste', '01/03/2026'],
+  lrsj_fed_novo_cadastro:          ['Atleta Teste', 'atleta@teste.com'],
 }
 
 const TEMPLATE_LABELS: Record<string, string> = {
@@ -34,6 +36,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
   lrsj_atleta_plano_vencido: 'Plano vencido hoje',
   lrsj_academia_anuidade_vencendo: 'Anuidade da academia vencendo',
   lrsj_academia_anuidade_vencida: 'Anuidade da academia vencida',
+  lrsj_fed_novo_cadastro: 'Novo cadastro para a federação',
 }
 
 // Templates applicable to individual athletes (for mass sending)
@@ -316,7 +319,7 @@ export default function WhatsAppPage() {
           </div>
           <p className="text-xs text-gray-500 mb-5">
             Templates aprovados pela Meta são necessários para envio de notificações proativas.
-            {approvedCount > 0 && ` ${approvedCount}/5 aprovados.`}
+            {approvedCount > 0 && ` ${approvedCount}/6 aprovados.`}
           </p>
 
           {loadingTemplates ? (
@@ -554,7 +557,7 @@ export default function WhatsAppPage() {
         <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-5">
           <h3 className="text-blue-300 font-semibold text-sm mb-2">Como funciona</h3>
           <ul className="text-gray-400 text-sm space-y-1.5">
-            <li>• Notificações automáticas são disparadas diariamente às 8h via Cron</li>
+            <li>• Notificações automáticas são disparadas diariamente às 8h (horário de Brasília) via Cron</li>
             <li>• Templates aprovados permitem contato proativo independente de janela</li>
             <li>• Cota gratuita: 1.000 conversas por mês</li>
             <li>• Variável necessária: <span className="text-slate-300 font-mono text-xs">WHATSAPP_WABA_ID = 954872767488248</span></li>
