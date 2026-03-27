@@ -19,10 +19,10 @@ function generateInternalPassword(): string {
 }
 
 // POST — verifica OTP e cria/autentica o usuário
-// Body: { telefone, code, nomeCompleto, nomeUsuario, funcao }
+// Body: { telefone, code, nomeCompleto, nomeUsuario, funcao, senha }
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { telefone, code, nomeCompleto, nomeUsuario, funcao } = body
+  const { telefone, code, nomeCompleto, nomeUsuario, funcao, senha } = body
 
   const phone = normalizePhone(telefone || '')
   if (!phone || !code) {
@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Novo cadastro — precisamos dos dados completos
-  if (!nomeCompleto?.trim() || !nomeUsuario?.trim() || !funcao) {
-    return NextResponse.json({ error: 'Dados de cadastro incompletos', action: 'need_signup_data' }, { status: 400 })
+  if (!nomeCompleto?.trim() || !nomeUsuario?.trim() || !funcao || !senha?.trim()) {
+    return NextResponse.json({ error: 'Dados de cadastro incompletos (nome, usuário, função e senha são obrigatórios)', action: 'need_signup_data' }, { status: 400 })
   }
 
   const sanitizedUsername = nomeUsuario.trim().toLowerCase().replace(/\s+/g, '')
@@ -107,11 +107,12 @@ export async function POST(req: NextRequest) {
   }
 
   // Criar usuário no Supabase Auth (email fictício baseado no telefone)
-  const internalPassword = generateInternalPassword()
+  // Usa a senha escolhida pelo usuário para que ele possa logar depois com telefone/usuário + senha
+  const userPassword = senha.trim()
 
   const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email: fakeEmail,
-    password: internalPassword,
+    password: userPassword,
     email_confirm: true,
     user_metadata: {
       full_name: nomeCompleto.trim(),
@@ -165,7 +166,7 @@ export async function POST(req: NextRequest) {
   // Login com o novo usuário
   const { data: session, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
     email: fakeEmail,
-    password: internalPassword,
+    password: userPassword,
   })
 
   if (signInError || !session.session) {
