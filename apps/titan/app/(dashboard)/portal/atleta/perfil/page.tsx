@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Settings, Calendar, Clock, X, Camera, Check, Pencil, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Calendar, Clock, X, Camera, Check, Pencil, MessageCircle, Building2, ShieldCheck, ExternalLink, ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
@@ -20,6 +20,33 @@ interface TurmaMatriculada {
 
 const dayLabels: Record<number, string> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb',
+}
+
+interface StakeholderPerfil {
+  id: string
+  nome_completo: string | null
+  nome_usuario: string | null
+  email: string | null
+  telefone: string | null
+  funcao: string | null
+  academia_id: string | null
+  federacao_id: string | null
+}
+
+interface Federacao {
+  id: string
+  nome: string
+  sigla: string
+  email: string | null
+  site: string | null
+}
+
+interface Academia {
+  id: string
+  nome: string
+  endereco_cidade: string
+  endereco_estado: string
+  federacao_id: string
 }
 
 interface AtletaPerfil {
@@ -100,12 +127,17 @@ export default function PerfilAtletaPage() {
   }
 
   const [atleta, setAtleta] = useState<AtletaPerfil | null>(null)
+  const [stakeholder, setStakeholder] = useState<StakeholderPerfil | null>(null)
+  const [federacoes, setFederacoes] = useState<Federacao[]>([])
+  const [academias, setAcademias] = useState<Academia[]>([])
   const [kyuDan, setKyuDan] = useState<KyuDan | null>(null)
   const [turmas, setTurmas] = useState<TurmaMatriculada[]>([])
   const [waitlistItems, setWaitlistItems] = useState<WaitlistItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [removingWaitlist, setRemovingWaitlist] = useState<string | null>(null)
+  const [selectedFedId, setSelectedFedId] = useState<string>('')
+  const [selectedAcadId, setSelectedAcadId] = useState<string>('')
 
   // Edit state
   const [editing, setEditing] = useState(false)
@@ -124,7 +156,7 @@ export default function PerfilAtletaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setError('Usuário não autenticado'); return }
 
-        const [{ data: fedData, error: fedErr }, { data: kdData }, { data: enrollData }, { data: waitData }] = await Promise.all([
+        const [{ data: fedData, error: fedErr }, { data: kdData }, { data: enrollData }, { data: waitData }, { data: stakeholderData }, { data: fedsData }, { data: acadData }] = await Promise.all([
           supabase.from('user_fed_lrsj').select('*').eq('stakeholder_id', user.id).maybeSingle(),
           supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan, icones').order('id'),
           supabase.from('class_enrollments')
@@ -136,9 +168,16 @@ export default function PerfilAtletaPage() {
             .select('position, class:class_id(id, name)')
             .eq('athlete_id', user.id)
             .order('position', { ascending: true }),
+          supabase.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, funcao, academia_id, federacao_id').eq('id', user.id).maybeSingle(),
+          supabase.from('federacoes').select('id, nome, sigla, email, site').eq('ativo', true),
+          supabase.from('academias').select('id, nome, endereco_cidade, endereco_estado, federacao_id').eq('ativo', true).order('nome'),
         ])
 
         if (fedErr) throw fedErr
+
+        if (stakeholderData) setStakeholder(stakeholderData as StakeholderPerfil)
+        if (fedsData) setFederacoes(fedsData as Federacao[])
+        if (acadData) setAcademias(acadData as Academia[])
 
         if (fedData) {
           setAtleta(fedData as AtletaPerfil)
@@ -624,10 +663,127 @@ export default function PerfilAtletaPage() {
             )}
           </div>
         ) : (
-          <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-8 text-center">
-            <User className="w-12 h-12 text-gray-500 mx-auto mb-3" />
-            <p className="text-gray-400">Nenhum perfil de filiação encontrado</p>
-            <p className="text-gray-500 text-sm mt-1">Entre em contato com sua academia ou federação</p>
+          // Onboarding: usuário sem filiação ativa
+          <div className="space-y-6">
+            {/* Header com dados do stakeholder */}
+            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-8">
+              <div className="flex flex-col sm:flex-row gap-6 items-start">
+                <div className="w-20 h-20 bg-primary/20 rounded-xl border-4 border-white/10 flex items-center justify-center shrink-0">
+                  <User className="w-10 h-10 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-white">{stakeholder?.nome_completo || '—'}</h2>
+                  <p className="text-gray-400 text-sm mt-1">@{stakeholder?.nome_usuario || '—'}</p>
+                  <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-400">
+                    {stakeholder?.email && <span>✉ {stakeholder.email}</span>}
+                    {stakeholder?.telefone && <span>📱 {stakeholder.telefone}</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Banner: sem filiação */}
+            <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-5">
+              <p className="font-semibold text-amber-300 text-sm">⚠️ Você ainda não possui filiação ativa</p>
+              <p className="text-gray-400 text-xs mt-1">Escolha sua academia e federação para solicitar filiação ou pagar sua anuidade.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Escolher Academia */}
+              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building2 className="w-5 h-5 text-orange-400" />
+                  <h3 className="font-semibold text-white">Minha Academia</h3>
+                </div>
+                <p className="text-gray-400 text-xs mb-3">Selecione a academia onde você treina.</p>
+                <div className="relative">
+                  <select
+                    value={selectedAcadId}
+                    onChange={e => setSelectedAcadId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-orange-500/50 transition-colors pr-8"
+                  >
+                    <option value="">Selecione uma academia...</option>
+                    {academias.map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.nome} — {a.endereco_cidade}/{a.endereco_estado}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+                {selectedAcadId && (
+                  <p className="text-xs text-green-400 mt-2">✓ Academia selecionada. Finalize sua filiação abaixo.</p>
+                )}
+              </div>
+
+              {/* Escolher Federação */}
+              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <ShieldCheck className="w-5 h-5 text-blue-400" />
+                  <h3 className="font-semibold text-white">Minha Federação</h3>
+                </div>
+                <p className="text-gray-400 text-xs mb-3">Selecione a federação à qual deseja se filiar.</p>
+                <div className="relative">
+                  <select
+                    value={selectedFedId}
+                    onChange={e => setSelectedFedId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-blue-500/50 transition-colors pr-8"
+                  >
+                    <option value="">Selecione uma federação...</option>
+                    {federacoes.map(f => (
+                      <option key={f.id} value={f.id}>{f.nome} ({f.sigla})</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+                {selectedFedId && (() => {
+                  const fed = federacoes.find(f => f.id === selectedFedId)
+                  return fed ? (
+                    <div className="mt-3 space-y-1 text-xs text-gray-400">
+                      {fed.email && <p>✉ {fed.email}</p>}
+                      {fed.site && <p>🌐 {fed.site}</p>}
+                    </div>
+                  ) : null
+                })()}
+              </div>
+            </div>
+
+            {/* CTAs de filiação */}
+            {selectedFedId && (
+              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <CreditCard className="w-5 h-5 text-green-400" />
+                  <h3 className="font-semibold text-white">Solicitar Filiação</h3>
+                </div>
+                <p className="text-gray-400 text-sm mb-5">
+                  Você selecionou <strong className="text-white">{federacoes.find(f => f.id === selectedFedId)?.sigla}</strong>.
+                  Escolha como deseja prosseguir:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <a
+                    href="/filiacao"
+                    className="flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-all text-sm"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Solicitar novo registro
+                  </a>
+                  {federacoes.find(f => f.id === selectedFedId)?.site && (
+                    <a
+                      href={federacoes.find(f => f.id === selectedFedId)!.site!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 px-4 py-3 border border-white/10 hover:bg-white/5 text-gray-300 font-medium rounded-lg transition-all text-sm"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Site da federação
+                    </a>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-4 text-center">
+                  Já é filiado? Entre em contato com a secretaria para vincular sua conta.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
