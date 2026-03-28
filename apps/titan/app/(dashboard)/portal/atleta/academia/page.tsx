@@ -12,35 +12,11 @@ export default function AcademiaAtletaPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchAcademia = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data: atletaData } = await supabase
-          .from('stakeholders')
-          .select('academia_id')
-          .eq('id', user.id)
-          .limit(1)
-          .single()
-
-        if (atletaData?.academia_id) {
-          const { data } = await supabase
-            .from('academias')
-            .select('*')
-            .eq('id', atletaData.academia_id)
-            .limit(1)
-            .single()
-          setAcademia(data)
-        }
-      } catch (error) {
-        console.error('Erro ao buscar academia:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchAcademia()
+    fetch('/api/atletas/self/academia')
+      .then(r => r.json())
+      .then(json => { if (json.academia) setAcademia(json.academia) })
+      .catch(err => console.error('Erro ao buscar academia:', err))
+      .finally(() => setLoading(false))
   }, [])
 
   return (
