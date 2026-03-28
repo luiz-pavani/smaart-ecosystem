@@ -8,10 +8,11 @@ import { useRouter } from 'next/navigation'
 
 interface TopNavProps {
   user: any
+  displayName?: string
   mobile?: boolean
 }
 
-export default function TopNav({ user, mobile = false }: TopNavProps) {
+export default function TopNav({ user, displayName, mobile = false }: TopNavProps) {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -119,11 +120,11 @@ export default function TopNav({ user, mobile = false }: TopNavProps) {
                 >
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                     <span className="text-sm font-bold text-primary">
-                      {user?.email?.[0].toUpperCase()}
+                      {(displayName || user?.email || '?')[0].toUpperCase()}
                     </span>
                   </div>
                   <span className="text-sm font-medium text-foreground">
-                    {user?.email?.split('@')[0]}
+                    {displayName || user?.email?.split('@')[0]}
                   </span>
                 </button>
 
