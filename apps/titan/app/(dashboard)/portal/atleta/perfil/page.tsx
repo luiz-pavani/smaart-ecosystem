@@ -31,6 +31,7 @@ interface StakeholderPerfil {
   funcao: string | null
   academia_id: string | null
   federacao_id: string | null
+  kyu_dan_id: number | null
 }
 
 interface Federacao {
@@ -176,7 +177,7 @@ export default function PerfilAtletaPage() {
             .select('position, class:class_id(id, name)')
             .eq('athlete_id', user.id)
             .order('position', { ascending: true }),
-          supabase.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, funcao, academia_id, federacao_id').eq('id', user.id).maybeSingle(),
+          supabase.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, funcao, academia_id, federacao_id, kyu_dan_id').eq('id', user.id).maybeSingle(),
           supabase.from('federacoes').select('id, nome, sigla, email, site').eq('ativo', true),
           supabase.from('academias').select('id, nome, endereco_cidade, endereco_estado, federacao_id').eq('ativo', true).order('nome'),
         ])
