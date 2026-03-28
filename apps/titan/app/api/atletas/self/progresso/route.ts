@@ -7,14 +7,27 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  // Fetch athlete's federation record
-  const { data: atleta } = await supabaseAdmin
+  // Fetch athlete's federation record, fallback to stakeholders
+  const { data: fedRecord } = await supabaseAdmin
     .from('user_fed_lrsj')
     .select('kyu_dan_id, data_ultima_graduacao, academia_id, status_plano')
     .eq('stakeholder_id', user.id)
     .maybeSingle()
 
-  if (!atleta) return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
+  const { data: stakeholder } = await supabaseAdmin
+    .from('stakeholders')
+    .select('kyu_dan_id, academia_id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (!fedRecord && !stakeholder) return NextResponse.json({ error: 'Perfil não encontrado' }, { status: 404 })
+
+  const atleta = {
+    kyu_dan_id: fedRecord?.kyu_dan_id ?? stakeholder?.kyu_dan_id ?? null,
+    data_ultima_graduacao: fedRecord?.data_ultima_graduacao ?? null,
+    academia_id: fedRecord?.academia_id ?? stakeholder?.academia_id ?? null,
+    status_plano: fedRecord?.status_plano ?? null,
+  }
 
   // Fetch kyu_dan info
   const { data: kyuDanList } = await supabaseAdmin
