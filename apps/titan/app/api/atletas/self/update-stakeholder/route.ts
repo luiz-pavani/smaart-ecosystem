@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const ALLOWED = [
-  'nome_completo', 'email', 'telefone', 'genero',
+  'nome_completo', 'nome_usuario', 'email', 'telefone', 'genero',
   'data_nascimento', 'kyu_dan_id', 'academia_id', 'federacao_id',
 ] as const
 

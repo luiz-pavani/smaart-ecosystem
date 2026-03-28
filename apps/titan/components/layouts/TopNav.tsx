@@ -11,11 +11,10 @@ interface TopNavProps {
   displayName?: string
   realEmail?: string | null
   funcao?: string
-  masterAccess?: boolean
   mobile?: boolean
 }
 
-export default function TopNav({ user, displayName, realEmail, funcao, masterAccess, mobile = false }: TopNavProps) {
+export default function TopNav({ user, displayName, realEmail, funcao, mobile = false }: TopNavProps) {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)

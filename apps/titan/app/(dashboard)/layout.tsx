@@ -21,14 +21,13 @@ export default async function DashboardLayout({
 
   const { data: stakeholder } = await supabaseAdmin
     .from('stakeholders')
-    .select('nome_usuario, nome_completo, email, funcao, master_access')
+    .select('nome_usuario, nome_completo, email, funcao')
     .eq('id', user.id)
     .maybeSingle()
 
   const displayName = stakeholder?.nome_usuario || stakeholder?.nome_completo || user.email?.split('@')[0] || ''
   const realEmail = stakeholder?.email || (user.email?.includes('@whatsapp.titan.app') ? null : user.email) || null
   const funcao = stakeholder?.funcao || 'Atleta'
-  const masterAccess = stakeholder?.master_access ?? false
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -36,7 +35,7 @@ export default async function DashboardLayout({
       <div className="hidden lg:flex">
         <Sidebar user={user} />
         <div className="flex-1">
-          <TopNav user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} masterAccess={masterAccess} />
+          <TopNav user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} />
           <main className="p-6">
             {children}
           </main>
@@ -45,7 +44,7 @@ export default async function DashboardLayout({
 
       {/* Mobile: Top Nav + Content + Bottom Nav */}
       <div className="lg:hidden">
-        <TopNav user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} masterAccess={masterAccess} mobile />
+        <TopNav user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} mobile />
         <main className="p-4 pb-20">
           {children}
         </main>

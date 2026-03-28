@@ -27,6 +27,7 @@ interface FedProfile {
 interface StakeholderProfile {
   id: string
   nome_completo: string | null
+  nome_usuario: string | null
   email: string | null
   telefone: string | null
   genero: string | null
@@ -93,7 +94,7 @@ export default function ConfiguracoesPage() {
         const [{ data: kdData }, { data: fedData }, { data: stData }] = await Promise.all([
           supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan').order('id'),
           supabase.from('user_fed_lrsj').select('*').eq('stakeholder_id', user.id).maybeSingle(),
-          supabase.from('stakeholders').select('id, nome_completo, email, telefone, genero, data_nascimento, kyu_dan_id').eq('id', user.id).maybeSingle(),
+          supabase.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, genero, data_nascimento, kyu_dan_id').eq('id', user.id).maybeSingle(),
         ])
 
         setKyuDans((kdData || []) as KyuDan[])
@@ -165,6 +166,7 @@ export default function ConfiguracoesPage() {
     try {
       const payload = {
         nome_completo: stakeholderForm.nome_completo || null,
+        nome_usuario: stakeholderForm.nome_usuario || null,
         email: stakeholderForm.email || null,
         telefone: stakeholderForm.telefone || null,
         genero: stakeholderForm.genero || null,
@@ -336,11 +338,12 @@ export default function ConfiguracoesPage() {
           ) : (
             // Usuário sem filiação — edita stakeholders
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <Field label="Nome Completo">
-                  <input className={inputCls} value={stakeholderForm.nome_completo || ''} onChange={e => setStField('nome_completo', e.target.value)} />
-                </Field>
-              </div>
+              <Field label="Nome Completo">
+                <input className={inputCls} value={stakeholderForm.nome_completo || ''} onChange={e => setStField('nome_completo', e.target.value)} />
+              </Field>
+              <Field label="Nome de Usuário">
+                <input className={inputCls} value={stakeholderForm.nome_usuario || ''} placeholder="ex: malupavani" onChange={e => setStField('nome_usuario', e.target.value.toLowerCase().replace(/\s+/g, ''))} />
+              </Field>
               <Field label="Email">
                 <input className={inputCls} type="email" value={stakeholderForm.email || ''} onChange={e => setStField('email', e.target.value)} />
               </Field>
