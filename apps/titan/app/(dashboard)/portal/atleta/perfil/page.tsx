@@ -32,6 +32,8 @@ interface StakeholderPerfil {
   academia_id: string | null
   federacao_id: string | null
   kyu_dan_id: number | null
+  data_nascimento: string | null
+  genero: string | null
 }
 
 interface Federacao {
@@ -187,8 +189,8 @@ export default function PerfilAtletaPage() {
             nome_completo: stakeholderData.nome_completo || '',
             email: stakeholderData.email || '',
             telefone: stakeholderData.telefone || '',
-            genero: '',
-            data_nascimento: '',
+            genero: stakeholderData.genero || '',
+            data_nascimento: stakeholderData.data_nascimento || '',
             kyu_dan_id: stakeholderData.kyu_dan_id ? String(stakeholderData.kyu_dan_id) : '',
           })
         }
@@ -296,6 +298,7 @@ export default function PerfilAtletaPage() {
         email: stForm.email || null,
         telefone: stForm.telefone || null,
         genero: stForm.genero || null,
+        data_nascimento: stForm.data_nascimento || null,
         kyu_dan_id: stForm.kyu_dan_id ? Number(stForm.kyu_dan_id) : null,
       }
       const res = await fetch('/api/atletas/self/update-stakeholder', {
@@ -780,6 +783,14 @@ export default function PerfilAtletaPage() {
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
                     </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Data de Nascimento</label>
+                    <input type="date"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.data_nascimento}
+                      onChange={e => setStForm(f => ({ ...f, data_nascimento: e.target.value }))}
+                    />
                   </div>
                   <div className="sm:col-span-2 space-y-1">
                     <label className="text-xs text-gray-400 font-medium">Graduação (Faixa)</label>

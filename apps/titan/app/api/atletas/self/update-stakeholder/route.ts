@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 
 const ALLOWED = [
   'nome_completo', 'email', 'telefone', 'genero',
-  'kyu_dan_id', 'academia_id', 'federacao_id',
+  'data_nascimento', 'kyu_dan_id', 'academia_id', 'federacao_id',
 ] as const
 
 export async function PATCH(req: NextRequest) {
