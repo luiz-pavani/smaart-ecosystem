@@ -84,8 +84,7 @@ export default function PortalPage() {
       roles.includes('academia_staff') ||
       roles.includes('federacao_admin') ||
       roles.includes('federacao_staff') ||
-      roles.includes('master_access') ||
-      hasAcademia
+      roles.includes('master_access')
 
     // Portal Academia - academia_admin/staff, federacao roles, ou master_access
     if (canSeeAcademiaPortal) {
@@ -101,8 +100,8 @@ export default function PortalPage() {
     }
 
     // Portal Federação - federacao_admin ou similar
-    if (roles.includes('federacao_admin') || roles.includes('federacao_staff') || 
-        roles.includes('master_access') || hasFederacao) {
+    if (roles.includes('federacao_admin') || roles.includes('federacao_staff') ||
+        roles.includes('master_access')) {
       portals.push({
         id: 'federacao',
         title: 'Portal da Federação',

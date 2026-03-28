@@ -9,10 +9,13 @@ import { useRouter } from 'next/navigation'
 interface TopNavProps {
   user: any
   displayName?: string
+  realEmail?: string | null
+  funcao?: string
+  masterAccess?: boolean
   mobile?: boolean
 }
 
-export default function TopNav({ user, displayName, mobile = false }: TopNavProps) {
+export default function TopNav({ user, displayName, realEmail, funcao, masterAccess, mobile = false }: TopNavProps) {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -131,10 +134,10 @@ export default function TopNav({ user, displayName, mobile = false }: TopNavProp
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-lg overflow-hidden z-50">
                     <div className="p-3 border-b border-border">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {user?.email}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Master Access</p>
+                      {realEmail && (
+                        <p className="text-sm font-medium text-foreground truncate">{realEmail}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">{funcao || 'Atleta'}</p>
                     </div>
                     
                     <div className="py-1">
