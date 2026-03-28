@@ -134,7 +134,7 @@ export default function CarteiraPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                   <div>
-                    <p className="text-[10px] font-bold tracking-[0.2em] text-gray-500 uppercase">Liga Regional de Subúrbio de Jiu-Jitsu</p>
+                    <p className="text-[10px] font-bold tracking-[0.2em] text-gray-500 uppercase">Liga Riograndense de Judô</p>
                     <p className="text-xs text-gray-600 mt-0.5">Carteira de Filiação</p>
                   </div>
                   <div

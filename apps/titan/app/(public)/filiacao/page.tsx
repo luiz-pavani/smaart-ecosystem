@@ -91,7 +91,7 @@ export default function FiliacaoPage() {
             <span className="text-3xl">🥋</span>
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">Solicitar Filiação</h1>
-          <p className="text-gray-400 text-sm">Liga Regional de Subúrbio de Jiu-Jitsu</p>
+          <p className="text-gray-400 text-sm">Liga Riograndense de Judô</p>
         </div>
 
         {step === 'success' ? (
