@@ -131,6 +131,7 @@ export default function PerfilAtletaPage() {
   const [federacoes, setFederacoes] = useState<Federacao[]>([])
   const [academias, setAcademias] = useState<Academia[]>([])
   const [kyuDan, setKyuDan] = useState<KyuDan | null>(null)
+  const [kyuDans, setKyuDans] = useState<KyuDan[]>([])
   const [turmas, setTurmas] = useState<TurmaMatriculada[]>([])
   const [waitlistItems, setWaitlistItems] = useState<WaitlistItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -138,6 +139,13 @@ export default function PerfilAtletaPage() {
   const [removingWaitlist, setRemovingWaitlist] = useState<string | null>(null)
   const [selectedFedId, setSelectedFedId] = useState<string>('')
   const [selectedAcadId, setSelectedAcadId] = useState<string>('')
+  const [editingStakeholder, setEditingStakeholder] = useState(false)
+  const [savingStakeholder, setSavingStakeholder] = useState(false)
+  const [stForm, setStForm] = useState<{
+    nome_completo: string; email: string; telefone: string
+    genero: string; data_nascimento: string; kyu_dan_id: string
+  }>({ nome_completo: '', email: '', telefone: '', genero: '', data_nascimento: '', kyu_dan_id: '' })
+  const [stSaveMsg, setStSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Edit state
   const [editing, setEditing] = useState(false)
@@ -175,9 +183,21 @@ export default function PerfilAtletaPage() {
 
         if (fedErr) throw fedErr
 
-        if (stakeholderData) setStakeholder(stakeholderData as StakeholderPerfil)
+        if (stakeholderData) {
+          setStakeholder(stakeholderData as StakeholderPerfil)
+          setStForm({
+            nome_completo: stakeholderData.nome_completo || '',
+            email: stakeholderData.email || '',
+            telefone: stakeholderData.telefone || '',
+            genero: '',
+            data_nascimento: '',
+            kyu_dan_id: stakeholderData.kyu_dan_id ? String(stakeholderData.kyu_dan_id) : '',
+          })
+        }
         if (fedsData) setFederacoes(fedsData as Federacao[])
         if (acadData) setAcademias(acadData as Academia[])
+
+        setKyuDans((kdData || []) as KyuDan[])
 
         if (fedData) {
           setAtleta(fedData as AtletaPerfil)
@@ -268,6 +288,32 @@ export default function PerfilAtletaPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const saveStakeholderProfile = async () => {
+    setSavingStakeholder(true); setStSaveMsg(null)
+    try {
+      const payload = {
+        nome_completo: stForm.nome_completo || null,
+        email: stForm.email || null,
+        telefone: stForm.telefone || null,
+        genero: stForm.genero || null,
+        data_nascimento: stForm.data_nascimento || null,
+        kyu_dan_id: stForm.kyu_dan_id ? Number(stForm.kyu_dan_id) : null,
+      }
+      const res = await fetch('/api/atletas/self/update-stakeholder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erro ao salvar')
+      setStakeholder(prev => prev ? { ...prev, ...payload } : prev)
+      setEditingStakeholder(false)
+      setStSaveMsg({ type: 'success', text: 'Perfil atualizado com sucesso.' })
+    } catch (err: any) {
+      setStSaveMsg({ type: 'error', text: err.message || 'Erro ao salvar perfil.' })
+    } finally { setSavingStakeholder(false) }
   }
 
   const fotoAtual = fotoPreview || atleta?.url_foto || null
@@ -679,8 +725,112 @@ export default function PerfilAtletaPage() {
                     {stakeholder?.telefone && <span>📱 {stakeholder.telefone}</span>}
                   </div>
                 </div>
+                <button
+                  onClick={() => setEditingStakeholder(v => !v)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shrink-0"
+                >
+                  <Pencil className="w-4 h-4" />
+                  {editingStakeholder ? 'Cancelar' : 'Editar Perfil'}
+                </button>
               </div>
             </div>
+
+            {/* Formulário de edição do perfil */}
+            {editingStakeholder && (
+              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6 space-y-4">
+                <h3 className="font-semibold text-white mb-2">Editar dados pessoais</h3>
+
+                {stSaveMsg && (
+                  <div className={`rounded-lg px-4 py-3 text-sm ${stSaveMsg.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+                    {stSaveMsg.text}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Nome Completo</label>
+                    <input
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.nome_completo}
+                      onChange={e => setStForm(f => ({ ...f, nome_completo: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Email</label>
+                    <input type="email"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.email}
+                      onChange={e => setStForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Telefone / WhatsApp</label>
+                    <input
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.telefone}
+                      placeholder="(DDD) 99999-9999"
+                      onChange={e => setStForm(f => ({ ...f, telefone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Gênero</label>
+                    <select
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.genero}
+                      onChange={e => setStForm(f => ({ ...f, genero: e.target.value }))}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Data de Nascimento</label>
+                    <input type="date"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.data_nascimento}
+                      onChange={e => setStForm(f => ({ ...f, data_nascimento: e.target.value }))}
+                    />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Graduação (Faixa)</label>
+                    <select
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.kyu_dan_id}
+                      onChange={e => setStForm(f => ({ ...f, kyu_dan_id: e.target.value }))}
+                    >
+                      <option value="">Selecione sua faixa</option>
+                      {kyuDans.map(k => (
+                        <option key={k.id} value={k.id}>{k.cor_faixa} — {k.kyu_dan}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    onClick={() => setEditingStakeholder(false)}
+                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-gray-300 text-sm transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={saveStakeholderProfile}
+                    disabled={savingStakeholder}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50"
+                  >
+                    {savingStakeholder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    {savingStakeholder ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {stSaveMsg && !editingStakeholder && (
+              <div className={`rounded-lg px-4 py-3 text-sm ${stSaveMsg.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+                {stSaveMsg.text}
+              </div>
+            )}
 
             {/* Banner: sem filiação */}
             <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-5">
