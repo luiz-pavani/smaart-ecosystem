@@ -165,9 +165,9 @@ export default function PerfilAtletaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setError('Usuário não autenticado'); return }
 
-        const [{ data: fedData, error: fedErr }, { data: kdData }, { data: enrollData }, { data: waitData }, { data: stakeholderData }, { data: fedsData }, { data: acadData }] = await Promise.all([
-          supabase.from('user_fed_lrsj').select('*').eq('stakeholder_id', user.id).maybeSingle(),
-          supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan, icones').order('id'),
+        // Carrega todos os dados via API com service role (contorna RLS)
+        const [perfilRes, { data: enrollData }, { data: waitData }] = await Promise.all([
+          fetch('/api/atletas/self/perfil-dados').then(r => r.json()),
           supabase.from('class_enrollments')
             .select('enrolled_at, class:class_id(id, name, location, instructor_name, class_schedules(day_of_week, start_time, end_time))')
             .eq('athlete_id', user.id)
@@ -177,12 +177,9 @@ export default function PerfilAtletaPage() {
             .select('position, class:class_id(id, name)')
             .eq('athlete_id', user.id)
             .order('position', { ascending: true }),
-          supabase.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, funcao, academia_id, federacao_id, kyu_dan_id').eq('id', user.id).maybeSingle(),
-          supabase.from('federacoes').select('id, nome, sigla, email, site').eq('ativo', true),
-          supabase.from('academias').select('id, nome, endereco_cidade, endereco_estado, federacao_id').eq('ativo', true).order('nome'),
         ])
 
-        if (fedErr) throw fedErr
+        const { stakeholder: stakeholderData, fedLrsj: fedData, federacoes: fedsData, academias: acadData, kyuDans: kdData } = perfilRes
 
         if (stakeholderData) {
           setStakeholder(stakeholderData as StakeholderPerfil)
@@ -299,7 +296,6 @@ export default function PerfilAtletaPage() {
         email: stForm.email || null,
         telefone: stForm.telefone || null,
         genero: stForm.genero || null,
-        data_nascimento: stForm.data_nascimento || null,
         kyu_dan_id: stForm.kyu_dan_id ? Number(stForm.kyu_dan_id) : null,
       }
       const res = await fetch('/api/atletas/self/update-stakeholder', {
@@ -784,14 +780,6 @@ export default function PerfilAtletaPage() {
                       <option value="Masculino">Masculino</option>
                       <option value="Feminino">Feminino</option>
                     </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Data de Nascimento</label>
-                    <input type="date"
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.data_nascimento}
-                      onChange={e => setStForm(f => ({ ...f, data_nascimento: e.target.value }))}
-                    />
                   </div>
                   <div className="sm:col-span-2 space-y-1">
                     <label className="text-xs text-gray-400 font-medium">Graduação (Faixa)</label>
