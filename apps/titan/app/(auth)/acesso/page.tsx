@@ -168,6 +168,22 @@ function AcessoUniversalContent() {
         options: { data: { full_name: nomeCompleto.trim(), username, stakeholder_role: funcao } },
       })
       if (error) throw error
+
+      // Criar stakeholder imediatamente (mesmo antes de confirmar email)
+      if (data.user?.id) {
+        await fetch('/api/auth/finalize-email-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: data.user.id,
+            funcao,
+            nomeCompleto: nomeCompleto.trim(),
+            nomeUsuario: username,
+            email: cadastroEmail.trim(),
+          }),
+        })
+      }
+
       if (data.user && data.session) { router.push('/portal'); router.refresh(); return }
       setMensagem('Cadastro criado! Verifique seu email para confirmação e depois faça login.')
       setModo('login'); setIdentifier(cadastroEmail.trim()); setLoginPassword('')
