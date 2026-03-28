@@ -19,13 +19,13 @@ export async function POST(req: NextRequest) {
   const normalized = identifier.trim()
   const digits = normalized.replace(/\D/g, '')
 
-  let data: { email: string | null; telefone: string | null } | null = null
+  let data: { id: string; email: string | null; telefone: string | null } | null = null
 
   // 1. Tentar por email
   if (normalized.includes('@')) {
     const { data: byEmail } = await supabaseAdmin
       .from('stakeholders')
-      .select('email, telefone')
+      .select('id, email, telefone')
       .eq('email', normalized)
       .maybeSingle()
     data = byEmail
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     for (const phone of candidates) {
       const { data: byPhone } = await supabaseAdmin
         .from('stakeholders')
-        .select('email, telefone')
+        .select('id, email, telefone')
         .eq('telefone', phone)
         .maybeSingle()
       if (byPhone) { data = byPhone; break }
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const username = normalized.toLowerCase().replace(/\s+/g, '')
     const { data: byUsername } = await supabaseAdmin
       .from('stakeholders')
-      .select('email, telefone')
+      .select('id, email, telefone')
       .eq('nome_usuario', username)
       .maybeSingle()
     data = byUsername
@@ -63,7 +63,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Usuário não encontrado. Verifique o email, telefone ou nome de usuário.' }, { status: 404 })
   }
 
-  // Derivar o email de autenticação
+  // Buscar o email real de autenticação direto do auth.users (fonte de verdade)
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(data.id)
+  if (authUser?.user?.email) {
+    return NextResponse.json({ authEmail: authUser.user.email })
+  }
+
+  // Fallback: derivar pelo stakeholder
   if (data.email) return NextResponse.json({ authEmail: data.email })
   if (data.telefone) return NextResponse.json({ authEmail: `${data.telefone}@whatsapp.titan.app` })
 
