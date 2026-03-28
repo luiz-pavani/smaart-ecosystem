@@ -193,6 +193,7 @@ export default function PerfilAtletaPage() {
             data_nascimento: stakeholderData.data_nascimento || '',
             kyu_dan_id: stakeholderData.kyu_dan_id ? String(stakeholderData.kyu_dan_id) : '',
           })
+          if (stakeholderData.academia_id) setSelectedAcadId(stakeholderData.academia_id)
         }
         if (fedsData) setFederacoes(fedsData as Federacao[])
         if (acadData) setAcademias(acadData as Academia[])
@@ -308,12 +309,33 @@ export default function PerfilAtletaPage() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Erro ao salvar')
-      setStakeholder(prev => prev ? { ...prev, ...payload } : prev)
+      setStakeholder(json.data as StakeholderPerfil)
       setEditingStakeholder(false)
       setStSaveMsg({ type: 'success', text: 'Perfil atualizado com sucesso.' })
     } catch (err: any) {
       setStSaveMsg({ type: 'error', text: err.message || 'Erro ao salvar perfil.' })
     } finally { setSavingStakeholder(false) }
+  }
+
+  const [savingAcad, setSavingAcad] = useState(false)
+  const [acadMsg, setAcadMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const saveAcademia = async () => {
+    if (!selectedAcadId) return
+    setSavingAcad(true); setAcadMsg(null)
+    try {
+      const res = await fetch('/api/atletas/self/update-stakeholder', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ academia_id: selectedAcadId }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erro ao salvar')
+      setStakeholder(json.data as StakeholderPerfil)
+      setAcadMsg({ type: 'success', text: 'Academia salva com sucesso.' })
+    } catch (err: any) {
+      setAcadMsg({ type: 'error', text: err.message || 'Erro ao salvar academia.' })
+    } finally { setSavingAcad(false) }
   }
 
   const fotoAtual = fotoPreview || atleta?.url_foto || null
@@ -849,7 +871,7 @@ export default function PerfilAtletaPage() {
                 <div className="relative">
                   <select
                     value={selectedAcadId}
-                    onChange={e => setSelectedAcadId(e.target.value)}
+                    onChange={e => { setSelectedAcadId(e.target.value); setAcadMsg(null) }}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-orange-500/50 transition-colors pr-8"
                   >
                     <option value="">Selecione uma academia...</option>
@@ -861,79 +883,47 @@ export default function PerfilAtletaPage() {
                   </select>
                   <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
+                {acadMsg && (
+                  <p className={`text-xs mt-2 ${acadMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>{acadMsg.text}</p>
+                )}
                 {selectedAcadId && (
-                  <p className="text-xs text-green-400 mt-2">✓ Academia selecionada. Finalize sua filiação abaixo.</p>
+                  <button
+                    onClick={saveAcademia}
+                    disabled={savingAcad}
+                    className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all"
+                  >
+                    {savingAcad ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Salvar Academia
+                  </button>
                 )}
               </div>
 
-              {/* Escolher Federação */}
+              {/* Filiação à Federação */}
               <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <ShieldCheck className="w-5 h-5 text-blue-400" />
-                  <h3 className="font-semibold text-white">Minha Federação</h3>
+                  <h3 className="font-semibold text-white">Filiação à Federação</h3>
                 </div>
-                <p className="text-gray-400 text-xs mb-3">Selecione a federação à qual deseja se filiar.</p>
-                <div className="relative">
-                  <select
-                    value={selectedFedId}
-                    onChange={e => setSelectedFedId(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-blue-500/50 transition-colors pr-8"
-                  >
-                    <option value="">Selecione uma federação...</option>
-                    {federacoes.map(f => (
-                      <option key={f.id} value={f.id}>{f.nome} ({f.sigla})</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
-                {selectedFedId && (() => {
-                  const fed = federacoes.find(f => f.id === selectedFedId)
-                  return fed ? (
-                    <div className="mt-3 space-y-1 text-xs text-gray-400">
-                      {fed.email && <p>✉ {fed.email}</p>}
-                      {fed.site && <p>🌐 {fed.site}</p>}
-                    </div>
-                  ) : null
-                })()}
+                <p className="text-gray-400 text-xs mb-4">Para se filiar a uma federação, acesse a página de filiação.</p>
+                <a
+                  href="/filiacao"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all text-sm"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  Solicitar Filiação
+                </a>
+                {federacoes.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    {federacoes.map(f => f.site ? (
+                      <a key={f.id} href={f.site} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-400 transition-colors">
+                        <ExternalLink className="w-3 h-3" /> {f.sigla} — site oficial
+                      </a>
+                    ) : null)}
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* CTAs de filiação */}
-            {selectedFedId && (
-              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <CreditCard className="w-5 h-5 text-green-400" />
-                  <h3 className="font-semibold text-white">Solicitar Filiação</h3>
-                </div>
-                <p className="text-gray-400 text-sm mb-5">
-                  Você selecionou <strong className="text-white">{federacoes.find(f => f.id === selectedFedId)?.sigla}</strong>.
-                  Escolha como deseja prosseguir:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <a
-                    href="/filiacao"
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-all text-sm"
-                  >
-                    <ShieldCheck className="w-4 h-4" />
-                    Solicitar novo registro
-                  </a>
-                  {federacoes.find(f => f.id === selectedFedId)?.site && (
-                    <a
-                      href={federacoes.find(f => f.id === selectedFedId)!.site!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 px-4 py-3 border border-white/10 hover:bg-white/5 text-gray-300 font-medium rounded-lg transition-all text-sm"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Site da federação
-                    </a>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-4 text-center">
-                  Já é filiado? Entre em contato com a secretaria para vincular sua conta.
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div>
