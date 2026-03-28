@@ -33,7 +33,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-muted/30">
       {/* Desktop: Sidebar + Content */}
       <div className="hidden lg:flex">
-        <Sidebar user={user} />
+        <Sidebar user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} />
         <div className="flex-1">
           <TopNav user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} />
           <main className="p-6">

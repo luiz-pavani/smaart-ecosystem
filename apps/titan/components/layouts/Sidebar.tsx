@@ -7,6 +7,9 @@ import Link from 'next/link'
 
 interface SidebarProps {
   user: any
+  displayName?: string
+  realEmail?: string | null
+  funcao?: string
 }
 
 const navigation = [
@@ -22,7 +25,7 @@ const navigation = [
   { name: 'Configurações', href: '/configuracoes', icon: Settings },
 ]
 
-export default function Sidebar({ user }: SidebarProps) {
+export default function Sidebar({ user, displayName, realEmail, funcao }: SidebarProps) {
   const router = useRouter()
   const supabase = createClient()
 
@@ -88,14 +91,14 @@ export default function Sidebar({ user }: SidebarProps) {
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
             <span className="text-sm font-bold text-primary">
-              {user?.email?.[0].toUpperCase()}
+              {(displayName || user?.email || '?')[0].toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">
-              {user?.email}
+              {displayName || user?.email?.split('@')[0]}
             </p>
-            <p className="text-xs text-muted-foreground">Admin</p>
+            <p className="text-xs text-muted-foreground">{realEmail || funcao || ''}</p>
           </div>
         </div>
         <button
