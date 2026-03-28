@@ -8,14 +8,13 @@ export async function GET(_req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Get or resolve academia_id from user_fed_lrsj
-  const { data: fed } = await supabaseAdmin
-    .from('user_fed_lrsj')
-    .select('academia_id')
-    .eq('stakeholder_id', user.id)
-    .maybeSingle()
+  // Get academia_id from user_fed_lrsj, fallback to stakeholders
+  const [{ data: fed }, { data: stakeholder }] = await Promise.all([
+    supabaseAdmin.from('user_fed_lrsj').select('academia_id').eq('stakeholder_id', user.id).maybeSingle(),
+    supabaseAdmin.from('stakeholders').select('academia_id').eq('id', user.id).maybeSingle(),
+  ])
 
-  const academiaId = fed?.academia_id
+  const academiaId = fed?.academia_id ?? stakeholder?.academia_id ?? null
 
   // Find family group
   let grupo = null
