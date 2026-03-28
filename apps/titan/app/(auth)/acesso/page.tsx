@@ -116,45 +116,15 @@ function AcessoUniversalContent() {
   const sanitizeUsername = (value: string) => value.trim().toLowerCase().replace(/\s+/g, '')
 
   const resolveEmailFromIdentifier = async (value: string) => {
-    const normalized = value.trim()
-    const digits = normalized.replace(/\D/g, '')
-
-    let data: { email: string | null; telefone: string | null } | null = null
-
-    if (normalized.includes('@')) {
-      // Tentar por email real no stakeholders
-      const { data: byEmail } = await supabase
-        .from('stakeholders').select('email, telefone').eq('email', normalized).maybeSingle()
-      data = byEmail
-    }
-
-    if (!data && digits.length >= 8) {
-      // Tentar por telefone (normaliza: adiciona 55 se não tiver, mantém se já tiver)
-      const candidates: string[] = []
-      if (digits.startsWith('55') && digits.length >= 12) candidates.push(digits)
-      if (!digits.startsWith('55') && digits.length >= 8) candidates.push(`55${digits}`)
-      if (digits.length >= 10) candidates.push(digits) // sem o 55, como está no banco
-
-      for (const phone of candidates) {
-        const { data: byPhone } = await supabase
-          .from('stakeholders').select('email, telefone').eq('telefone', phone).maybeSingle()
-        if (byPhone) { data = byPhone; break }
-      }
-    }
-
-    if (!data) {
-      // Tentar por nome de usuário
-      const { data: byUsername } = await supabase
-        .from('stakeholders').select('email, telefone').eq('nome_usuario', sanitizeUsername(normalized)).maybeSingle()
-      data = byUsername
-    }
-
-    if (!data) throw new Error('Usuário não encontrado. Verifique o email, telefone ou nome de usuário.')
-
-    // Derivar o email de autenticação real
-    if (data.email) return data.email
-    if (data.telefone) return `${data.telefone}@whatsapp.titan.app`
-    throw new Error('Conta sem método de autenticação configurado. Entre em contato com o suporte.')
+    // Usa API route com service role key para contornar RLS (usuário não autenticado)
+    const res = await fetch('/api/auth/resolve-identifier', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: value.trim() }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error)
+    return data.authEmail as string
   }
 
   const handleLogin = async (e: FormEvent) => {
