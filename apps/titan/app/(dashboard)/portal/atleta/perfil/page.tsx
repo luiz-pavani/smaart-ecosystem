@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Calendar, Clock, X, Camera, Check, Pencil, MessageCircle, Building2, ShieldCheck, ExternalLink, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Calendar, Clock, X, Camera, Check, Pencil, Building2, ShieldCheck, ExternalLink, ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
@@ -146,9 +146,9 @@ export default function PerfilAtletaPage() {
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileSaveMsg, setProfileSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [stForm, setStForm] = useState<{
-    nome_completo: string; email: string; telefone: string
+    nome_completo: string; nome_usuario: string; email: string; telefone: string
     genero: string; data_nascimento: string; kyu_dan_id: string
-  }>({ nome_completo: '', email: '', telefone: '', genero: '', data_nascimento: '', kyu_dan_id: '' })
+  }>({ nome_completo: '', nome_usuario: '', email: '', telefone: '', genero: '', data_nascimento: '', kyu_dan_id: '' })
   const [atletaForm, setAtletaForm] = useState<EditForm>({
     telefone: '', email: '', cidade: '', estado: '', pais: '', nome_patch: '', tamanho_patch: '',
   })
@@ -183,6 +183,7 @@ export default function PerfilAtletaPage() {
           setStakeholder(stakeholderData as StakeholderPerfil)
           setStForm({
             nome_completo: stakeholderData.nome_completo || '',
+            nome_usuario: stakeholderData.nome_usuario || '',
             email: stakeholderData.email || '',
             telefone: stakeholderData.telefone || '',
             genero: stakeholderData.genero || '',
@@ -268,6 +269,7 @@ export default function PerfilAtletaPage() {
       // Always save stakeholder fields
       const stPayload = {
         nome_completo: stForm.nome_completo || null,
+        nome_usuario: stForm.nome_usuario || null,
         email: stForm.email || null,
         telefone: stForm.telefone || null,
         genero: stForm.genero || null,
@@ -497,6 +499,15 @@ export default function PerfilAtletaPage() {
                     />
                   </div>
                   <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Nome de Usuário</label>
+                    <input
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.nome_usuario}
+                      placeholder="@seunome"
+                      onChange={e => setStForm(f => ({ ...f, nome_usuario: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
                     <label className="text-xs text-gray-400 font-medium">Email</label>
                     <input type="email"
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
@@ -615,19 +626,17 @@ export default function PerfilAtletaPage() {
                           : 'Renove em breve para manter sua filiação ativa.'}
                       </p>
                     </div>
-                    <a
-                      href={`https://wa.me/555196834013?text=${msgWpp}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => router.push('/portal/atleta/renovacao')}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors shrink-0 ${
                         vencido
                           ? 'bg-red-600/80 hover:bg-red-600 text-white'
                           : 'bg-amber-600/80 hover:bg-amber-600 text-white'
                       }`}
                     >
-                      <MessageCircle className="w-4 h-4" />
-                      Solicitar renovação
-                    </a>
+                      <CreditCard className="w-4 h-4" />
+                      Renovar filiação
+                    </button>
                   </div>
                 </div>
               )
