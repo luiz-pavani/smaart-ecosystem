@@ -26,7 +26,7 @@ export async function GET() {
     if (stakeholderData.kyu_dan_id) {
       const { data: kd } = await supabaseAdmin
         .from('kyu_dan')
-        .select('id, graduacao, cor_faixa')
+        .select('id, kyu_dan, cor_faixa')
         .eq('id', stakeholderData.kyu_dan_id)
         .single()
       kyuDanInfo = kd
@@ -44,7 +44,7 @@ export async function GET() {
     if (!kyuDanInfo && finalKyuDanId) {
       const { data: kd } = await supabaseAdmin
         .from('kyu_dan')
-        .select('id, graduacao, cor_faixa')
+        .select('id, kyu_dan, cor_faixa')
         .eq('id', finalKyuDanId)
         .single()
       kyuDanInfo = kd
@@ -67,7 +67,7 @@ export async function GET() {
     // Fetch kyu_dan list
     const { data: kyuDanList } = await supabaseAdmin
       .from('kyu_dan')
-      .select('id, graduacao, cor_faixa')
+      .select('id, kyu_dan, cor_faixa')
       .order('id', { ascending: true })
 
     // Try to fetch federation schedule (may not exist)
@@ -76,8 +76,18 @@ export async function GET() {
       const { data: scheduleData } = await supabaseAdmin
         .from('federation_schedule')
         .select('*')
-        .order('data', { ascending: true })
-      federationSchedule = scheduleData || []
+        .order('date', { ascending: true })
+      // Normalize field names to match UI expectations
+      federationSchedule = (scheduleData || []).map((ev: any) => ({
+        id: ev.id,
+        titulo: ev.title || ev.titulo || ev.name || 'Evento',
+        descricao: ev.description || ev.descricao || null,
+        data: ev.date || ev.data,
+        hora: ev.start_time || ev.hora || null,
+        local: ev.location || ev.local || null,
+        tipo: ev.type || ev.tipo || null,
+        graduation_level: ev.graduation_level || [],
+      }))
     } catch {
       federationSchedule = []
     }

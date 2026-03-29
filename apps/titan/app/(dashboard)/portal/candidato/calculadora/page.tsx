@@ -1,408 +1,447 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { Calculator, Save, Download, CheckCircle2, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Calculator, Save, Loader2, CheckCircle, Trophy, Medal, GraduationCap, BookOpen, Gavel } from 'lucide-react'
+import { jsPDF } from 'jspdf'
 
-// ——— SCORING RULES ———
-interface FieldConfig {
-  label: string
-  key: string
-  type: 'number' | 'select' | 'boolean'
-  points?: number
-  maxItems?: number
-  pointsPerItem?: number
-  options?: { label: string; value: number }[]
-  description?: string
-}
+// ——— DADOS EXATOS DO ORIGINAL ———
 
-const FIELD_CONFIG_EXAME: FieldConfig[] = [
-  {
-    label: 'Tempo de Prática (anos)',
-    key: 'anos_pratica',
-    type: 'select',
-    options: [
-      { label: '1 a 2 anos', value: 5 },
-      { label: '3 a 4 anos', value: 10 },
-      { label: '5 a 7 anos', value: 15 },
-      { label: '8 a 10 anos', value: 20 },
-      { label: 'Mais de 10 anos', value: 25 },
-    ],
-    description: 'Tempo de prática contínua no judô',
+const SCORING_RULES: any = {
+  exam: {
+    shodan: { min: 25, red: 15, std: 10, maj: 8, max: 5 },
+    nidan: { min: 40, red: 30, std: 20, maj: 15, max: 10 },
+    sandan: { min: 55, red: 40, std: 30, maj: 20, max: 15 },
+    yondan: { min: 70, red: 50, std: 40, maj: 30, max: 20 },
+    godan: { min: 80, red: 60, std: 50, maj: 40, max: 30 },
+    rokudan: { min: 100, red: 80, std: 70, maj: 60, max: 50 }
   },
-  {
-    label: 'Competições Regionais',
-    key: 'comp_regionais',
-    type: 'number',
-    pointsPerItem: 3,
-    maxItems: 10,
-    description: 'Pontos por competição (máx. 10)',
-  },
-  {
-    label: 'Competições Estaduais',
-    key: 'comp_estaduais',
-    type: 'number',
-    pointsPerItem: 5,
-    maxItems: 8,
-    description: 'Pontos por competição (máx. 8)',
-  },
-  {
-    label: 'Competições Nacionais',
-    key: 'comp_nacionais',
-    type: 'number',
-    pointsPerItem: 10,
-    maxItems: 5,
-    description: 'Pontos por competição (máx. 5)',
-  },
-  {
-    label: 'Medalhas Estaduais (ouro)',
-    key: 'medalhas_estaduais_ouro',
-    type: 'number',
-    pointsPerItem: 10,
-    maxItems: 5,
-    description: 'Pontos por medalha de ouro',
-  },
-  {
-    label: 'Medalhas Estaduais (prata/bronze)',
-    key: 'medalhas_estaduais_outros',
-    type: 'number',
-    pointsPerItem: 5,
-    maxItems: 10,
-    description: 'Pontos por medalha de prata/bronze',
-  },
-  {
-    label: 'Cursos Profep MAX concluídos',
-    key: 'cursos_maxi',
-    type: 'number',
-    pointsPerItem: 8,
-    maxItems: 5,
-    description: 'Pontos por curso concluído (máx. 5)',
-  },
-  {
-    label: 'Cursos COB/IOB concluídos',
-    key: 'cursos_cob',
-    type: 'number',
-    pointsPerItem: 8,
-    maxItems: 3,
-    description: 'Pontos por curso COB (máx. 3)',
-  },
-  {
-    label: 'Estágios de Arbitragem',
-    key: 'estagios_arbitragem',
-    type: 'number',
-    pointsPerItem: 10,
-    maxItems: 3,
-    description: 'Pontos por estágio (máx. 3)',
-  },
-  {
-    label: 'Estágios de Ensino',
-    key: 'estagios_ensino',
-    type: 'number',
-    pointsPerItem: 10,
-    maxItems: 3,
-    description: 'Pontos por estágio (máx. 3)',
-  },
-  {
-    label: 'Aprovação em Kata',
-    key: 'kata_aprovado',
-    type: 'boolean',
-    points: 15,
-    description: 'Kata obrigatório aprovado pelo avaliador',
-  },
-  {
-    label: 'Prova Teórica aprovada',
-    key: 'teoria_aprovada',
-    type: 'boolean',
-    points: 20,
-    description: 'Prova escrita com nota mínima 7,0',
-  },
-]
-
-const FIELD_CONFIG_MERITO: FieldConfig[] = [
-  {
-    label: 'Anos de contribuição à Liga',
-    key: 'anos_contribuicao',
-    type: 'select',
-    options: [
-      { label: '1 a 2 anos', value: 5 },
-      { label: '3 a 5 anos', value: 15 },
-      { label: '6 a 10 anos', value: 25 },
-      { label: 'Mais de 10 anos', value: 35 },
-    ],
-  },
-  {
-    label: 'Cargos na Federação',
-    key: 'cargos_federacao',
-    type: 'number',
-    pointsPerItem: 10,
-    maxItems: 3,
-    description: 'Pontos por cargo exercido (máx. 3)',
-  },
-  {
-    label: 'Eventos organizados',
-    key: 'eventos_organizados',
-    type: 'number',
-    pointsPerItem: 5,
-    maxItems: 10,
-    description: 'Pontos por evento (máx. 10)',
-  },
-  {
-    label: 'Publicações / Artigos científicos',
-    key: 'publicacoes',
-    type: 'number',
-    pointsPerItem: 10,
-    maxItems: 5,
-    description: 'Pontos por publicação (máx. 5)',
-  },
-  {
-    label: 'Indicação pela Comissão Técnica',
-    key: 'indicacao_comissao',
-    type: 'boolean',
-    points: 30,
-    description: 'Indicação formal da Comissão Técnica da Liga',
-  },
-  {
-    label: 'Título Honorífico reconhecido',
-    key: 'titulo_honorifico',
-    type: 'boolean',
-    points: 20,
-    description: 'Título conferido por entidade nacional ou internacional',
-  },
-]
-
-const MIN_POINTS = {
-  'Shodan (1º Dan)': 100,
-  'Nidan (2º Dan)': 120,
-  'Sandan (3º Dan)': 140,
-  'Yondan (4º Dan)': 160,
-}
-
-function calcScore(values: Record<string, number | boolean>, fields: FieldConfig[]): number {
-  let total = 0
-  for (const field of fields) {
-    const val = values[field.key]
-    if (field.type === 'boolean') {
-      if (val === true) total += field.points || 0
-    } else if (field.type === 'select') {
-      total += (val as number) || 0
-    } else if (field.type === 'number') {
-      const count = Math.min(Number(val) || 0, field.maxItems || 99)
-      total += count * (field.pointsPerItem || 0)
-    }
+  merit: {
+    shodan: { min: 50, red: 30, std: 20, maj: 16, max: 10 },
+    nidan: { min: 80, red: 60, std: 40, maj: 30, max: 20 },
+    sandan: { min: 110, red: 80, std: 60, maj: 40, max: 30 },
+    yondan: { min: 140, red: 100, std: 80, maj: 60, max: 40 },
+    godan: { min: 160, red: 120, std: 100, maj: 80, max: 60 },
+    rokudan: { min: 200, red: 160, std: 140, maj: 120, max: 100 }
   }
-  return total
+}
+
+const TIME_RULES: any = {
+  exam: {
+    shodan: { min: 1, red: 1.5, std: 2, maj: 4, max: 6 },
+    nidan: { min: 1, red: 2, std: 3, maj: 5, max: 7 },
+    sandan: { min: 2, red: 3, std: 4, maj: 6, max: 8 },
+    yondan: { min: 3, red: 4, std: 5, maj: 7, max: 9 },
+    godan: { min: 4, red: 5, std: 6, maj: 8, max: 10 },
+    rokudan: { min: 5, red: 6, std: 7, maj: 10, max: 12 }
+  },
+  merit: {
+    shodan: { min: 1, red: 1.5, std: 2, maj: 4, max: 6 },
+    nidan: { min: 1, red: 2, std: 3, maj: 5, max: 7 },
+    sandan: { min: 2, red: 3, std: 4, maj: 6, max: 8 },
+    yondan: { min: 3, red: 4, std: 5, maj: 7, max: 9 },
+    godan: { min: 4, red: 5, std: 6, maj: 8, max: 10 },
+    rokudan: { min: 5, red: 6, std: 7, maj: 10, max: 12 }
+  }
+}
+
+const FIELD_CONFIG: Record<string, { label: string; weight: number; sub: string }> = {
+  contrib_pres:     { label: "Presidente ou Diretor",        weight: 4.0, sub: "LRSJ/LNJ/CSJ/UPJ/WJF" },
+  contrib_arb_nac:  { label: "Árbitro Nacional/Int.",        weight: 3.0, sub: "Atuação ativa" },
+  contrib_arb_est:  { label: "Árbitro Estadual / Coord.",    weight: 2.0, sub: "Atuação ativa" },
+  contrib_oficial:  { label: "Oficial Técnico / Colab.",     weight: 2.0, sub: "Mesário, Súmula, Staff" },
+  contrib_prof45:   { label: "Professor (45+ alunos)",       weight: 4.0, sub: "Registrados na LRSJ" },
+  contrib_prof30:   { label: "Professor (30+ alunos)",       weight: 3.0, sub: "Registrados na LRSJ" },
+  contrib_prof20:   { label: "Professor (20+ alunos)",       weight: 2.0, sub: "Registrados na LRSJ" },
+  contrib_prof10:   { label: "Professor (10+ alunos)",       weight: 1.0, sub: "Registrados na LRSJ" },
+  prol_livro:        { label: "Livro Publicado",              weight: 5.0, sub: "Autor/Co-autor/Org." },
+  prol_capitulo:     { label: "Capítulo em Livro",           weight: 2.0, sub: "Publicado" },
+  prol_artigo_princ: { label: "Artigo Científico (Principal)",weight: 4.0, sub: "Revista indexada" },
+  prol_artigo_sec:   { label: "Artigo Científico (Secundário)",weight: 2.0, sub: "Revista indexada" },
+  prol_curso:        { label: "Ministrante de Curso",        weight: 0.5, sub: "Curso LRSJ - WJF" },
+  prol_avaliador:    { label: "Avaliador de Banca",          weight: 0.5, sub: "Exames de Faixa" },
+  prol_social:       { label: "Atividade Social",            weight: 2.0, sub: "Projetos/Eventos" },
+  prol_colab:        { label: "Colaborador Eventual",        weight: 1.0, sub: "Apoio em eventos" },
+}
+
+const KATA_OPTIONS = [
+  { id: 'itsutsu',    label: 'Itsutsu no Kata',         val: 3 },
+  { id: 'koshiki',    label: 'Koshiki no Kata',          val: 3 },
+  { id: 'goshin',     label: 'Kodokan Goshin Jutsu',     val: 3 },
+  { id: 'kime',       label: 'Kime no Kata',             val: 3 },
+  { id: 'ju',         label: 'Ju no Kata',               val: 3 },
+  { id: 'katame',     label: 'Katame no Kata',           val: 2 },
+  { id: 'nage',       label: 'Nage no Kata',             val: 2 },
+  { id: 'seiryoku',   label: "Seiryoku-Zen'yo",          val: 1 },
+  { id: 'kodomo',     label: 'Kodomo-no-Kata',           val: 1 },
+  { id: 'gokyo',      label: 'Go-kyō-no-waza',           val: 2 },
+  { id: 'katamewaza', label: 'Katame-waza',              val: 2 },
+  { id: 'shinmeisho', label: 'Shinmeisho-no-waza',       val: 1 },
+  { id: 'habukareta', label: 'Habukareta-waza',          val: 1 },
+]
+
+const SELECT_OPTIONS = {
+  personal: [
+    { label: "Campeão Olímpico", val: 10 }, { label: "Atleta Olímpico", val: 9 },
+    { label: "Campeão Mundial", val: 8 },   { label: "Medalhista Mundial", val: 7 },
+    { label: "Campeão Continental", val: 6 },{ label: "Campeão Nacional", val: 5 },
+    { label: "Medalhista Continental", val: 4 },{ label: "Medal. Nac. / Camp. Reg.", val: 3 },
+    { label: "Camp. Est. / Medal. Reg.", val: 2 },{ label: "Medalhista Estadual", val: 1 }
+  ],
+  student: [
+    { label: "Camp. Olímpico", val: 10 },   { label: "Atleta Olímpico", val: 9 },
+    { label: "Camp. Mundial", val: 8 },     { label: "Medal. Mundial", val: 7 },
+    { label: "Camp. Continental", val: 6 }, { label: "Camp. Nacional", val: 5 },
+    { label: "Medal. Continental", val: 4 },{ label: "Medal. Nac. / Camp. Reg.", val: 3 },
+    { label: "Camp. Est. / Medal. Reg.", val: 2 },{ label: "Medal. Estadual", val: 1 }
+  ],
+  referee: [
+    { label: "Internacional A", val: 10 }, { label: "Internacional B", val: 8 },
+    { label: "Internacional C", val: 6 },  { label: "Nacional A", val: 4 },
+    { label: "Nacional B", val: 2 },       { label: "Nacional C", val: 1 }
+  ],
+  academic: [
+    { label: "Doutorado", val: 10 },          { label: "Mestrado", val: 8 },
+    { label: "Pós-Graduação > 1", val: 6 },   { label: "Pós-Graduação", val: 4 },
+    { label: "Graduação Sup.", val: 2 },       { label: "Técnico", val: 1 }
+  ],
+  admin: [
+    { label: "Federação Mundial", val: 10 }, { label: "União Pan-americana", val: 8 },
+    { label: "Conf. Sul-americana", val: 6 },{ label: "Liga Nacional", val: 4 },
+    { label: "Liga Riograndense", val: 2 },  { label: "Resp. Técnico Filiada", val: 1 }
+  ]
 }
 
 export default function CalculadoraPage() {
-  const [track, setTrack] = useState<'exame' | 'merito'>('exame')
-  const [values, setValues] = useState<Record<string, number | boolean>>({})
-  const [graduacao, setGraduacao] = useState('Shodan (1º Dan)')
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [track, setTrack] = useState<'exam' | 'merit'>('exam')
+  const [targetGrade, setTargetGrade] = useState('shodan')
+  const [candidateName, setCandidateName] = useState('')
+
+  const [values, setValues] = useState<any>({
+    calc_personal: 0, calc_student: 0, calc_vitorias: 0,
+    calc_referee: 0, calc_academic: 0, calc_admin: 0,
+    katas: []
+  })
 
   useEffect(() => {
-    fetch('/api/candidato/dados')
-      .then(r => r.json())
-      .then(d => {
-        setGraduacao(d.inscricao?.graduacao_pretendida || 'Shodan (1º Dan)')
-        const prog = d.inscricao?.progresso || {}
-        if (prog.calculadora) setValues(prog.calculadora)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    const load = async () => {
+      try {
+        const res = await fetch('/api/candidato/dados')
+        const json = await res.json()
+        if (json.inscricao?.progresso?.calculator_inputs) {
+          setValues(json.inscricao.progresso.calculator_inputs)
+          if (json.inscricao.progresso.track) setTrack(json.inscricao.progresso.track)
+        }
+        if (json.inscricao?.graduacao_pretendida) {
+          setTargetGrade(json.inscricao.graduacao_pretendida.toLowerCase().split(' ')[0])
+        }
+        if (json.stakeholder?.nome_completo) setCandidateName(json.stakeholder.nome_completo)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [])
 
-  const fields = track === 'exame' ? FIELD_CONFIG_EXAME : FIELD_CONFIG_MERITO
-  const score = calcScore(values, fields)
-  const minPts = MIN_POINTS[graduacao as keyof typeof MIN_POINTS] || 100
-  const percentage = Math.min((score / minPts) * 100, 100)
-  const reached = score >= minPts
+  const calculateTotal = () => {
+    let total = 0
+    total += Number(values.calc_personal) || 0
+    total += Number(values.calc_student) || 0
+    total += Number(values.calc_referee) || 0
+    total += Number(values.calc_academic) || 0
+    total += Number(values.calc_admin) || 0
+    total += (Number(values.calc_vitorias) || 0) * 0.2
 
-  const setValue = (key: string, val: number | boolean) => {
-    setValues(prev => ({ ...prev, [key]: val }))
-    setSaved(false)
+    Object.keys(FIELD_CONFIG).forEach(key => {
+      const val = Number(values[key]) || 0
+      total += val * FIELD_CONFIG[key].weight
+    })
+
+    const checkedKatas: string[] = values.katas || []
+    checkedKatas.forEach((kataId: string) => {
+      const kata = KATA_OPTIONS.find(k => k.id === kataId)
+      if (kata) total += kata.val
+    })
+
+    return parseFloat(total.toFixed(1))
+  }
+
+  const totalPoints = calculateTotal()
+  const rules = SCORING_RULES[track][targetGrade] || SCORING_RULES[track]['shodan']
+  const times = TIME_RULES[track][targetGrade] || TIME_RULES[track]['shodan']
+
+  const getCarenciaStatus = () => {
+    if (totalPoints >= rules.min) return { label: "CARÊNCIA MÍNIMA",  time: `${times.min} ano(s)`, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" }
+    if (totalPoints >= rules.red) return { label: "CARÊNCIA REDUZIDA", time: `${times.red} anos`,   color: "text-green-400",   bg: "bg-green-500/10 border-green-500/30" }
+    if (totalPoints >= rules.std) return { label: "CARÊNCIA PADRÃO",   time: `${times.std} anos`,   color: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/30" }
+    if (totalPoints >= rules.maj) return { label: "CARÊNCIA MAJORADA", time: `${times.maj} anos`,   color: "text-yellow-400",  bg: "bg-yellow-500/10 border-yellow-500/30" }
+    if (totalPoints >= rules.max) return { label: "CARÊNCIA MÁXIMA",   time: `${times.max} anos`,   color: "text-orange-400",  bg: "bg-orange-500/10 border-orange-500/30" }
+    return { label: "INSUFICIENTE", time: "--", color: "text-red-500", bg: "bg-red-500/10 border-red-500/30" }
+  }
+
+  const status = getCarenciaStatus()
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { id, value } = e.target
+    setValues((prev: any) => ({ ...prev, [id]: value }))
+  }
+
+  const handleKataToggle = (id: string) => {
+    setValues((prev: any) => {
+      const current: string[] = prev.katas || []
+      return {
+        ...prev,
+        katas: current.includes(id) ? current.filter((k: string) => k !== id) : [...current, id]
+      }
+    })
   }
 
   const handleSave = async () => {
-    setSaving(true)
+    setIsSaving(true)
     try {
       await fetch('/api/candidato/progresso', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ progresso: { calculadora: values } }),
+        body: JSON.stringify({
+          progresso: { total: totalPoints, calculator_inputs: values, track, updated_at: new Date().toISOString() }
+        }),
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
-    } catch { /* ignore */ }
-    setSaving(false)
+      generatePdf()
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const handleExportPDF = async () => {
-    const { jsPDF } = await import('jspdf')
+  const generatePdf = () => {
     const doc = new jsPDF()
+    const now = new Date()
+    const safeName = (candidateName || 'candidato').toLowerCase().replace(/[^a-z0-9]+/g, '-')
 
-    doc.setFontSize(18)
-    doc.text('Calculadora de Pontos — Portal do Candidato', 14, 20)
-    doc.setFontSize(12)
-    doc.text(`Graduação: ${graduacao}`, 14, 32)
-    doc.text(`Trilha: ${track === 'exame' ? 'Por Exame' : 'Por Mérito'}`, 14, 40)
-    doc.text(`Pontuação: ${score} / ${minPts} pontos`, 14, 48)
-    doc.text(`Status: ${reached ? 'CARÊNCIA ATINGIDA' : 'CARÊNCIA NÃO ATINGIDA'}`, 14, 56)
+    doc.setFillColor(10, 18, 30)
+    doc.rect(0, 0, 210, 28, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.text('Simulação de Pontos', 14, 18)
     doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Liga Riograndense de Judô', 150, 18, { align: 'right' })
 
-    let y = 70
-    fields.forEach(f => {
-      const val = values[f.key]
-      let pts = 0
-      if (f.type === 'boolean') pts = val ? f.points || 0 : 0
-      else if (f.type === 'select') pts = (val as number) || 0
-      else pts = Math.min(Number(val) || 0, f.maxItems || 99) * (f.pointsPerItem || 0)
-      doc.text(`${f.label}: ${pts} pts`, 14, y)
-      y += 8
-      if (y > 270) { doc.addPage(); y = 20 }
-    })
+    doc.setTextColor(120, 120, 120)
+    doc.text(`Gerado em ${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`, 14, 34)
 
-    doc.save(`calculadora-pontos-${graduacao.toLowerCase().replace(/\s+/g, '-')}.pdf`)
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.text('Resumo', 14, 44)
+
+    doc.setFillColor(240, 245, 255)
+    doc.roundedRect(14, 48, 182, 28, 3, 3, 'F')
+    doc.setFontSize(22)
+    doc.text(String(totalPoints), 20, 66)
+    doc.setFontSize(10)
+    doc.text('Pontuação total', 20, 52)
+    doc.text(`Trilha: ${track === 'exam' ? 'Com Exame' : 'Por Mérito'}`, 110, 56)
+    doc.text(`Status: ${status.label} (${status.time})`, 110, 63)
+    doc.text(`Candidato: ${candidateName || '--'}`, 110, 70)
+
+    doc.save(`simulacao-pontos-${safeName}-${now.toISOString().slice(0, 10)}.pdf`)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-red-600" />
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="p-8 text-center text-slate-500">
+      <Loader2 className="animate-spin mx-auto mb-2" size={24} />
+      Carregando...
+    </div>
+  )
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Calculadora de Pontos</h1>
-          <p className="text-slate-400 mt-1">Calcule sua pontuação para <span className="text-white">{graduacao}</span></p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-white text-sm transition-colors"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Save className="w-4 h-4" />}
-            {saved ? 'Salvo' : 'Salvar'}
-          </button>
-          <button
-            onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white text-sm transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            PDF
-          </button>
-        </div>
-      </div>
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <header className="mb-2">
+        <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">Calculadora de Pontos</h2>
+        <p className="text-slate-400 text-sm mt-1">Simule sua pontuação e descubra sua carência para promoção.</p>
+      </header>
 
-      {/* Score card */}
-      <div className={`rounded-2xl p-6 border ${reached ? 'bg-green-900/20 border-green-600/30' : 'bg-[#111827] border-slate-800'}`}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Calculator className="w-6 h-6 text-red-500" />
-            <span className="text-xs font-black tracking-widest text-slate-400 uppercase">Pontuação Total</span>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_20rem] gap-6">
+        <div className="space-y-6">
+
+          {/* Seletor de trilha */}
+          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button onClick={() => setTrack('exam')} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${track === 'exam' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Com Exame</button>
+            <button onClick={() => setTrack('merit')} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${track === 'merit' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Por Mérito</button>
           </div>
-          {reached && (
-            <span className="text-xs font-black tracking-widest text-green-400 bg-green-400/10 border border-green-400/20 px-3 py-1 rounded-full uppercase">
-              Carência Atingida
-            </span>
-          )}
-        </div>
 
-        <div className="flex items-end gap-2 mb-4">
-          <span className="text-6xl font-black text-white">{score}</span>
-          <span className="text-slate-500 text-2xl mb-2">/ {minPts}</span>
-        </div>
-
-        <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${reached ? 'bg-green-500' : 'bg-red-600'}`}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-        <p className="text-slate-500 text-xs mt-2">
-          {reached
-            ? `Você atingiu a carência mínima para ${graduacao}.`
-            : `Faltam ${minPts - score} pontos para atingir a carência mínima.`
-          }
-        </p>
-      </div>
-
-      {/* Track selector */}
-      <div className="flex gap-2 bg-[#111827] border border-slate-800 rounded-xl p-1">
-        <button
-          onClick={() => setTrack('exame')}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${track === 'exame' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'}`}
-        >
-          Por Exame
-        </button>
-        <button
-          onClick={() => setTrack('merito')}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-colors ${track === 'merito' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'}`}
-        >
-          Por Mérito
-        </button>
-      </div>
-
-      {/* Fields */}
-      <div className="space-y-3">
-        {fields.map(field => {
-          const val = values[field.key]
-          let pts = 0
-          if (field.type === 'boolean') pts = val ? field.points || 0 : 0
-          else if (field.type === 'select') pts = (val as number) || 0
-          else pts = Math.min(Number(val) || 0, field.maxItems || 99) * (field.pointsPerItem || 0)
-
-          return (
-            <div key={field.key} className="bg-[#111827] border border-slate-800 rounded-xl p-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium text-sm">{field.label}</p>
-                {field.description && (
-                  <p className="text-slate-500 text-xs mt-0.5">{field.description}</p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3 flex-shrink-0">
-                {field.type === 'boolean' ? (
-                  <button
-                    onClick={() => setValue(field.key, !val)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${val ? 'bg-red-600' : 'bg-slate-700'}`}
-                  >
-                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow ${val ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
-                ) : field.type === 'select' ? (
-                  <select
-                    value={(val as number) || 0}
-                    onChange={e => setValue(field.key, Number(e.target.value))}
-                    className="bg-black border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-red-600"
-                  >
-                    <option value={0}>Selecionar</option>
-                    {field.options?.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
+          {/* Seção 1: Resultados Esportivos */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <h4 className="text-red-500 font-black uppercase text-xs mb-4 border-b border-slate-800 pb-2 flex items-center gap-2"><Trophy size={14}/> 1. Resultados Esportivos</h4>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Melhor Título Pessoal</label>
+                  <select id="calc_personal" value={values.calc_personal} onChange={handleChange} className="w-full bg-black border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    <option value="0">Selecione...</option>
+                    {SELECT_OPTIONS.personal.map((opt, i) => <option key={i} value={opt.val}>{opt.label} ({opt.val})</option>)}
                   </select>
-                ) : (
-                  <input
-                    type="number"
-                    min={0}
-                    max={field.maxItems || 99}
-                    value={(val as number) || 0}
-                    onChange={e => setValue(field.key, Number(e.target.value))}
-                    className="w-20 bg-black border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm text-center focus:outline-none focus:border-red-600"
-                  />
-                )}
-
-                <span className={`text-sm font-black w-12 text-right ${pts > 0 ? 'text-red-400' : 'text-slate-600'}`}>
-                  {pts > 0 ? `+${pts}` : '—'}
-                </span>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Melhor Título de Aluno</label>
+                  <select id="calc_student" value={values.calc_student} onChange={handleChange} className="w-full bg-black border border-slate-700 rounded-lg p-2 text-xs text-white">
+                    <option value="0">Selecione...</option>
+                    {SELECT_OPTIONS.student.map((opt, i) => <option key={i} value={opt.val}>{opt.label} ({opt.val})</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="bg-red-900/10 p-4 rounded-xl border border-red-900/30">
+                <label className="text-[10px] font-bold text-red-400 uppercase">Pontuação no Ranking (Vitórias)</label>
+                <span className="text-[9px] text-red-300/70 block mb-1 uppercase font-bold">-- Nº de Vitórias (últimos 3 anos) --</span>
+                <input type="number" id="calc_vitorias" value={values.calc_vitorias} onChange={handleChange} className="w-full bg-black border border-red-900/50 rounded-lg p-2 text-white font-mono mt-1" placeholder="0"/>
+                <p className="text-[9px] text-red-300 mt-1">Critério: Cada vitória vale <strong>0,2 pontos</strong>.</p>
               </div>
             </div>
-          )
-        })}
+          </div>
+
+          {/* Seção 2: Qualificações */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <h4 className="text-red-500 font-black uppercase text-xs mb-4 border-b border-slate-800 pb-2 flex items-center gap-2"><Medal size={14}/> 2. Qualificações</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Árbitro</label>
+                <select id="calc_referee" value={values.calc_referee} onChange={handleChange} className="w-full bg-black border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="0">Nenhum</option>
+                  {SELECT_OPTIONS.referee.map((opt, i) => <option key={i} value={opt.val}>{opt.label} ({opt.val})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Acadêmico</label>
+                <select id="calc_academic" value={values.calc_academic} onChange={handleChange} className="w-full bg-black border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="0">Nenhum</option>
+                  {SELECT_OPTIONS.academic.map((opt, i) => <option key={i} value={opt.val}>{opt.label} ({opt.val})</option>)}
+                </select>
+              </div>
+              <div className="md:col-span-2 lg:col-span-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Administração</label>
+                <select id="calc_admin" value={values.calc_admin} onChange={handleChange} className="w-full bg-black border border-slate-700 rounded-lg p-2 text-xs text-white">
+                  <option value="0">Nenhum</option>
+                  {SELECT_OPTIONS.admin.map((opt, i) => <option key={i} value={opt.val}>{opt.label} ({opt.val})</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Seção 3: Contribuição */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+              <div className="flex flex-col border-b border-slate-800 pb-4 mb-4">
+                <h4 className="text-green-500 font-black uppercase text-xs flex items-center gap-2"><Gavel size={14}/> 3. Contribuição ao Judô</h4>
+                <span className="text-[9px] bg-green-900/50 text-green-300 px-2 py-1 rounded mt-2 w-fit">-- Nº de anos nessas funções na graduação atual --</span>
+              </div>
+              <div className="space-y-4">
+                {Object.keys(FIELD_CONFIG).filter(k => k.startsWith('contrib_')).map(key => (
+                  <div key={key} className="flex justify-between items-center border-b border-slate-800/50 pb-2 last:border-0">
+                    <div className="pr-4">
+                      <div className="text-xs font-bold text-slate-300">{FIELD_CONFIG[key].label}</div>
+                      <div className="text-[9px] text-slate-500">{FIELD_CONFIG[key].sub} (x{FIELD_CONFIG[key].weight})</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="number" id={key} value={values[key] || ''} onChange={handleChange} className="w-16 bg-black border border-slate-700 rounded-lg p-2 text-center text-white text-xs font-bold focus:border-green-500" placeholder="0"/>
+                      <span className="text-[9px] font-bold text-slate-600 uppercase">Anos</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Seção 4: Atividades em Prol */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+              <div className="flex flex-col border-b border-slate-800 pb-4 mb-4">
+                <h4 className="text-green-500 font-black uppercase text-xs flex items-center gap-2"><BookOpen size={14}/> 4. Atividades em Prol do Judô</h4>
+                <span className="text-[9px] bg-green-900/50 text-green-300 px-2 py-1 rounded mt-2 w-fit">-- Nº de produções na graduação atual --</span>
+              </div>
+              <div className="space-y-4">
+                {Object.keys(FIELD_CONFIG).filter(k => k.startsWith('prol_')).map(key => (
+                  <div key={key} className="flex justify-between items-center border-b border-slate-800/50 pb-2 last:border-0">
+                    <div className="pr-4">
+                      <div className="text-xs font-bold text-slate-300">{FIELD_CONFIG[key].label}</div>
+                      <div className="text-[9px] text-slate-500">{FIELD_CONFIG[key].sub} (x{FIELD_CONFIG[key].weight})</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input type="number" id={key} value={values[key] || ''} onChange={handleChange} className="w-16 bg-black border border-slate-700 rounded-lg p-2 text-center text-white text-xs font-bold focus:border-green-500" placeholder="0"/>
+                      <span className="text-[9px] font-bold text-slate-600 uppercase">Qtd</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Seção 5: Conhecimento Prático */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-2 mb-6">
+              <h4 className="text-slate-300 font-black uppercase text-xs flex items-center gap-2"><GraduationCap size={14}/> 5. Conhecimento Prático</h4>
+              <span className="text-[9px] bg-green-900/50 text-green-300 px-2 py-1 rounded mt-2 w-fit">-- com exame aprovado até o final do processo --</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {KATA_OPTIONS.map(kata => (
+                <label key={kata.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${values.katas?.includes(kata.id) ? 'bg-red-900/20 border-red-500/50' : 'bg-black border-slate-800 hover:border-slate-600'}`}>
+                  <div className={`w-5 h-5 rounded flex items-center justify-center border shrink-0 ${values.katas?.includes(kata.id) ? 'bg-red-600 border-red-600' : 'border-slate-600'}`}>
+                    {values.katas?.includes(kata.id) && <CheckCircle size={14} className="text-white"/>}
+                  </div>
+                  <input type="checkbox" className="hidden" checked={values.katas?.includes(kata.id) || false} onChange={() => handleKataToggle(kata.id)} />
+                  <div>
+                    <div className="text-xs font-bold text-slate-200">{kata.label}</div>
+                    <div className="text-[9px] text-slate-500">{kata.val} pontos</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Placar lateral sticky */}
+        <div className="space-y-6 lg:sticky lg:top-6 h-fit">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6 shadow-2xl">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Pontuação Total</div>
+            <div className="text-6xl font-black text-white tracking-tighter mb-4">{totalPoints}</div>
+
+            <div className="space-y-2 pt-4 border-t border-slate-600 text-[10px]">
+              <div className={`flex justify-between items-center ${totalPoints >= rules.min ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                <span>Mínima ({times.min} anos):</span><span>{rules.min} pts</span>
+              </div>
+              <div className={`flex justify-between items-center ${totalPoints >= rules.red && totalPoints < rules.min ? 'text-green-400 font-bold' : 'text-slate-500'}`}>
+                <span>Reduzida ({times.red} anos):</span><span>{rules.red} pts</span>
+              </div>
+              <div className={`flex justify-between items-center ${totalPoints >= rules.std && totalPoints < rules.red ? 'text-blue-400 font-bold' : 'text-slate-500'}`}>
+                <span>Padrão ({times.std} anos):</span><span>{rules.std} pts</span>
+              </div>
+              <div className={`flex justify-between items-center ${totalPoints >= rules.maj && totalPoints < rules.std ? 'text-yellow-400 font-bold' : 'text-slate-500'}`}>
+                <span>Majorada ({times.maj} anos):</span><span>{rules.maj} pts</span>
+              </div>
+              <div className={`flex justify-between items-center ${totalPoints >= rules.max && totalPoints < rules.maj ? 'text-orange-400 font-bold' : 'text-slate-500'}`}>
+                <span>Máxima ({times.max} anos):</span><span>{rules.max} pts</span>
+              </div>
+            </div>
+
+            <div className={`mt-6 text-center p-3 rounded-lg border ${status.bg} ${status.color}`}>
+              <div className="text-[10px] font-black uppercase">Status Atual</div>
+              <div className="text-lg font-black mt-1">{status.label}</div>
+              <div className="text-[11px] font-bold mt-1">{status.time !== '--' ? `Carência: ${status.time}` : 'Pontuação insuficiente'}</div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="w-full flex items-center justify-center gap-2 py-4 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-black uppercase tracking-widest text-xs rounded-xl transition-all shadow-lg"
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin"/> : saved ? <CheckCircle size={16}/> : <Save size={16}/>}
+            {isSaving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar e Exportar PDF'}
+          </button>
+        </div>
       </div>
     </div>
   )

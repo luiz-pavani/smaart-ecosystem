@@ -1,253 +1,236 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, CheckCircle2, Circle, Users, BookOpen, ClipboardList, GraduationCap, Dumbbell, Trophy } from 'lucide-react'
+import { Loader2, CheckCircle2, Circle, ListChecks, GraduationCap, Clock, FileText, BookOpen, Award, Dumbbell } from 'lucide-react'
 
-interface InscricaoData {
-  graduacao_pretendida: string
+// ——— DADOS EXATOS DO ORIGINAL (profepmax/candidato/page.tsx) ———
+const REQUIREMENTS_DATA: any = {
+  shodan: {
+    presential: [
+      { title: "Nage-no-Kata", desc: "Execução completa (Tori e Uke).", type: "check" },
+      { title: "Arbitragem", desc: "Exame prático em competição.", type: "check" },
+      { title: "Waza", desc: "Demonstração técnica.", type: "check", subitems: ["Kihon-dōsa (Fundamentos)", "Go-kyō (5 grupos)", "Katame-waza (Solo)", "Renraku-waza (Combinações)", "Kaeshi-waza (Contra-ataques)"] }
+    ],
+    internships: [
+      { title: "Oficial de Competição", desc: "Carga horária prática de 48 horas (6 competições completas ou 8 com atuação parcial).", type: "hours" },
+      { title: "Árbitro", desc: "Carga horária prática de 48 horas (6 competições completas ou 8 com atuação parcial).", type: "hours" }
+    ],
+    theory: [
+      { title: "Artigo ou Poster", desc: "Avaliação da banca.", type: "grade" },
+      { title: "Exame Teórico Geral", desc: "Prova escrita.", type: "grade" },
+      { title: "Exame Teórico de Arbitragem", desc: "Prova escrita.", type: "grade" }
+    ],
+    courses: {
+      profep: ["Curso de Nage-no-Kata", "Curso Ensino do Judô Infantil", "Curso Seiryoku-Zen'yo-Kokumin-Taiiku-no-Kata", "Direto do Dojo com Douglas Vieira", "Curso de Oficiais de Competição", "Curso de Arbitragem", "Curso de Waza", "Curso de Kodomo-no-Kata", "Curso de Ensino do Judô com Segurança", "Curso de História do Judô", "Curso de Terminologia do Judô", "Curso de Atendimento Pré-hospitalar (1ºs socorros)"],
+      cob: ["Esporte Antirracista", "Prevenção do Assédio e Abuso", "Saúde Mental no Esporte", "Formando Campeões", "Combate à Manipulação de Resultados", "Igualdade de Gênero"]
+    },
+    practical_exams: [
+      { title: "Kodomo-no-Kata", desc: "Envio de vídeo", type: "grade" },
+      { title: "Seiryoku-Zen'yo-Kokumin-Taiiku-no-Kata", desc: "Envio de vídeo", type: "grade" },
+      { title: "Arbitragem", desc: "Presencial", type: "grade" },
+      { title: "Nage-no-Kata", desc: "Presencial", type: "grade" },
+      { title: "Waza", desc: "Presencial", type: "grade" }
+    ]
+  },
+  nidan: {
+    presential: [
+      { title: "Katame-no-Kata", desc: "Execução completa.", type: "check" },
+      { title: "Arbitragem", desc: "Prático.", type: "check" },
+      { title: "Waza", desc: "Demonstração.", type: "check", subitems: ["Shinmeisho-no-waza", "Katame-waza", "Renraku-waza", "Kaeshi-waza"] }
+    ],
+    internships: [
+      { title: "Árbitro", desc: "Carga horária prática de 48 horas (6 competições completas ou 8 com atuação parcial).", type: "hours" }
+    ],
+    theory: [
+      { title: "Artigo ou Poster", type: "grade" },
+      { title: "Exame Teórico Geral", type: "grade" },
+      { title: "Exame Teórico de Arbitragem", type: "grade" }
+    ],
+    courses: {
+      profep: ["Curso de Gestão de Academias", "Curso de Katame-no-Kata", "Direto do Dojo com Ma. Suelen Altheman", "Curso de Arbitragem", "Curso de Waza", "Curso de Kodomo-no-Kata", "Curso de Ensino do Judô com Segurança", "Curso de História do Judô", "Curso de História do Judô no Brasil", "Curso de Terminologia do Judô", "Curso de Atendimento Pré-hospitalar"],
+      cob: ["Combate à Manipulação de Resultados", "Igualdade de Gênero", "Comissão de Atletas", "Conduta Ética na Prática", "Ginecologia do Esporte"]
+    },
+    practical_exams: [
+      { title: "Kodomo-no-Kata", desc: "Envio de vídeo", type: "grade" },
+      { title: "Seiryoku-Zen'yo-Kokumin-Taiiku-no-Kata", desc: "Envio de vídeo", type: "grade" },
+      { title: "Arbitragem", desc: "Presencial", type: "grade" },
+      { title: "Katame-no-Kata", desc: "Presencial", type: "grade" },
+      { title: "Waza", desc: "Presencial", type: "grade" }
+    ]
+  },
+  sandan: {
+    presential: [
+      { title: "Kōdōkan Goshin-jutsu", desc: "Execução Completa", type: "check" },
+      { title: "Waza", desc: "Aula Magna", type: "check" }
+    ],
+    internships: [],
+    theory: [{ title: "Artigo", type: "grade" }],
+    courses: { profep: ["Curso de Kōdōkan Goshin-jutsu"], cob: ["Fundamentos da Administração"] },
+    practical_exams: [{ title: "Goshin-jutsu (Nota)", type: "grade" }]
+  },
+  yondan: {
+    presential: [
+      { title: "Kime-no-Kata", desc: "Execução Completa", type: "check" },
+      { title: "Waza", desc: "Aula Magna", type: "check" }
+    ],
+    internships: [],
+    theory: [{ title: "Artigo", type: "grade" }],
+    courses: { profep: ["Curso de Kime-no-Kata"], cob: ["Fundamentos do Treinamento"] },
+    practical_exams: [{ title: "Kime-no-Kata (Nota)", type: "grade" }]
+  },
+  godan: {
+    presential: [
+      { title: "Ju-no-Kata", desc: "Execução Completa", type: "check" },
+      { title: "Waza", desc: "Aula Magna", type: "check" }
+    ],
+    internships: [],
+    theory: [{ title: "Artigo", type: "grade" }],
+    courses: { profep: ["Curso de Ju-no-Kata"], cob: ["Treinamento Avançado"] },
+    practical_exams: [{ title: "Ju-no-Kata (Nota)", type: "grade" }]
+  },
+  rokudan: {
+    presential: [{ title: "Waza", desc: "Aula Magna", type: "check" }],
+    internships: [],
+    theory: [{ title: "Artigo", type: "grade" }],
+    courses: { profep: ["Itsutsu-no-Kata", "Koshiki-no-Kata"], cob: [] },
+    practical_exams: []
+  }
 }
 
-const REQUIREMENTS_DATA: Record<string, {
-  presenciais: { label: string; quantidade: number }[]
-  estagios: { label: string; quantidade: number }[]
-  teoria: { label: string }[]
-  cursosMaxi: { label: string; horas: number }[]
-  cursosCob: { label: string }[]
-  examesPraticos: { label: string }[]
-}> = {
-  'Shodan (1º Dan)': {
-    presenciais: [
-      { label: 'Treinamentos obrigatórios (Liga)', quantidade: 10 },
-      { label: 'Seminários Técnicos', quantidade: 2 },
-    ],
-    estagios: [
-      { label: 'Estágio de Arbitragem (Regional)', quantidade: 1 },
-      { label: 'Estágio de Ensino (Academia Filiada)', quantidade: 1 },
-    ],
-    teoria: [
-      { label: 'Prova Teórica: Regulamento e Arbitragem' },
-      { label: 'Prova Teórica: História e Filosofia do Judô' },
-    ],
-    cursosMaxi: [
-      { label: 'Módulo de Fundamentos do Judô', horas: 20 },
-      { label: 'Módulo de Arbitragem Básica', horas: 10 },
-    ],
-    cursosCob: [
-      { label: 'Curso de Educação Olímpica (IOB)' },
-      { label: 'Curso de Ética no Esporte (IOB)' },
-    ],
-    examesPraticos: [
-      { label: 'Exame de Técnicas (Nage-waza e Katame-waza)' },
-      { label: 'Kata obrigatório: Nage no Kata' },
-      { label: 'Randori avaliativo' },
-    ],
-  },
-  'Nidan (2º Dan)': {
-    presenciais: [
-      { label: 'Treinamentos obrigatórios (Liga)', quantidade: 15 },
-      { label: 'Seminários Técnicos', quantidade: 3 },
-    ],
-    estagios: [
-      { label: 'Estágio de Arbitragem (Estadual)', quantidade: 2 },
-      { label: 'Estágio de Ensino (Academia Filiada)', quantidade: 2 },
-    ],
-    teoria: [
-      { label: 'Prova Teórica Avançada: Arbitragem e Regulamento' },
-      { label: 'Monografia ou TCC sobre Judô' },
-    ],
-    cursosMaxi: [
-      { label: 'Módulo Avançado de Judô', horas: 30 },
-      { label: 'Módulo de Arbitragem Avançada', horas: 20 },
-      { label: 'Módulo de Gestão Esportiva', horas: 15 },
-    ],
-    cursosCob: [
-      { label: 'Curso de Educação Olímpica (IOB)' },
-      { label: 'Curso de Liderança Esportiva (IOB)' },
-      { label: 'Curso de Integridade Esportiva (IOB)' },
-    ],
-    examesPraticos: [
-      { label: 'Exame de Técnicas Avançadas' },
-      { label: 'Kata obrigatório: Katame no Kata' },
-      { label: 'Kata opcional: Kime no Kata ou Ju no Kata' },
-      { label: 'Randori avaliativo (2 sessões)' },
-    ],
-  },
-  'Sandan (3º Dan)': {
-    presenciais: [
-      { label: 'Treinamentos obrigatórios (Liga)', quantidade: 20 },
-      { label: 'Seminários Técnicos', quantidade: 4 },
-    ],
-    estagios: [
-      { label: 'Estágio de Arbitragem (Nacional ou Internacional)', quantidade: 1 },
-      { label: 'Estágio de Ensino', quantidade: 3 },
-    ],
-    teoria: [
-      { label: 'Prova Teórica: Pedagogia do Judô' },
-      { label: 'Apresentação de Trabalho Científico' },
-    ],
-    cursosMaxi: [
-      { label: 'Módulo de Metodologia do Ensino', horas: 40 },
-      { label: 'Módulo de Alto Rendimento', horas: 20 },
-    ],
-    cursosCob: [
-      { label: 'Curso de Educação Olímpica (IOB)' },
-      { label: 'Curso de Gestão de Projetos Esportivos (IOB)' },
-    ],
-    examesPraticos: [
-      { label: 'Demonstração técnica completa' },
-      { label: 'Kata: Kodokan Goshin Jutsu' },
-      { label: 'Apresentação didática para banca' },
-    ],
-  },
-  'Yondan (4º Dan)': {
-    presenciais: [
-      { label: 'Treinamentos obrigatórios (Liga)', quantidade: 25 },
-      { label: 'Seminários Nacionais', quantidade: 2 },
-    ],
-    estagios: [
-      { label: 'Estágio Internacional', quantidade: 1 },
-      { label: 'Estágio de Ensino de Alto Nível', quantidade: 2 },
-    ],
-    teoria: [
-      { label: 'Tese ou Projeto de Pesquisa em Judô' },
-      { label: 'Defesa perante Comissão Técnica' },
-    ],
-    cursosMaxi: [
-      { label: 'Módulo Especializado (livre escolha)', horas: 60 },
-    ],
-    cursosCob: [
-      { label: 'Pacote Completo de Formação IOB' },
-    ],
-    examesPraticos: [
-      { label: 'Exame técnico perante Comissão Nacional' },
-      { label: 'Kata à escolha da banca' },
-    ],
-  },
+const GRADE_KEYS: Record<string, string> = {
+  'Shodan (1º Dan)': 'shodan',
+  'Nidan (2º Dan)': 'nidan',
+  'Sandan (3º Dan)': 'sandan',
+  'Yondan (4º Dan)': 'yondan',
+  'Godan (5º Dan)': 'godan',
+  'Rokudan (6º Dan)': 'rokudan',
 }
 
-const DEFAULT_REQ = REQUIREMENTS_DATA['Shodan (1º Dan)']
+function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6">
+      <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2 mb-4 pb-3 border-b border-slate-800">
+        {icon}{title}
+      </h3>
+      <div className="space-y-3">{children}</div>
+    </div>
+  )
+}
 
-const SECTIONS = [
-  { key: 'presenciais', label: 'Presenciais', icon: Users, color: 'text-blue-400' },
-  { key: 'estagios', label: 'Estágios', icon: GraduationCap, color: 'text-purple-400' },
-  { key: 'teoria', label: 'Teoria', icon: BookOpen, color: 'text-yellow-400' },
-  { key: 'cursosMaxi', label: 'Cursos Profep MAX', icon: ClipboardList, color: 'text-red-400' },
-  { key: 'cursosCob', label: 'Cursos COB', icon: Trophy, color: 'text-green-400' },
-  { key: 'examesPraticos', label: 'Exames Práticos', icon: Dumbbell, color: 'text-orange-400' },
-]
+function ReqItem({ title, desc, subitems }: { title: string; desc?: string; subitems?: string[] }) {
+  return (
+    <div className="flex gap-3">
+      <CheckCircle2 size={16} className="text-slate-600 shrink-0 mt-0.5" />
+      <div>
+        <div className="text-sm font-bold text-slate-200">{title}</div>
+        {desc && <div className="text-xs text-slate-500 mt-0.5">{desc}</div>}
+        {subitems && (
+          <ul className="mt-1 space-y-1">
+            {subitems.map((s, i) => (
+              <li key={i} className="text-xs text-slate-400 flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-slate-600 shrink-0"/>
+                {s}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CourseItem({ label }: { label: string }) {
+  return (
+    <div className="flex gap-3 items-start">
+      <BookOpen size={14} className="text-indigo-500 shrink-0 mt-0.5"/>
+      <span className="text-xs text-slate-300">{label}</span>
+    </div>
+  )
+}
 
 export default function RequisitosPage() {
-  const [inscricao, setInscricao] = useState<InscricaoData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [checked, setChecked] = useState<Record<string, boolean>>({})
+  const [graduacao, setGraduacao] = useState('Shodan (1º Dan)')
 
   useEffect(() => {
-    fetch('/api/candidato/dados')
-      .then(r => r.json())
-      .then(d => {
-        setInscricao(d.inscricao)
-        // Load checked state from progresso if available
-        const progresso = d.inscricao?.progresso || {}
-        setChecked(progresso.requisitos_checked || {})
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    fetch('/api/candidato/dados').then(r => r.json()).then(json => {
+      if (json.inscricao?.graduacao_pretendida) setGraduacao(json.inscricao.graduacao_pretendida)
+    }).finally(() => setLoading(false))
   }, [])
 
-  const toggleCheck = async (key: string) => {
-    const newChecked = { ...checked, [key]: !checked[key] }
-    setChecked(newChecked)
-    // Auto-save
-    await fetch('/api/candidato/progresso', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ progresso: { requisitos_checked: newChecked } }),
-    })
-  }
+  const key = GRADE_KEYS[graduacao] || 'shodan'
+  const req = REQUIREMENTS_DATA[key]
 
-  const grad = inscricao?.graduacao_pretendida || 'Shodan (1º Dan)'
-  const req = REQUIREMENTS_DATA[grad] || DEFAULT_REQ
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-red-600" />
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="p-8 text-center text-slate-500">
+      <Loader2 className="animate-spin mx-auto mb-2" size={24}/>
+      Carregando...
+    </div>
+  )
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-black text-white tracking-tight">Meus Requisitos</h1>
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <header>
+        <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">Meus Requisitos</h2>
         <div className="flex items-center gap-3 mt-2">
-          <p className="text-slate-400">Requisitos para:</p>
-          <span className="text-sm font-black text-red-500 bg-red-600/10 border border-red-600/20 px-3 py-1 rounded-full uppercase tracking-widest">
-            {grad}
-          </span>
+          <p className="text-slate-400 text-sm">Requisitos para promoção a</p>
+          <span className="text-xs font-black uppercase tracking-widest text-red-400 bg-red-900/20 border border-red-900/30 px-3 py-1 rounded-full">{graduacao}</span>
         </div>
-        <p className="text-slate-600 text-xs mt-2">Marque os itens concluídos. O progresso é salvo automaticamente.</p>
-      </div>
+      </header>
 
-      <div className="space-y-6">
-        {SECTIONS.map(section => {
-          const Icon = section.icon
-          const items = (req as Record<string, { label: string; quantidade?: number; horas?: number }[]>)[section.key] || []
-          const doneCount = items.filter((_, i) => checked[`${section.key}_${i}`]).length
+      {/* Presenciais */}
+      {req.presential?.length > 0 && (
+        <Section title="Requisitos Presenciais" icon={<Dumbbell size={14} className="text-red-500"/>}>
+          {req.presential.map((item: any, i: number) => (
+            <ReqItem key={i} title={item.title} desc={item.desc} subitems={item.subitems}/>
+          ))}
+        </Section>
+      )}
 
-          return (
-            <div key={section.key} className="bg-[#111827] border border-slate-800 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className={`w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center`}>
-                  <Icon className={`w-4 h-4 ${section.color}`} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-white font-black text-sm uppercase tracking-widest">{section.label}</h3>
-                </div>
-                <span className="text-xs text-slate-500">
-                  {doneCount}/{items.length}
-                </span>
-                {/* Progress bar */}
-                <div className="w-24 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-red-600 rounded-full transition-all"
-                    style={{ width: items.length ? `${(doneCount / items.length) * 100}%` : '0%' }}
-                  />
-                </div>
-              </div>
+      {/* Estágios */}
+      {req.internships?.length > 0 && (
+        <Section title="Estágios Práticos" icon={<Clock size={14} className="text-orange-400"/>}>
+          {req.internships.map((item: any, i: number) => (
+            <ReqItem key={i} title={item.title} desc={item.desc}/>
+          ))}
+        </Section>
+      )}
 
-              <div className="space-y-2">
-                {items.map((item, i) => {
-                  const itemKey = `${section.key}_${i}`
-                  const isDone = checked[itemKey]
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => toggleCheck(itemKey)}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors text-left group"
-                    >
-                      {isDone ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-slate-600 group-hover:text-slate-400 flex-shrink-0 transition-colors" />
-                      )}
-                      <span className={`text-sm flex-1 ${isDone ? 'line-through text-slate-500' : 'text-slate-300'}`}>
-                        {item.label}
-                      </span>
-                      {item.quantidade !== undefined && (
-                        <span className="text-xs text-slate-600 flex-shrink-0">{item.quantidade}x</span>
-                      )}
-                      {item.horas !== undefined && (
-                        <span className="text-xs text-slate-600 flex-shrink-0">{item.horas}h</span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {/* Teoria */}
+      {req.theory?.length > 0 && (
+        <Section title="Requisitos Teóricos" icon={<FileText size={14} className="text-blue-400"/>}>
+          {req.theory.map((item: any, i: number) => (
+            <ReqItem key={i} title={item.title} desc={item.desc}/>
+          ))}
+        </Section>
+      )}
+
+      {/* Cursos Profep MAX */}
+      {req.courses?.profep?.length > 0 && (
+        <Section title={`Cursos Profep MAX (${req.courses.profep.length} cursos)`} icon={<GraduationCap size={14} className="text-indigo-400"/>}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {req.courses.profep.map((c: string, i: number) => <CourseItem key={i} label={c}/>)}
+          </div>
+        </Section>
+      )}
+
+      {/* Cursos COB */}
+      {req.courses?.cob?.length > 0 && (
+        <Section title={`Cursos COB / Instituto Olímpico (${req.courses.cob.length} cursos)`} icon={<Award size={14} className="text-green-400"/>}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {req.courses.cob.map((c: string, i: number) => <CourseItem key={i} label={c}/>)}
+          </div>
+        </Section>
+      )}
+
+      {/* Exames Práticos */}
+      {req.practical_exams?.length > 0 && (
+        <Section title="Exames Práticos" icon={<ListChecks size={14} className="text-purple-400"/>}>
+          {req.practical_exams.map((item: any, i: number) => (
+            <ReqItem key={i} title={item.title} desc={item.desc}/>
+          ))}
+        </Section>
+      )}
     </div>
   )
 }
