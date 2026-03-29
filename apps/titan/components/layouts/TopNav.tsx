@@ -69,18 +69,29 @@ export default function TopNav({ user, displayName, realEmail, funcao, mobile = 
             </div>
           )}
 
-          {/* Desktop: Search */}
+          {/* Desktop: Logo + Search */}
           {!mobile && (
-            <div className="flex-1 max-w-2xl">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="search"
-                  placeholder="Buscar academias, atletas..."
-                  className="w-full pl-12 pr-4 py-3 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                />
+            <>
+              <button
+                onClick={() => router.push('/portal')}
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity mr-4 shrink-0"
+              >
+                <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">T</span>
+                </div>
+                <span className="text-lg font-bold text-foreground">Titan</span>
+              </button>
+              <div className="flex-1 max-w-2xl">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    type="search"
+                    placeholder="Buscar academias, atletas..."
+                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                  />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* Actions */}

@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import Sidebar from '@/components/layouts/Sidebar'
 import TopNav from '@/components/layouts/TopNav'
 
 export default async function DashboardLayout({
@@ -31,25 +30,10 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Desktop: Sidebar + Content */}
-      <div className="hidden lg:flex">
-        <Sidebar user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} />
-        <div className="flex-1">
-          <TopNav user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} />
-          <main className="p-6">
-            {children}
-          </main>
-        </div>
-      </div>
-
-      {/* Mobile: Top Nav + Content + Bottom Nav */}
-      <div className="lg:hidden">
-        <TopNav user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} mobile />
-        <main className="p-4 pb-20">
-          {children}
-        </main>
-        {/* TODO: Add BottomNav component for mobile */}
-      </div>
+      <TopNav user={user} displayName={displayName} realEmail={realEmail} funcao={funcao} />
+      <main className="p-4 lg:p-6">
+        {children}
+      </main>
     </div>
   )
 }
