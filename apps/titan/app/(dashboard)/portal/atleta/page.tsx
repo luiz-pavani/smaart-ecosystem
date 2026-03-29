@@ -437,6 +437,25 @@ export default function PortalAtletaPage() {
             </div>
           </button>
 
+          {/* Cursos */}
+          <button
+            onClick={() => window.open('https://profepmax.com.br', '_blank')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-amber-500/10 to-amber-600/5
+                     hover:from-amber-500/20 hover:to-amber-600/10 border border-amber-500/20 hover:border-amber-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/0 to-amber-600/0
+                          group-hover:from-amber-500/10 group-hover:to-amber-600/5 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <BookOpen className="w-6 h-6 text-amber-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Cursos</h3>
+              <p className="text-sm text-slate-400">Conteúdos e formações</p>
+            </div>
+          </button>
+
           {/* Carteirinha */}
           <button
             onClick={() => router.push('/portal/atleta/carteira')}
