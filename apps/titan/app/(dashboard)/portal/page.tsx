@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Users, Building2, Trophy, CalendarDays, Loader2, AlertCircle } from 'lucide-react'
+import { Users, Building2, Trophy, CalendarDays, Loader2, AlertCircle, Lock } from 'lucide-react'
 
 interface UserRole {
   role: string
@@ -24,6 +24,7 @@ interface PortalOption {
   color: string
   href: string
   badge?: string
+  locked?: boolean
 }
 
 export default function PortalPage() {
@@ -61,76 +62,57 @@ export default function PortalPage() {
     }
   }
 
-  // Determine available portals based on user roles
-  const getAvailablePortals = (): PortalOption[] => {
-    const portals: PortalOption[] = []
+  const getPortals = (): PortalOption[] => {
     const roles = userRoles.map(r => r.role)
-    const hasAcademia = userRoles.some(r => r.academia_id)
-    const hasFederacao = userRoles.some(r => r.federacao_id)
+    const canAcademia = roles.includes('academia_admin') || roles.includes('academia_staff') || roles.includes('federacao_admin') || roles.includes('federacao_staff') || roles.includes('master_access')
+    const canFederacao = roles.includes('federacao_admin') || roles.includes('federacao_staff') || roles.includes('master_access')
+    const canEventos = roles.includes('federacao_admin') || roles.includes('event_organizer') || roles.includes('master_access')
 
-    // Portal Atleta - Todos os usuários autenticados
-    portals.push({
-      id: 'atleta',
-      title: 'Portal do Atleta',
-      description: 'Gestão pessoal, desempenho, frequência e participação em eventos',
-      icon: <Users className="w-8 h-8" />,
-      color: 'from-blue-500 to-blue-600',
-      href: '/portal/atleta',
-      badge: 'PESSOAL'
-    })
-
-    const canSeeAcademiaPortal =
-      roles.includes('academia_admin') ||
-      roles.includes('academia_staff') ||
-      roles.includes('federacao_admin') ||
-      roles.includes('federacao_staff') ||
-      roles.includes('master_access')
-
-    // Portal Academia - academia_admin/staff, federacao roles, ou master_access
-    if (canSeeAcademiaPortal) {
-      portals.push({
+    return [
+      {
+        id: 'atleta',
+        title: 'Portal do Atleta',
+        description: 'Gestão pessoal, desempenho, frequência e participação em eventos',
+        icon: <Users className="w-8 h-8" />,
+        color: 'from-blue-500 to-blue-600',
+        href: '/portal/atleta',
+        badge: 'PESSOAL',
+        locked: false,
+      },
+      {
         id: 'academia',
         title: 'Portal da Academia',
         description: 'Gerencie sua academia, atletas, aulas e eventos',
         icon: <Building2 className="w-8 h-8" />,
         color: 'from-purple-500 to-purple-600',
         href: '/portal/academia',
-        badge: 'PROFESSORES'
-      })
-    }
-
-    // Portal Federação - federacao_admin ou similar
-    if (roles.includes('federacao_admin') || roles.includes('federacao_staff') ||
-        roles.includes('master_access')) {
-      portals.push({
+        badge: 'PROFESSORES',
+        locked: !canAcademia,
+      },
+      {
         id: 'federacao',
         title: 'Portal da Federação',
         description: 'Administre federação, academias filiadas e regulamentações',
         icon: <Trophy className="w-8 h-8" />,
         color: 'from-red-500 to-red-600',
         href: '/portal/federacao',
-        badge: 'GESTÃO'
-      })
-    }
-
-    // Portal Eventos - federacao_admin ou event_organizer
-    if (roles.includes('federacao_admin') || roles.includes('event_organizer') || 
-        roles.includes('master_access')) {
-      portals.push({
+        badge: 'GESTÃO',
+        locked: !canFederacao,
+      },
+      {
         id: 'eventos',
         title: 'Portal de Eventos',
         description: 'Crie e gerencie competições, treinamentos e campeonatos',
         icon: <CalendarDays className="w-8 h-8" />,
         color: 'from-orange-500 to-orange-600',
         href: '/portal/eventos',
-        badge: 'EVENTOS'
-      })
-    }
-
-    return portals
+        badge: 'EVENTOS',
+        locked: !canEventos,
+      },
+    ]
   }
 
-  const portals = getAvailablePortals()
+  const portals = getPortals()
 
   if (loading) {
     return (
@@ -166,60 +148,53 @@ export default function PortalPage() {
 
       {/* Portals Grid */}
       <div className="max-w-6xl mx-auto px-4 py-12">
-        {portals.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400 text-lg">Nenhum portal disponível para sua conta</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {portals.map((portal) => (
-              <button
-                key={portal.id}
-                onClick={() => router.push(portal.href)}
-                className="group relative overflow-hidden rounded-2xl bg-gradient-to-br hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-              >
-                {/* Gradient Background */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${portal.color} opacity-90 group-hover:opacity-100 transition-opacity`}></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {portals.map((portal) => (
+            <button
+              key={portal.id}
+              onClick={() => !portal.locked && router.push(portal.href)}
+              disabled={portal.locked}
+              className={`group relative overflow-hidden rounded-2xl transition-all duration-300 ${
+                portal.locked
+                  ? 'cursor-not-allowed opacity-40 grayscale'
+                  : 'hover:shadow-2xl transform hover:scale-105'
+              }`}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${portal.color} opacity-90 ${!portal.locked ? 'group-hover:opacity-100' : ''} transition-opacity`}></div>
 
-                {/* Content */}
-                <div className="relative p-8 flex flex-col h-full">
-                  {/* Badge */}
+              <div className="relative p-8 flex flex-col h-full">
+                <div className="flex items-start justify-between mb-4">
                   {portal.badge && (
-                    <div className="inline-flex items-center justify-center w-fit mb-4">
-                      <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-semibold text-white backdrop-blur">
-                        {portal.badge}
-                      </span>
-                    </div>
+                    <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-semibold text-white backdrop-blur">
+                      {portal.badge}
+                    </span>
                   )}
+                  {portal.locked && <Lock className="w-5 h-5 text-white/70 ml-auto" />}
+                </div>
 
-                  {/* Icon */}
-                  <div className="text-white mb-4 group-hover:scale-110 transition-transform">
-                    {portal.icon}
-                  </div>
+                <div className="text-white mb-4 group-hover:scale-110 transition-transform">
+                  {portal.icon}
+                </div>
 
-                  {/* Title */}
-                  <h2 className="text-2xl font-bold text-white mb-3 text-left">
-                    {portal.title}
-                  </h2>
+                <h2 className="text-2xl font-bold text-white mb-3 text-left">{portal.title}</h2>
+                <p className="text-white/80 text-left flex-grow mb-6">{portal.description}</p>
 
-                  {/* Description */}
-                  <p className="text-white/80 text-left flex-grow mb-6">
-                    {portal.description}
-                  </p>
-
-                  {/* Arrow */}
+                {portal.locked ? (
+                  <p className="text-white/50 text-sm text-left">Acesso restrito</p>
+                ) : (
                   <div className="flex items-center gap-2 text-white font-semibold group-hover:translate-x-2 transition-transform">
                     <span>Acessar</span>
                     <span className="text-xl">→</span>
                   </div>
-                </div>
+                )}
+              </div>
 
-                {/* Hover Overlay */}
+              {!portal.locked && (
                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
-              </button>
-            ))}
-          </div>
-        )}
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Footer */}
