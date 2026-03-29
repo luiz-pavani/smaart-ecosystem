@@ -98,17 +98,18 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-function InputField({ label, value, onChange, placeholder }: {
+function InputField({ label, value, onChange, placeholder, type = 'text' }: {
   label: string
   value: string
   onChange: (v: string) => void
   placeholder?: string
+  type?: string
 }) {
   return (
     <div className="space-y-1">
       <label className="text-xs text-gray-400 font-medium">{label}</label>
       <input
-        type="text"
+        type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder || '—'}
@@ -140,25 +141,21 @@ export default function PerfilAtletaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [removingWaitlist, setRemovingWaitlist] = useState<string | null>(null)
-  const [selectedFedId, setSelectedFedId] = useState<string>('')
   const [selectedAcadId, setSelectedAcadId] = useState<string>('')
-  const [editingStakeholder, setEditingStakeholder] = useState(false)
-  const [savingStakeholder, setSavingStakeholder] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileSaveMsg, setProfileSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [stForm, setStForm] = useState<{
     nome_completo: string; email: string; telefone: string
     genero: string; data_nascimento: string; kyu_dan_id: string
   }>({ nome_completo: '', email: '', telefone: '', genero: '', data_nascimento: '', kyu_dan_id: '' })
-  const [stSaveMsg, setStSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
-  // Edit state
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
-  const [fotoFile, setFotoFile] = useState<File | null>(null)
-  const [form, setForm] = useState<EditForm>({
+  const [atletaForm, setAtletaForm] = useState<EditForm>({
     telefone: '', email: '', cidade: '', estado: '', pais: '', nome_patch: '', tamanho_patch: '',
   })
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
+  const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [savingAcad, setSavingAcad] = useState(false)
+  const [acadMsg, setAcadMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -167,7 +164,6 @@ export default function PerfilAtletaPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setError('Usuário não autenticado'); return }
 
-        // Carrega todos os dados via API com service role (contorna RLS)
         const [perfilRes, { data: enrollData }, { data: waitData }] = await Promise.all([
           fetch('/api/atletas/self/perfil-dados').then(r => r.json()),
           supabase.from('class_enrollments')
@@ -198,13 +194,26 @@ export default function PerfilAtletaPage() {
         if (fedsData) setFederacoes(fedsData as Federacao[])
         if (acadData) setAcademias(acadData as Academia[])
 
-        setKyuDans((kdData || []) as KyuDan[])
+        const kdList = (kdData || []) as KyuDan[]
+        setKyuDans(kdList)
 
         if (fedData) {
           setAtleta(fedData as AtletaPerfil)
-          const kd = (kdData || []).find((k: KyuDan) => k.id === fedData.kyu_dan_id)
-          setKyuDan(kd || null)
+          setAtletaForm({
+            telefone: fedData.telefone || '',
+            email: fedData.email || '',
+            cidade: fedData.cidade || '',
+            estado: fedData.estado || '',
+            pais: fedData.pais || '',
+            nome_patch: fedData.nome_patch || '',
+            tamanho_patch: fedData.tamanho_patch || '',
+          })
         }
+
+        // Resolve kyu_dan display: prefer stakeholder, fallback to atleta
+        const kdId = stakeholderData?.kyu_dan_id ?? fedData?.kyu_dan_id ?? null
+        const kd = kdList.find((k: KyuDan) => k.id === kdId)
+        setKyuDan(kd || null)
 
         setTurmas((enrollData || []).map((e: any) => {
           const c = Array.isArray(e.class) ? e.class[0] : e.class
@@ -233,27 +242,16 @@ export default function PerfilAtletaPage() {
   }, [])
 
   const startEditing = () => {
-    if (!atleta) return
-    setForm({
-      telefone: atleta.telefone || '',
-      email: atleta.email || '',
-      cidade: atleta.cidade || '',
-      estado: atleta.estado || '',
-      pais: atleta.pais || '',
-      nome_patch: atleta.nome_patch || '',
-      tamanho_patch: atleta.tamanho_patch || '',
-    })
     setFotoPreview(null)
     setFotoFile(null)
-    setSaveError(null)
-    setEditing(true)
+    setProfileSaveMsg(null)
+    setEditingProfile(true)
   }
 
   const cancelEditing = () => {
-    setEditing(false)
+    setEditingProfile(false)
     setFotoPreview(null)
     setFotoFile(null)
-    setSaveError(null)
   }
 
   const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,37 +262,11 @@ export default function PerfilAtletaPage() {
   }
 
   const saveProfile = async () => {
-    setSaving(true)
-    setSaveError(null)
+    setSavingProfile(true)
+    setProfileSaveMsg(null)
     try {
-      const fd = new FormData()
-      for (const [key, val] of Object.entries(form)) {
-        fd.append(key, val)
-      }
-      if (fotoFile) fd.append('foto', fotoFile)
-
-      const res = await fetch('/api/atletas/self/update-profile', {
-        method: 'PATCH',
-        body: fd,
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Erro ao salvar')
-
-      setAtleta(json.data as AtletaPerfil)
-      setEditing(false)
-      setFotoPreview(null)
-      setFotoFile(null)
-    } catch (err: any) {
-      setSaveError(err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const saveStakeholderProfile = async () => {
-    setSavingStakeholder(true); setStSaveMsg(null)
-    try {
-      const payload = {
+      // Always save stakeholder fields
+      const stPayload = {
         nome_completo: stForm.nome_completo || null,
         email: stForm.email || null,
         telefone: stForm.telefone || null,
@@ -302,23 +274,51 @@ export default function PerfilAtletaPage() {
         data_nascimento: stForm.data_nascimento || null,
         kyu_dan_id: stForm.kyu_dan_id ? Number(stForm.kyu_dan_id) : null,
       }
-      const res = await fetch('/api/atletas/self/update-stakeholder', {
+      const stRes = await fetch('/api/atletas/self/update-stakeholder', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(stPayload),
       })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Erro ao salvar')
-      setStakeholder(json.data as StakeholderPerfil)
-      setEditingStakeholder(false)
-      setStSaveMsg({ type: 'success', text: 'Perfil atualizado com sucesso.' })
-    } catch (err: any) {
-      setStSaveMsg({ type: 'error', text: err.message || 'Erro ao salvar perfil.' })
-    } finally { setSavingStakeholder(false) }
-  }
+      const stJson = await stRes.json()
+      if (!stRes.ok) throw new Error(stJson.error || 'Erro ao salvar')
+      setStakeholder(stJson.data as StakeholderPerfil)
 
-  const [savingAcad, setSavingAcad] = useState(false)
-  const [acadMsg, setAcadMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+      // If user has atleta record, also save atleta-specific fields
+      if (atleta) {
+        const fd = new FormData()
+        fd.append('telefone', atletaForm.telefone)
+        fd.append('email', atletaForm.email)
+        fd.append('cidade', atletaForm.cidade)
+        fd.append('estado', atletaForm.estado)
+        fd.append('pais', atletaForm.pais)
+        fd.append('nome_patch', atletaForm.nome_patch)
+        fd.append('tamanho_patch', atletaForm.tamanho_patch)
+        if (fotoFile) fd.append('foto', fotoFile)
+
+        const atlRes = await fetch('/api/atletas/self/update-profile', {
+          method: 'PATCH',
+          body: fd,
+        })
+        const atlJson = await atlRes.json()
+        if (!atlRes.ok) throw new Error(atlJson.error || 'Erro ao salvar dados de filiação')
+        setAtleta(atlJson.data as AtletaPerfil)
+      }
+
+      // Refresh kyu_dan display
+      const kdId = stJson.data?.kyu_dan_id ?? atleta?.kyu_dan_id ?? null
+      const kd = kyuDans.find(k => k.id === kdId)
+      setKyuDan(kd || null)
+
+      setEditingProfile(false)
+      setFotoPreview(null)
+      setFotoFile(null)
+      setProfileSaveMsg({ type: 'success', text: 'Perfil atualizado com sucesso.' })
+    } catch (err: any) {
+      setProfileSaveMsg({ type: 'error', text: err.message || 'Erro ao salvar perfil.' })
+    } finally {
+      setSavingProfile(false)
+    }
+  }
 
   const saveAcademia = async () => {
     if (!selectedAcadId) return
@@ -338,7 +338,14 @@ export default function PerfilAtletaPage() {
     } finally { setSavingAcad(false) }
   }
 
-  const fotoAtual = fotoPreview || atleta?.url_foto || null
+  // Resolved display values (prefer atleta, fallback to stakeholder)
+  const displayName = atleta?.nome_completo || stakeholder?.nome_completo || '—'
+  const displayUsername = stakeholder?.nome_usuario
+  const displayEmail = atleta?.email || stakeholder?.email
+  const displayTelefone = atleta?.telefone || stakeholder?.telefone
+  const displayGenero = atleta?.genero || stakeholder?.genero
+  const displayNascimento = atleta?.data_nascimento || stakeholder?.data_nascimento
+  const displayFoto = fotoPreview || atleta?.url_foto || null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
@@ -352,7 +359,7 @@ export default function PerfilAtletaPage() {
             Voltar
           </button>
           <h1 className="text-3xl font-bold text-white">Meu Perfil</h1>
-          <p className="text-gray-400 mt-1">Dados pessoais e de filiação na federação</p>
+          <p className="text-gray-400 mt-1">Dados pessoais e de filiação</p>
         </div>
       </div>
 
@@ -369,17 +376,17 @@ export default function PerfilAtletaPage() {
               Tentar novamente
             </button>
           </div>
-        ) : atleta ? (
+        ) : (
           <div className="space-y-6">
             {/* Header card */}
             <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-8">
               <div className="flex flex-col sm:flex-row gap-6 items-start">
                 {/* Photo */}
                 <div className="relative shrink-0">
-                  {fotoAtual ? (
+                  {displayFoto ? (
                     <img
-                      src={fotoAtual}
-                      alt={atleta.nome_completo || ''}
+                      src={displayFoto}
+                      alt={displayName}
                       className="w-28 h-28 object-cover rounded-xl border-4 border-white/10"
                     />
                   ) : (
@@ -387,7 +394,7 @@ export default function PerfilAtletaPage() {
                       <User className="w-14 h-14 text-blue-300" />
                     </div>
                   )}
-                  {editing && (
+                  {editingProfile && atleta && (
                     <>
                       <button
                         onClick={() => fileInputRef.current?.click()}
@@ -409,9 +416,9 @@ export default function PerfilAtletaPage() {
 
                 {/* Name + badges */}
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl font-bold text-white mb-1">{atleta.nome_completo || '—'}</h2>
-                  {atleta.nome_patch && !editing && (
-                    <p className="text-gray-400 text-sm mb-3">"{atleta.nome_patch}"</p>
+                  <h2 className="text-2xl font-bold text-white mb-1">{displayName}</h2>
+                  {displayUsername && (
+                    <p className="text-gray-400 text-sm mb-2">@{displayUsername}</p>
                   )}
                   <div className="flex flex-wrap gap-2 mt-2">
                     {kyuDan && (
@@ -419,17 +426,17 @@ export default function PerfilAtletaPage() {
                         {kyuDan.icones ? `${kyuDan.icones} ` : ''}{kyuDan.cor_faixa} | {kyuDan.kyu_dan}
                       </span>
                     )}
-                    {atleta.academias && (
+                    {atleta?.academias && (
                       <span className="px-3 py-1 rounded-full text-xs font-medium border bg-orange-500/20 text-orange-300 border-orange-500/30">
                         🥋 {atleta.academias}
                       </span>
                     )}
-                    {atleta.status_plano && (
+                    {atleta?.status_plano && (
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColor(atleta.status_plano)}`}>
                         Plano {atleta.status_plano}
                       </span>
                     )}
-                    {atleta.status_membro && (
+                    {atleta?.status_membro && (
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColor(atleta.status_membro)}`}>
                         {atleta.status_membro}
                       </span>
@@ -438,19 +445,19 @@ export default function PerfilAtletaPage() {
                 </div>
 
                 {/* Edit button */}
-                {!editing ? (
+                {!editingProfile ? (
                   <button
                     onClick={startEditing}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shrink-0"
                   >
                     <Pencil className="w-4 h-4" />
-                    Editar
+                    Editar Perfil
                   </button>
                 ) : (
                   <div className="flex gap-2 shrink-0">
                     <button
                       onClick={cancelEditing}
-                      disabled={saving}
+                      disabled={savingProfile}
                       className="flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/15 text-gray-300 text-sm font-medium rounded-lg transition-all"
                     >
                       <X className="w-4 h-4" />
@@ -458,33 +465,129 @@ export default function PerfilAtletaPage() {
                     </button>
                     <button
                       onClick={saveProfile}
-                      disabled={saving}
+                      disabled={savingProfile}
                       className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50"
                     >
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                       Salvar
                     </button>
                   </div>
                 )}
               </div>
-
-              {/* Edit hint */}
-              {editing && (
-                <p className="mt-4 text-xs text-gray-500">
-                  Toque na foto para trocar · Preencha os campos abaixo · Clique em Salvar
-                </p>
-              )}
-
-              {saveError && (
-                <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  {saveError}
-                </div>
-              )}
             </div>
 
-            {/* Renovação banner */}
-            {(() => {
+            {/* Edit form */}
+            {editingProfile && (
+              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6 space-y-4">
+                <h3 className="font-semibold text-white mb-2">Editar dados pessoais</h3>
+
+                {profileSaveMsg && (
+                  <div className={`rounded-lg px-4 py-3 text-sm ${profileSaveMsg.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+                    {profileSaveMsg.text}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Nome Completo</label>
+                    <input
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.nome_completo}
+                      onChange={e => setStForm(f => ({ ...f, nome_completo: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Email</label>
+                    <input type="email"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.email}
+                      onChange={e => setStForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Telefone / WhatsApp</label>
+                    <input
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.telefone}
+                      placeholder="(DDD) 99999-9999"
+                      onChange={e => setStForm(f => ({ ...f, telefone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Gênero</label>
+                    <select
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.genero}
+                      onChange={e => setStForm(f => ({ ...f, genero: e.target.value }))}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Data de Nascimento</label>
+                    <input type="date"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.data_nascimento}
+                      onChange={e => setStForm(f => ({ ...f, data_nascimento: e.target.value }))}
+                    />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Graduação (Faixa)</label>
+                    <select
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.kyu_dan_id}
+                      onChange={e => setStForm(f => ({ ...f, kyu_dan_id: e.target.value }))}
+                    >
+                      <option value="">Selecione sua faixa</option>
+                      {kyuDans.map(k => (
+                        <option key={k.id} value={k.id}>{k.cor_faixa} — {k.kyu_dan}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Atleta-specific fields (only for users with federation record) */}
+                  {atleta && (
+                    <>
+                      <InputField
+                        label="Cidade"
+                        value={atletaForm.cidade}
+                        onChange={v => setAtletaForm(f => ({ ...f, cidade: v }))}
+                      />
+                      <InputField
+                        label="Estado"
+                        value={atletaForm.estado}
+                        onChange={v => setAtletaForm(f => ({ ...f, estado: v }))}
+                        placeholder="ex: RS"
+                      />
+                      <InputField
+                        label="Nome no Patch"
+                        value={atletaForm.nome_patch}
+                        onChange={v => setAtletaForm(f => ({ ...f, nome_patch: v }))}
+                        placeholder="Apelido ou nome curto"
+                      />
+                      <InputField
+                        label="Tamanho do Patch"
+                        value={atletaForm.tamanho_patch}
+                        onChange={v => setAtletaForm(f => ({ ...f, tamanho_patch: v }))}
+                        placeholder="ex: M, G, GG"
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Save message (outside edit form) */}
+            {profileSaveMsg && !editingProfile && (
+              <div className={`rounded-lg px-4 py-3 text-sm ${profileSaveMsg.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+                {profileSaveMsg.text}
+              </div>
+            )}
+
+            {/* Renovation banner (only for users with federation plan) */}
+            {atleta && (() => {
               const exp = atleta.data_expiracao
               const today = new Date().toISOString().split('T')[0]
               const diffDays = exp
@@ -496,8 +599,8 @@ export default function PerfilAtletaPage() {
               if (!vencido && !vencendo) return null
 
               const msgWpp = vencido
-                ? encodeURIComponent(`Olá! Sou atleta filiado(a) e meu plano está vencido. Gostaria de renovar minha filiação na LRSJ. Meu nome: ${atleta.nome_completo || ''}`)
-                : encodeURIComponent(`Olá! Meu plano na LRSJ vence em ${diffDays} dias. Gostaria de informações para renovação. Meu nome: ${atleta.nome_completo || ''}`)
+                ? encodeURIComponent(`Olá! Sou atleta filiado(a) e meu plano está vencido. Gostaria de renovar minha filiação. Meu nome: ${atleta.nome_completo || ''}`)
+                : encodeURIComponent(`Olá! Meu plano vence em ${diffDays} dias. Gostaria de informações para renovação. Meu nome: ${atleta.nome_completo || ''}`)
 
               return (
                 <div className={`rounded-xl border p-5 ${vencido ? 'bg-red-500/10 border-red-500/25' : 'bg-amber-500/10 border-amber-500/25'}`}>
@@ -530,14 +633,16 @@ export default function PerfilAtletaPage() {
               )
             })()}
 
-            {/* Documentos */}
-            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
-              <AtletaDocumentos
-                atletaId={atleta.stakeholder_id}
-                statusMembro={atleta.status_membro}
-                kyuDanId={atleta.kyu_dan_id}
-              />
-            </div>
+            {/* Documentos (only for users with federation record) */}
+            {atleta && (
+              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+                <AtletaDocumentos
+                  atletaId={atleta.stakeholder_id}
+                  statusMembro={atleta.status_membro}
+                  kyuDanId={atleta.kyu_dan_id}
+                />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Dados Pessoais */}
@@ -546,27 +651,11 @@ export default function PerfilAtletaPage() {
                   <User className="w-4 h-4 text-blue-400" />
                   <h3 className="font-semibold text-white">Dados Pessoais</h3>
                 </div>
-                <Row label="Gênero" value={atleta.genero} />
-                <Row label="Data de Nascimento" value={atleta.data_nascimento} />
-                <Row label="Nacionalidade" value={atleta.nacionalidade} />
-                {editing ? (
-                  <div className="pt-2 space-y-3">
-                    <InputField
-                      label="Tamanho do Patch"
-                      value={form.tamanho_patch}
-                      onChange={v => setForm(f => ({ ...f, tamanho_patch: v }))}
-                      placeholder="ex: M, G, GG"
-                    />
-                    <InputField
-                      label="Nome no Patch"
-                      value={form.nome_patch}
-                      onChange={v => setForm(f => ({ ...f, nome_patch: v }))}
-                      placeholder="Apelido ou nome curto"
-                    />
-                  </div>
-                ) : (
-                  <Row label="Tamanho do Patch" value={atleta.tamanho_patch} />
-                )}
+                <Row label="Gênero" value={displayGenero} />
+                <Row label="Data de Nascimento" value={displayNascimento} />
+                {atleta?.nacionalidade && <Row label="Nacionalidade" value={atleta.nacionalidade} />}
+                {atleta?.tamanho_patch && <Row label="Tamanho do Patch" value={atleta.tamanho_patch} />}
+                {atleta?.nome_patch && <Row label="Nome no Patch" value={atleta.nome_patch} />}
               </div>
 
               {/* Contato */}
@@ -574,56 +663,12 @@ export default function PerfilAtletaPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <Mail className="w-4 h-4 text-blue-400" />
                   <h3 className="font-semibold text-white">Contato</h3>
-                  {!editing && (
-                    <button
-                      onClick={startEditing}
-                      className="ml-auto text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors"
-                    >
-                      <Pencil className="w-3 h-3" />
-                      Editar
-                    </button>
-                  )}
                 </div>
-                {editing ? (
-                  <div className="space-y-3">
-                    <InputField
-                      label="Telefone / WhatsApp"
-                      value={form.telefone}
-                      onChange={v => setForm(f => ({ ...f, telefone: v }))}
-                      placeholder="(99) 99999-9999"
-                    />
-                    <InputField
-                      label="Email"
-                      value={form.email}
-                      onChange={v => setForm(f => ({ ...f, email: v }))}
-                      placeholder="email@exemplo.com"
-                    />
-                    <InputField
-                      label="Cidade"
-                      value={form.cidade}
-                      onChange={v => setForm(f => ({ ...f, cidade: v }))}
-                    />
-                    <InputField
-                      label="Estado"
-                      value={form.estado}
-                      onChange={v => setForm(f => ({ ...f, estado: v }))}
-                      placeholder="ex: SP"
-                    />
-                    <InputField
-                      label="País"
-                      value={form.pais}
-                      onChange={v => setForm(f => ({ ...f, pais: v }))}
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <Row label="Email" value={atleta.email} />
-                    <Row label="Telefone" value={atleta.telefone} />
-                    <Row label="Cidade" value={atleta.cidade} />
-                    <Row label="Estado" value={atleta.estado} />
-                    <Row label="País" value={atleta.pais} />
-                  </>
-                )}
+                <Row label="Email" value={displayEmail} />
+                <Row label="Telefone" value={displayTelefone} />
+                {atleta?.cidade && <Row label="Cidade" value={atleta.cidade} />}
+                {atleta?.estado && <Row label="Estado" value={atleta.estado} />}
+                {atleta?.pais && <Row label="País" value={atleta.pais} />}
               </div>
 
               {/* Graduação */}
@@ -644,10 +689,68 @@ export default function PerfilAtletaPage() {
                   <CreditCard className="w-4 h-4 text-blue-400" />
                   <h3 className="font-semibold text-white">Filiação</h3>
                 </div>
-                <Row label="Academia" value={atleta.academias} />
-                <Row label="Status do Plano" value={atleta.status_plano} />
-                <Row label="Status do Membro" value={atleta.status_membro} />
-                <Row label="Validade" value={atleta.data_expiracao} />
+                {atleta ? (
+                  <>
+                    <Row label="Academia" value={atleta.academias} />
+                    <Row label="Status do Plano" value={atleta.status_plano} />
+                    <Row label="Status do Membro" value={atleta.status_membro} />
+                    <Row label="Validade" value={atleta.data_expiracao} />
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">Selecione a academia onde você treina</p>
+                      <div className="relative">
+                        <select
+                          value={selectedAcadId}
+                          onChange={e => { setSelectedAcadId(e.target.value); setAcadMsg(null) }}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-orange-500/50 transition-colors pr-8"
+                        >
+                          <option value="">Selecione uma academia...</option>
+                          {academias.map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.nome} — {a.endereco_cidade}/{a.endereco_estado}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                      </div>
+                      {acadMsg && (
+                        <p className={`text-xs mt-2 ${acadMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>{acadMsg.text}</p>
+                      )}
+                      {selectedAcadId && (
+                        <button
+                          onClick={saveAcademia}
+                          disabled={savingAcad}
+                          className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all"
+                        >
+                          {savingAcad ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          Salvar Academia
+                        </button>
+                      )}
+                    </div>
+                    <div className="border-t border-white/10 pt-4">
+                      <p className="text-xs text-gray-400 mb-3">Para se filiar a uma federação, acesse a página de filiação.</p>
+                      <a
+                        href="/filiacao"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all text-sm"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        Solicitar Filiação
+                      </a>
+                      {federacoes.length > 0 && (
+                        <div className="mt-3 space-y-1">
+                          {federacoes.map(f => f.site ? (
+                            <a key={f.id} href={f.site} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-400 transition-colors">
+                              <ExternalLink className="w-3 h-3" /> {f.sigla} — site oficial
+                            </a>
+                          ) : null)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -729,201 +832,6 @@ export default function PerfilAtletaPage() {
                 </div>
               </div>
             )}
-          </div>
-        ) : (
-          // Onboarding: usuário sem filiação ativa
-          <div className="space-y-6">
-            {/* Header com dados do stakeholder */}
-            <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-8">
-              <div className="flex flex-col sm:flex-row gap-6 items-start">
-                <div className="w-20 h-20 bg-primary/20 rounded-xl border-4 border-white/10 flex items-center justify-center shrink-0">
-                  <User className="w-10 h-10 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-white">{stakeholder?.nome_completo || '—'}</h2>
-                  <p className="text-gray-400 text-sm mt-1">@{stakeholder?.nome_usuario || '—'}</p>
-                  <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-400">
-                    {stakeholder?.email && <span>✉ {stakeholder.email}</span>}
-                    {stakeholder?.telefone && <span>📱 {stakeholder.telefone}</span>}
-                  </div>
-                </div>
-                <button
-                  onClick={() => setEditingStakeholder(v => !v)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all shrink-0"
-                >
-                  <Pencil className="w-4 h-4" />
-                  {editingStakeholder ? 'Cancelar' : 'Editar Perfil'}
-                </button>
-              </div>
-            </div>
-
-            {/* Formulário de edição do perfil */}
-            {editingStakeholder && (
-              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6 space-y-4">
-                <h3 className="font-semibold text-white mb-2">Editar dados pessoais</h3>
-
-                {stSaveMsg && (
-                  <div className={`rounded-lg px-4 py-3 text-sm ${stSaveMsg.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
-                    {stSaveMsg.text}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Nome Completo</label>
-                    <input
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.nome_completo}
-                      onChange={e => setStForm(f => ({ ...f, nome_completo: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Email</label>
-                    <input type="email"
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.email}
-                      onChange={e => setStForm(f => ({ ...f, email: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Telefone / WhatsApp</label>
-                    <input
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.telefone}
-                      placeholder="(DDD) 99999-9999"
-                      onChange={e => setStForm(f => ({ ...f, telefone: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Gênero</label>
-                    <select
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.genero}
-                      onChange={e => setStForm(f => ({ ...f, genero: e.target.value }))}
-                    >
-                      <option value="">Selecione</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="Feminino">Feminino</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Data de Nascimento</label>
-                    <input type="date"
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.data_nascimento}
-                      onChange={e => setStForm(f => ({ ...f, data_nascimento: e.target.value }))}
-                    />
-                  </div>
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Graduação (Faixa)</label>
-                    <select
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.kyu_dan_id}
-                      onChange={e => setStForm(f => ({ ...f, kyu_dan_id: e.target.value }))}
-                    >
-                      <option value="">Selecione sua faixa</option>
-                      {kyuDans.map(k => (
-                        <option key={k.id} value={k.id}>{k.cor_faixa} — {k.kyu_dan}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    onClick={() => setEditingStakeholder(false)}
-                    className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-gray-300 text-sm transition-all"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={saveStakeholderProfile}
-                    disabled={savingStakeholder}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50"
-                  >
-                    {savingStakeholder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    {savingStakeholder ? 'Salvando...' : 'Salvar'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {stSaveMsg && !editingStakeholder && (
-              <div className={`rounded-lg px-4 py-3 text-sm ${stSaveMsg.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
-                {stSaveMsg.text}
-              </div>
-            )}
-
-            {/* Banner: sem filiação */}
-            <div className="bg-amber-500/10 border border-amber-500/25 rounded-xl p-5">
-              <p className="font-semibold text-amber-300 text-sm">⚠️ Você ainda não possui filiação ativa</p>
-              <p className="text-gray-400 text-xs mt-1">Escolha sua academia e federação para solicitar filiação ou pagar sua anuidade.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Escolher Academia */}
-              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 className="w-5 h-5 text-orange-400" />
-                  <h3 className="font-semibold text-white">Minha Academia</h3>
-                </div>
-                <p className="text-gray-400 text-xs mb-3">Selecione a academia onde você treina.</p>
-                <div className="relative">
-                  <select
-                    value={selectedAcadId}
-                    onChange={e => { setSelectedAcadId(e.target.value); setAcadMsg(null) }}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white appearance-none focus:outline-none focus:border-orange-500/50 transition-colors pr-8"
-                  >
-                    <option value="">Selecione uma academia...</option>
-                    {academias.map(a => (
-                      <option key={a.id} value={a.id}>
-                        {a.nome} — {a.endereco_cidade}/{a.endereco_estado}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
-                {acadMsg && (
-                  <p className={`text-xs mt-2 ${acadMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>{acadMsg.text}</p>
-                )}
-                {selectedAcadId && (
-                  <button
-                    onClick={saveAcademia}
-                    disabled={savingAcad}
-                    className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all"
-                  >
-                    {savingAcad ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    Salvar Academia
-                  </button>
-                )}
-              </div>
-
-              {/* Filiação à Federação */}
-              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <ShieldCheck className="w-5 h-5 text-blue-400" />
-                  <h3 className="font-semibold text-white">Filiação à Federação</h3>
-                </div>
-                <p className="text-gray-400 text-xs mb-4">Para se filiar a uma federação, acesse a página de filiação.</p>
-                <a
-                  href="/filiacao"
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all text-sm"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  Solicitar Filiação
-                </a>
-                {federacoes.length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    {federacoes.map(f => f.site ? (
-                      <a key={f.id} href={f.site} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-400 transition-colors">
-                        <ExternalLink className="w-3 h-3" /> {f.sigla} — site oficial
-                      </a>
-                    ) : null)}
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         )}
       </div>
