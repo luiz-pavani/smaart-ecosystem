@@ -8,12 +8,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Users, Building2, Trophy, CalendarDays, Loader2, AlertCircle, Lock } from 'lucide-react'
+import { Users, Building2, Trophy, CalendarDays, GraduationCap, Loader2, AlertCircle, Lock } from 'lucide-react'
 
 interface UserRole {
   role: string
   federacao_id?: string
   academia_id?: string
+  candidato?: boolean
 }
 
 interface PortalOption {
@@ -50,7 +51,7 @@ export default function PortalPage() {
       // Get user roles
       const { data, error: rolesError } = await supabase
         .from('stakeholders')
-        .select('role, federacao_id, academia_id')
+        .select('role, federacao_id, academia_id, candidato')
         .eq('id', user.id)
       if (rolesError) throw rolesError
       setUserRoles(data || [])
@@ -67,6 +68,7 @@ export default function PortalPage() {
     const canAcademia = roles.includes('academia_admin') || roles.includes('academia_staff') || roles.includes('federacao_admin') || roles.includes('federacao_staff') || roles.includes('master_access')
     const canFederacao = roles.includes('federacao_admin') || roles.includes('federacao_staff') || roles.includes('master_access')
     const canEventos = roles.includes('federacao_admin') || roles.includes('event_organizer') || roles.includes('master_access')
+    const canCandidato = roles.includes('master_access') || userRoles.some(r => r.candidato === true)
 
     return [
       {
@@ -108,6 +110,16 @@ export default function PortalPage() {
         href: '/portal/eventos',
         badge: 'EVENTOS',
         locked: !canEventos,
+      },
+      {
+        id: 'candidato',
+        title: 'Portal do Candidato',
+        description: 'Programa de Formação de Faixas Pretas — requisitos, cronograma e documentos',
+        icon: <GraduationCap className="w-8 h-8" />,
+        color: 'from-red-700 to-red-900',
+        href: '/portal/candidato',
+        badge: 'FAIXA PRETA',
+        locked: !canCandidato,
       },
     ]
   }
