@@ -45,17 +45,12 @@ export default function CandidatoLayout({ children }: { children: React.ReactNod
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/acesso'); return }
-      const { data } = await supabase
-        .from('stakeholders')
-        .select('nome_completo, role')
-        .eq('id', user.id)
-        .single()
-      if (data?.nome_completo) setUserName(data.nome_completo)
-      // master_access check via API (service role)
+      // Use perfil-dados (supabaseAdmin) to bypass RLS and get role
       const meRes = await fetch('/api/atletas/self/perfil-dados').then(r => r.json()).catch(() => null)
-      const hasMaster = meRes?.stakeholder?.master_access === true
-      const hasFedRole = data?.role === 'federacao_admin' || data?.role === 'admin'
-      setIsAdmin(hasMaster || hasFedRole)
+      const st = meRes?.stakeholder
+      if (st?.nome_completo) setUserName(st.nome_completo)
+      const adminRoles = ['master_access', 'federacao_admin', 'admin']
+      setIsAdmin(adminRoles.includes(st?.role || ''))
     }
     load()
   }, [])

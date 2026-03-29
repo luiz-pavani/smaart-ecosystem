@@ -6,9 +6,9 @@ async function checkAdmin() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) return null
-  const { data: st } = await supabaseAdmin.from('stakeholders').select('master_access, role').eq('id', user.id).single()
+  const { data: st } = await supabaseAdmin.from('stakeholders').select('role').eq('id', user.id).single()
   if (!st) return null
-  if (st.master_access || st.role === 'federacao_admin' || st.role === 'admin') return user
+  if (['master_access','federacao_admin','admin'].includes(st.role)) return user
   return null
 }
 

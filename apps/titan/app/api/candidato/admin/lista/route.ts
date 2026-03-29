@@ -7,8 +7,8 @@ export async function GET() {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: st } = await supabaseAdmin.from('stakeholders').select('master_access, role').eq('id', user.id).single()
-  if (!st || (!st.master_access && st.role !== 'federacao_admin' && st.role !== 'admin')) {
+  const { data: st } = await supabaseAdmin.from('stakeholders').select('role').eq('id', user.id).single()
+  if (!st || !['master_access','federacao_admin','admin'].includes(st.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
