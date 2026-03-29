@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, CalendarDays, MapPin, Clock, Plus, Pencil, Trash2, X, ChevronDown } from 'lucide-react'
+import { Loader2, CalendarDays, MapPin, Clock, Plus, Pencil, Trash2, X, ChevronDown, ExternalLink, Monitor, Users } from 'lucide-react'
 import { useCandidato } from '../context'
 
 interface ScheduleEvent {
@@ -13,6 +13,8 @@ interface ScheduleEvent {
   local?: string
   tipo?: string
   graduation_level?: string[]
+  link?: string
+  modality?: string
 }
 
 interface EventForm {
@@ -353,6 +355,18 @@ export default function CronogramaPage() {
                           <div className="flex items-center gap-1.5 text-xs text-slate-400">
                             <MapPin className="w-3.5 h-3.5" />{ev.local}
                           </div>
+                        )}
+                        {ev.modality && (
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            {ev.modality.includes('Online') ? <Monitor className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
+                            {ev.modality}
+                          </div>
+                        )}
+                        {ev.link && (
+                          <a href={ev.link} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                            <ExternalLink className="w-3.5 h-3.5" />Acessar
+                          </a>
                         )}
                         {isAdmin && ev.graduation_level && ev.graduation_level.length > 0 && (
                           <div className="flex items-center gap-1.5 text-xs text-indigo-400/70">

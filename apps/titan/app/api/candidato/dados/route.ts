@@ -87,6 +87,8 @@ export async function GET() {
         local: ev.location || ev.local || null,
         tipo: ev.type || ev.tipo || null,
         graduation_level: ev.graduation_level || [],
+        link: ev.link || null,
+        modality: ev.modality || null,
       }))
     } catch {
       federationSchedule = []
