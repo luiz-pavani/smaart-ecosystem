@@ -14,7 +14,7 @@ export async function GET() {
     { data: academias },
     { data: kyuDans },
   ] = await Promise.all([
-    supabaseAdmin.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, funcao, genero, academia_id, federacao_id, kyu_dan_id, data_nascimento').eq('id', user.id).maybeSingle(),
+    supabaseAdmin.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, funcao, genero, academia_id, federacao_id, kyu_dan_id, data_nascimento, instagram').eq('id', user.id).maybeSingle(),
     supabaseAdmin.from('user_fed_lrsj').select('*').eq('stakeholder_id', user.id).maybeSingle(),
     supabaseAdmin.from('federacoes').select('id, nome, sigla, email, site').eq('ativo', true),
     supabaseAdmin.from('academias').select('id, nome, endereco_cidade, endereco_estado, federacao_id').eq('ativo', true).order('nome'),

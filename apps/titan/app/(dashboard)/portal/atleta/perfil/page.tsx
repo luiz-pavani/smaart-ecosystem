@@ -34,6 +34,7 @@ interface StakeholderPerfil {
   kyu_dan_id: number | null
   data_nascimento: string | null
   genero: string | null
+  instagram: string | null
 }
 
 interface Federacao {
@@ -147,8 +148,8 @@ export default function PerfilAtletaPage() {
   const [profileSaveMsg, setProfileSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [stForm, setStForm] = useState<{
     nome_completo: string; nome_usuario: string; email: string; telefone: string
-    genero: string; data_nascimento: string; kyu_dan_id: string
-  }>({ nome_completo: '', nome_usuario: '', email: '', telefone: '', genero: '', data_nascimento: '', kyu_dan_id: '' })
+    genero: string; data_nascimento: string; kyu_dan_id: string; instagram: string
+  }>({ nome_completo: '', nome_usuario: '', email: '', telefone: '', genero: '', data_nascimento: '', kyu_dan_id: '', instagram: '' })
   const [atletaForm, setAtletaForm] = useState<EditForm>({
     telefone: '', email: '', cidade: '', estado: '', pais: '', nome_patch: '', tamanho_patch: '',
   })
@@ -189,6 +190,7 @@ export default function PerfilAtletaPage() {
             genero: stakeholderData.genero || '',
             data_nascimento: stakeholderData.data_nascimento || '',
             kyu_dan_id: stakeholderData.kyu_dan_id ? String(stakeholderData.kyu_dan_id) : '',
+            instagram: stakeholderData.instagram || '',
           })
           if (stakeholderData.academia_id) setSelectedAcadId(stakeholderData.academia_id)
         }
@@ -275,6 +277,7 @@ export default function PerfilAtletaPage() {
         genero: stForm.genero || null,
         data_nascimento: stForm.data_nascimento || null,
         kyu_dan_id: stForm.kyu_dan_id ? Number(stForm.kyu_dan_id) : null,
+        instagram: stForm.instagram || null,
       }
       const stRes = await fetch('/api/atletas/self/update-stakeholder', {
         method: 'PATCH',
@@ -315,6 +318,7 @@ export default function PerfilAtletaPage() {
       setFotoPreview(null)
       setFotoFile(null)
       setProfileSaveMsg({ type: 'success', text: 'Perfil atualizado com sucesso.' })
+      router.refresh()
     } catch (err: any) {
       setProfileSaveMsg({ type: 'error', text: err.message || 'Erro ao salvar perfil.' })
     } finally {
@@ -525,6 +529,15 @@ export default function PerfilAtletaPage() {
                     />
                   </div>
                   <div className="space-y-1">
+                    <label className="text-xs text-gray-400 font-medium">Instagram</label>
+                    <input
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition-colors"
+                      value={stForm.instagram}
+                      placeholder="@seuperfil"
+                      onChange={e => setStForm(f => ({ ...f, instagram: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
                     <label className="text-xs text-gray-400 font-medium">Gênero</label>
                     <select
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
@@ -675,6 +688,7 @@ export default function PerfilAtletaPage() {
                 </div>
                 <Row label="Email" value={displayEmail} />
                 <Row label="Telefone" value={displayTelefone} />
+                {stakeholder?.instagram && <Row label="Instagram" value={stakeholder.instagram} />}
                 {atleta?.cidade && <Row label="Cidade" value={atleta.cidade} />}
                 {atleta?.estado && <Row label="Estado" value={atleta.estado} />}
                 {atleta?.pais && <Row label="País" value={atleta.pais} />}
