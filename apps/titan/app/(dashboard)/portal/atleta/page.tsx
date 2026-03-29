@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen, QrCode, AlertTriangle, X } from 'lucide-react'
+import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen, QrCode, AlertTriangle, X, ClipboardCheck, GraduationCap, MapPin, Clock } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { TopList } from '@/components/dashboard/TopList'
@@ -28,6 +28,16 @@ interface Progresso {
   has_rules: boolean
 }
 
+interface CandidatoEvent {
+  id: string
+  titulo: string
+  descricao?: string
+  data: string
+  hora?: string
+  local?: string
+  tipo?: string
+}
+
 interface DashboardData {
   atleta: any
   totalTreinos: number
@@ -35,6 +45,8 @@ interface DashboardData {
   progresso: Progresso | null
   historicoLast7Days: { name: string; value: number }[]
   proximosEventos: { name: string; value: string; subtitle: string }[]
+  candidatoNextEvent: CandidatoEvent | null
+  isCandidato: boolean
 }
 
 export default function PortalAtletaPage() {
@@ -120,13 +132,29 @@ export default function PortalAtletaPage() {
       const historicoLast7Days = Array.from(dayMap.entries()).map(([name, value]) => ({ name, value }))
       const proximosEventos: any[] = []
 
+      // Candidato banner: only fetch if stakeholder.candidato is true
+      let candidatoNextEvent: CandidatoEvent | null = null
+      const isCandidato = !!(atleta?.candidato || atleta?.master_access)
+      if (isCandidato) {
+        try {
+          const candidatoData = await fetch('/api/candidato/dados').then(r => r.json())
+          const today = new Date().toISOString().split('T')[0]
+          const upcoming = (candidatoData.federation_schedule || [])
+            .filter((ev: any) => ev.data >= today)
+            .sort((a: any, b: any) => a.data.localeCompare(b.data))
+          candidatoNextEvent = upcoming[0] || null
+        } catch { /* silent */ }
+      }
+
       setData({
         atleta,
         totalTreinos: totalTreinos || 0,
         treinosUltimos30Dias: treinosUltimos30Dias || 0,
         progresso: progressoRes?.error ? null : progressoRes,
         historicoLast7Days,
-        proximosEventos
+        proximosEventos,
+        candidatoNextEvent,
+        isCandidato,
       })
     } catch (err) {
       console.error('Erro ao carregar portal do atleta:', err)
@@ -270,6 +298,44 @@ export default function PortalAtletaPage() {
             </button>
           </div>
 
+          {/* Banner — próximo evento do Portal do Candidato */}
+          {data.isCandidato && data.candidatoNextEvent && (() => {
+            const ev = data.candidatoNextEvent!
+            const TIPO_COLORS: Record<string, string> = {
+              exame: 'from-red-600/20 to-red-900/10 border-red-600/30 text-red-400',
+              treino: 'from-blue-600/20 to-blue-900/10 border-blue-600/30 text-blue-400',
+              seminario: 'from-purple-600/20 to-purple-900/10 border-purple-600/30 text-purple-400',
+              reuniao: 'from-yellow-600/20 to-yellow-900/10 border-yellow-600/30 text-yellow-400',
+            }
+            const tipoKey = ev.tipo?.toLowerCase() || ''
+            const colorClass = TIPO_COLORS[tipoKey] || 'from-slate-600/20 to-slate-900/10 border-slate-600/30 text-slate-400'
+            const dateFormatted = new Date(ev.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+            return (
+              <div className={`bg-gradient-to-r ${colorClass} border rounded-2xl p-5 flex items-center gap-5`}>
+                <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-white/5 flex flex-col items-center justify-center">
+                  <GraduationCap className="w-6 h-6 text-current opacity-80" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black uppercase tracking-widest opacity-70 mb-0.5">Próximo evento — Candidato</p>
+                  <p className="text-white font-bold text-base truncate">{ev.titulo}</p>
+                  <div className="flex flex-wrap gap-3 mt-1">
+                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <Calendar className="w-3.5 h-3.5" />{dateFormatted}
+                    </span>
+                    {ev.hora && <span className="flex items-center gap-1 text-xs text-slate-400"><Clock className="w-3.5 h-3.5" />{ev.hora}</span>}
+                    {ev.local && <span className="flex items-center gap-1 text-xs text-slate-400"><MapPin className="w-3.5 h-3.5" />{ev.local}</span>}
+                  </div>
+                </div>
+                <button
+                  onClick={() => router.push('/portal/candidato/cronograma')}
+                  className="flex-shrink-0 text-xs font-bold px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors whitespace-nowrap"
+                >
+                  Ver Cronograma
+                </button>
+              </div>
+            )
+          })()}
+
           {/* Próximos Eventos */}
           {data.proximosEventos.length > 0 && (
             <TopList
@@ -285,6 +351,23 @@ export default function PortalAtletaPage() {
       <div className="pt-4">
         <h2 className="text-xl font-semibold text-white mb-4">Acesso Rápido</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Check-in Rápido */}
+          <button
+            onClick={() => router.push('/portal/atleta/turmas')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10
+                     hover:from-emerald-500/30 hover:to-emerald-600/20 border border-emerald-500/40 hover:border-emerald-500/60
+                     transition-all duration-300 text-left ring-1 ring-emerald-500/20"
+          >
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/30 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <ClipboardCheck className="w-6 h-6 text-emerald-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Check-in Rápido</h3>
+              <p className="text-sm text-emerald-400 font-medium">Registrar presença →</p>
+            </div>
+          </button>
+
           {/* Minhas Turmas */}
           <button
             onClick={() => router.push('/portal/atleta/turmas')}
