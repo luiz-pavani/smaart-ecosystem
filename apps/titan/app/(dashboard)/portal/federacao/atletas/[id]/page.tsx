@@ -88,7 +88,7 @@ const NIVEIS_ARBITRAGEM = [
   "Nacional C","Nacional B","Nacional A",
   "Internacional C","Internacional B","Internacional A",
 ];
-const TAMANHOS_PATCH = ["PP", "P", "M", "G", "GG", "XGG"];
+const TAMANHOS_PATCH = ["P", "M", "G"];
 const STATUS_PLANO_OPCOES = ["Válido", "Vencido"];
 const STATUS_MEMBRO_OPCOES = ["Em análise", "Aceito", "Rejeitado"];
 const PAISES_TOP = ["Brasil", "Uruguai"];
