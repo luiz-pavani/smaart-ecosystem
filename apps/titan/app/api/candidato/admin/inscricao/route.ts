@@ -12,9 +12,27 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { inscricao_id, status_inscricao, status_pagamento, observacoes, graduacao_pretendida } = await req.json()
-  if (!inscricao_id) return NextResponse.json({ error: 'inscricao_id required' }, { status: 400 })
+  const { inscricao_id, stakeholder_id, status_inscricao, status_pagamento, observacoes, graduacao_pretendida } = await req.json()
 
+  // CREATE — admin confirming inscription on behalf of candidate
+  if (!inscricao_id) {
+    if (!stakeholder_id) return NextResponse.json({ error: 'stakeholder_id required to create' }, { status: 400 })
+    const { data, error } = await supabaseAdmin
+      .from('candidato_inscricoes')
+      .insert({
+        stakeholder_id,
+        graduacao_pretendida: graduacao_pretendida || 'Shodan (1º Dan)',
+        status_inscricao: status_inscricao || 'CONFIRMADO',
+        status_pagamento: status_pagamento || 'PENDENTE',
+        observacoes: observacoes || null,
+      })
+      .select()
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ inscricao: data })
+  }
+
+  // UPDATE — existing inscription
   const updates: Record<string, any> = {}
   if (status_inscricao !== undefined) updates.status_inscricao = status_inscricao
   if (status_pagamento !== undefined) updates.status_pagamento = status_pagamento

@@ -60,6 +60,7 @@ function EditModal({ candidato, onClose, onSave }: { candidato: Candidato; onClo
     setSaving(true)
     await onSave({
       inscricao_id: candidato.inscricao?.id,
+      stakeholder_id: candidato.id,
       graduacao_pretendida: graduacao,
       status_inscricao: statusInscricao,
       status_pagamento: statusPagamento,
@@ -80,8 +81,8 @@ function EditModal({ candidato, onClose, onSave }: { candidato: Candidato; onClo
         </div>
 
         {!candidato.inscricao && (
-          <div className="mb-4 px-3 py-2 bg-yellow-900/20 border border-yellow-800/30 rounded-lg">
-            <p className="text-yellow-400 text-xs font-semibold">Candidato sem inscrição registrada. Apenas a graduação e observações serão editáveis via perfil.</p>
+          <div className="mb-4 px-3 py-2 bg-indigo-900/20 border border-indigo-800/30 rounded-lg">
+            <p className="text-indigo-300 text-xs font-semibold">Sem inscrição registrada. Ao salvar, uma inscrição será criada pelo admin.</p>
           </div>
         )}
 
@@ -89,7 +90,7 @@ function EditModal({ candidato, onClose, onSave }: { candidato: Candidato; onClo
           <div>
             <label className={labelCls}>Graduação Pretendida</label>
             <div className="relative">
-              <select value={graduacao} onChange={e => setGraduacao(e.target.value)} className={selectCls} disabled={!candidato.inscricao}>
+              <select value={graduacao} onChange={e => setGraduacao(e.target.value)} className={selectCls}>
                 {GRADUACOES.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -99,7 +100,7 @@ function EditModal({ candidato, onClose, onSave }: { candidato: Candidato; onClo
           <div>
             <label className={labelCls}>Status da Inscrição</label>
             <div className="relative">
-              <select value={statusInscricao} onChange={e => setStatusInscricao(e.target.value)} className={selectCls} disabled={!candidato.inscricao}>
+              <select value={statusInscricao} onChange={e => setStatusInscricao(e.target.value)} className={selectCls}>
                 {STATUS_INSCRICAO.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -109,7 +110,7 @@ function EditModal({ candidato, onClose, onSave }: { candidato: Candidato; onClo
           <div>
             <label className={labelCls}>Status do Pagamento</label>
             <div className="relative">
-              <select value={statusPagamento} onChange={e => setStatusPagamento(e.target.value)} className={selectCls} disabled={!candidato.inscricao}>
+              <select value={statusPagamento} onChange={e => setStatusPagamento(e.target.value)} className={selectCls}>
                 {STATUS_PAGAMENTO.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -169,9 +170,11 @@ export default function AdminCandidatosPage() {
     })
     const result = await res.json()
     if (result.inscricao) {
-      setCandidatos(prev => prev.map(c =>
-        c.inscricao?.id === data.inscricao_id ? { ...c, inscricao: result.inscricao } : c
-      ))
+      setCandidatos(prev => prev.map(c => {
+        if (data.inscricao_id && c.inscricao?.id === data.inscricao_id) return { ...c, inscricao: result.inscricao }
+        if (!data.inscricao_id && c.id === data.stakeholder_id) return { ...c, inscricao: result.inscricao }
+        return c
+      }))
       setEditing(null)
     }
   }
