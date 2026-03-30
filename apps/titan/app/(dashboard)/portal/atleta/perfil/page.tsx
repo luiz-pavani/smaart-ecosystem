@@ -305,7 +305,7 @@ export default function PerfilAtletaPage() {
         fd.append('estado', atletaForm.estado)
         fd.append('pais', atletaForm.pais)
         fd.append('nome_patch', atletaForm.nome_patch)
-        fd.append('tamanho_patch', atletaForm.tamanho_patch)
+        if (atletaForm.tamanho_patch) fd.append('tamanho_patch', atletaForm.tamanho_patch)
         if (fotoFile) fd.append('foto', fotoFile)
 
         const atlRes = await fetch('/api/atletas/self/update-profile', {
@@ -599,12 +599,25 @@ export default function PerfilAtletaPage() {
                         onChange={v => setAtletaForm(f => ({ ...f, nome_patch: v }))}
                         placeholder="Apelido ou nome curto"
                       />
-                      <InputField
-                        label="Tamanho do Patch"
-                        value={atletaForm.tamanho_patch}
-                        onChange={v => setAtletaForm(f => ({ ...f, tamanho_patch: v }))}
-                        placeholder="ex: M, G, GG"
-                      />
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-400 font-medium">Tamanho do Patch</label>
+                        <div className="relative">
+                          <select
+                            value={atletaForm.tamanho_patch || ''}
+                            onChange={e => setAtletaForm(f => ({ ...f, tamanho_patch: e.target.value }))}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white appearance-none focus:outline-none focus:border-blue-500/50 transition-colors"
+                          >
+                            <option value="">— selecione —</option>
+                            <option value="PP">PP</option>
+                            <option value="P">P</option>
+                            <option value="M">M</option>
+                            <option value="G">G</option>
+                            <option value="GG">GG</option>
+                            <option value="XGG">XGG</option>
+                          </select>
+                          <ChevronDown className="absolute right-2 top-2.5 w-4 h-4 text-gray-500 pointer-events-none" />
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
