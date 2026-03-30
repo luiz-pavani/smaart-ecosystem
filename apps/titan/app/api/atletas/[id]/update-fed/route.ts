@@ -46,7 +46,7 @@ export async function PATCH(
     // Full whitelist of editable fields
     const ALL_FIELDS = [
       'nome_completo', 'nome_patch', 'genero', 'data_nascimento', 'nacionalidade',
-      'email', 'telefone', 'cidade', 'estado', 'pais', 'tamanho_patch',
+      'email', 'telefone', 'cidade', 'estado', 'pais', 'tamanho_patch', 'cor_patch',
       'kyu_dan_id', 'nivel_arbitragem', 'academia_id', 'academias',
       'status_membro', 'data_adesao', 'plano_tipo', 'status_plano',
       'data_expiracao', 'lote_id', 'observacoes',

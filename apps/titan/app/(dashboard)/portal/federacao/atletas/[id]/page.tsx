@@ -33,6 +33,7 @@ type AthleteRecord = {
   url_documento_id?: string | null;
   url_certificado_dan?: string | null;
   tamanho_patch?: string | null;
+  cor_patch?: string | null;
   lote_id?: string | null;
   observacoes?: string | null;
   validado_em?: string | null;
@@ -89,6 +90,7 @@ const NIVEIS_ARBITRAGEM = [
   "Internacional C","Internacional B","Internacional A",
 ];
 const TAMANHOS_PATCH = ["P", "M", "G"];
+const CORES_PATCH = ["AZUL", "ROSA"];
 const STATUS_PLANO_OPCOES = ["Válido", "Vencido"];
 const STATUS_MEMBRO_OPCOES = ["Em análise", "Aceito", "Rejeitado"];
 const PAISES_TOP = ["Brasil", "Uruguai"];
@@ -253,6 +255,17 @@ function EditableRow({
           <select value={String(formData[field] ?? "")} onChange={e => setField(field, e.target.value)} className={selectCls}>
             <option value="">Selecione</option>
             {TAMANHOS_PATCH.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      );
+    }
+    if (field === "cor_patch") {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="text-gray-400 text-sm">{label}</span>
+          <select value={String(formData[field] ?? "")} onChange={e => setField(field, e.target.value)} className={selectCls}>
+            <option value="">Selecione</option>
+            {CORES_PATCH.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
       );
@@ -464,6 +477,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         status_plano: formData.status_plano ?? null,
         data_expiracao: formData.data_expiracao || null,
         tamanho_patch: formData.tamanho_patch || null,
+        cor_patch: formData.cor_patch || null,
         lote_id: formData.lote_id ?? null,
         observacoes: formData.observacoes ?? null,
       };
@@ -735,6 +749,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
             <EditableRow label="Graduação (Kyu/Dan)" field="kyu_dan_id" type="select" ctx={ctx} />
             <EditableRow label="Nível de Arbitragem" field="nivel_arbitragem" type="select" ctx={ctx} />
             <EditableRow label="Tamanho do Patch" field="tamanho_patch" type="select" ctx={ctx} />
+            <EditableRow label="Cor do Patch" field="cor_patch" type="select" ctx={ctx} />
             <EditableRow label="Nome no Patch" field="nome_patch" ctx={ctx} />
           </InfoCard>
 
