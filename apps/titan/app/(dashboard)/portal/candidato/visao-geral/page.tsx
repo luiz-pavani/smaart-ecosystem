@@ -30,6 +30,12 @@ const GRADUACOES = [
   'Nidan (2º Dan)',
   'Sandan (3º Dan)',
   'Yondan (4º Dan)',
+  'Godan (5º Dan)',
+  'Rokudan (6º Dan)',
+  'Shichidan (7º Dan)',
+  'Hachidan (8º Dan)',
+  'Kudan (9º Dan)',
+  'Judan (10º Dan)',
 ]
 
 function formatDate(iso: string | null | undefined) {
