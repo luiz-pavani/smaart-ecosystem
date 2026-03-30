@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Search, CheckCircle2, Clock, AlertCircle, ChevronDown, X } from 'lucide-react'
+import { Loader2, Search, X, ChevronDown } from 'lucide-react'
 
 interface Candidato {
   id: string
@@ -22,6 +22,11 @@ interface Candidato {
 
 const STATUS_INSCRICAO = ['PENDENTE', 'EM_ANALISE', 'CONFIRMADO', 'REPROVADO', 'CANCELADO']
 const STATUS_PAGAMENTO = ['PENDENTE', 'APROVADO', 'RECUSADO', 'REEMBOLSADO']
+const GRADUACOES = [
+  'Shodan (1º Dan)', 'Nidan (2º Dan)', 'Sandan (3º Dan)', 'Yondan (4º Dan)',
+  'Godan (5º Dan)', 'Rokudan (6º Dan)', 'Shichidan (7º Dan)', 'Hachidan (8º Dan)',
+  'Kudan (9º Dan)', 'Judan (10º Dan)',
+]
 
 const STATUS_COLORS: Record<string, string> = {
   CONFIRMADO: 'bg-green-600/20 text-green-400 border-green-600/30',
@@ -41,73 +46,86 @@ function StatusBadge({ value }: { value: string }) {
   )
 }
 
+const selectCls = "w-full bg-black border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm appearance-none focus:outline-none focus:border-indigo-500"
+const labelCls = "text-xs font-black tracking-widest text-slate-400 uppercase block mb-1.5"
+
 function EditModal({ candidato, onClose, onSave }: { candidato: Candidato; onClose: () => void; onSave: (data: any) => void }) {
+  const [graduacao, setGraduacao] = useState(candidato.inscricao?.graduacao_pretendida || 'Shodan (1º Dan)')
   const [statusInscricao, setStatusInscricao] = useState(candidato.inscricao?.status_inscricao || 'PENDENTE')
   const [statusPagamento, setStatusPagamento] = useState(candidato.inscricao?.status_pagamento || 'PENDENTE')
   const [observacoes, setObservacoes] = useState(candidato.inscricao?.observacoes || '')
   const [saving, setSaving] = useState(false)
 
-  if (!candidato.inscricao) return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 w-full max-w-md">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white font-black">Sem Inscrição</h3>
-          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
-        </div>
-        <p className="text-slate-400 text-sm">{candidato.nome_completo} ainda não realizou inscrição.</p>
-        <button onClick={onClose} className="mt-4 w-full py-2 border border-slate-700 rounded-lg text-slate-400 text-sm">Fechar</button>
-      </div>
-    </div>
-  )
-
   const handleSave = async () => {
     setSaving(true)
-    await onSave({ inscricao_id: candidato.inscricao!.id, status_inscricao: statusInscricao, status_pagamento: statusPagamento, observacoes })
+    await onSave({
+      inscricao_id: candidato.inscricao?.id,
+      graduacao_pretendida: graduacao,
+      status_inscricao: statusInscricao,
+      status_pagamento: statusPagamento,
+      observacoes,
+    })
     setSaving(false)
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 w-full max-w-md">
+      <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-white font-black text-lg">{candidato.nome_completo.split(' ')[0]}</h3>
-            <p className="text-slate-500 text-xs">{candidato.inscricao.graduacao_pretendida}</p>
+            <h3 className="text-white font-black text-lg">{candidato.nome_completo}</h3>
+            <p className="text-slate-500 text-xs">{candidato.email}</p>
           </div>
           <button onClick={onClose}><X className="w-5 h-5 text-slate-400 hover:text-white" /></button>
         </div>
 
+        {!candidato.inscricao && (
+          <div className="mb-4 px-3 py-2 bg-yellow-900/20 border border-yellow-800/30 rounded-lg">
+            <p className="text-yellow-400 text-xs font-semibold">Candidato sem inscrição registrada. Apenas a graduação e observações serão editáveis via perfil.</p>
+          </div>
+        )}
+
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-black tracking-widest text-slate-400 uppercase block mb-1.5">Status da Inscrição</label>
+            <label className={labelCls}>Graduação Pretendida</label>
             <div className="relative">
-              <select value={statusInscricao} onChange={e => setStatusInscricao(e.target.value)}
-                className="w-full bg-black border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm appearance-none focus:outline-none focus:border-indigo-500">
+              <select value={graduacao} onChange={e => setGraduacao(e.target.value)} className={selectCls} disabled={!candidato.inscricao}>
+                {GRADUACOES.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Status da Inscrição</label>
+            <div className="relative">
+              <select value={statusInscricao} onChange={e => setStatusInscricao(e.target.value)} className={selectCls} disabled={!candidato.inscricao}>
                 {STATUS_INSCRICAO.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
           </div>
+
           <div>
-            <label className="text-xs font-black tracking-widest text-slate-400 uppercase block mb-1.5">Status do Pagamento</label>
+            <label className={labelCls}>Status do Pagamento</label>
             <div className="relative">
-              <select value={statusPagamento} onChange={e => setStatusPagamento(e.target.value)}
-                className="w-full bg-black border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm appearance-none focus:outline-none focus:border-indigo-500">
+              <select value={statusPagamento} onChange={e => setStatusPagamento(e.target.value)} className={selectCls} disabled={!candidato.inscricao}>
                 {STATUS_PAGAMENTO.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
             </div>
           </div>
+
           <div>
-            <label className="text-xs font-black tracking-widest text-slate-400 uppercase block mb-1.5">Observações</label>
-            <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={3}
+            <label className={labelCls}>Observações</label>
+            <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={4}
               className="w-full bg-black border border-slate-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-indigo-500 resize-none" />
           </div>
         </div>
 
         <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 py-3 border border-slate-700 rounded-lg text-slate-400 text-sm hover:text-white transition-colors">Cancelar</button>
-          <button onClick={handleSave} disabled={saving}
+          <button onClick={handleSave} disabled={saving || !candidato.inscricao}
             className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg text-white font-bold text-sm flex items-center justify-center gap-2">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             Salvar
@@ -200,16 +218,14 @@ export default function AdminCandidatosPage() {
       {/* Table */}
       <div className="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden">
         <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-px">
-          {/* Header */}
           <div className="col-span-5 grid grid-cols-[1fr_auto_auto_auto_auto] bg-[#0d1420] px-5 py-3">
             <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Candidato</span>
-            <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase text-center w-32">Graduação Atual</span>
+            <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase text-center w-32">Faixa Atual</span>
             <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase text-center w-36">Objetivo</span>
             <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase text-center w-32">Status</span>
             <span className="w-16" />
           </div>
 
-          {/* Rows */}
           {filtered.length === 0 ? (
             <div className="col-span-5 py-12 text-center text-slate-500 text-sm">
               {search ? 'Nenhum candidato encontrado.' : 'Nenhum candidato cadastrado.'}

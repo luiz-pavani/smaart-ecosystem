@@ -12,13 +12,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { inscricao_id, status_inscricao, status_pagamento, observacoes } = await req.json()
+  const { inscricao_id, status_inscricao, status_pagamento, observacoes, graduacao_pretendida } = await req.json()
   if (!inscricao_id) return NextResponse.json({ error: 'inscricao_id required' }, { status: 400 })
 
   const updates: Record<string, any> = {}
   if (status_inscricao !== undefined) updates.status_inscricao = status_inscricao
   if (status_pagamento !== undefined) updates.status_pagamento = status_pagamento
   if (observacoes !== undefined) updates.observacoes = observacoes
+  if (graduacao_pretendida !== undefined) updates.graduacao_pretendida = graduacao_pretendida
 
   const { data, error } = await supabaseAdmin
     .from('candidato_inscricoes')
