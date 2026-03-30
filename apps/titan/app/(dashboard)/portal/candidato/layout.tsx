@@ -16,6 +16,7 @@ import {
   LogOut,
   Users,
   ShieldCheck,
+  ExternalLink,
 } from 'lucide-react'
 import { CandidatoContext } from './context'
 
@@ -40,6 +41,8 @@ export default function CandidatoLayout({ children }: { children: React.ReactNod
   const supabase = createClient()
   const [userName, setUserName] = useState<string>('')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [canAccessProfep, setCanAccessProfep] = useState(false)
+  const [ssoLoading, setSsoLoading] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -51,11 +54,30 @@ export default function CandidatoLayout({ children }: { children: React.ReactNod
       if (st?.nome_completo) setUserName(st.nome_completo)
       const adminRoles = ['master_access', 'federacao_admin', 'admin']
       setIsAdmin(adminRoles.includes(st?.role || ''))
+      // Check if can access Profepmax (CONFIRMADO + APROVADO)
+      try {
+        const ssoCheck = await fetch('/api/candidato/sso/token')
+        setCanAccessProfep(ssoCheck.ok)
+      } catch { setCanAccessProfep(false) }
     }
     load()
   }, [])
 
   const firstName = userName.split(' ')[0] || 'Candidato'
+
+  const openProfepMax = async () => {
+    setSsoLoading(true)
+    try {
+      const res = await fetch('/api/candidato/sso/token')
+      const { token, error } = await res.json()
+      if (error || !token) throw new Error(error || 'Erro SSO')
+      window.open(`https://profepmax.com.br/auth/titan?token=${token}`, '_blank')
+    } catch {
+      alert('Não foi possível acessar o Profep MAX. Verifique se sua inscrição está CONFIRMADA e APROVADA.')
+    } finally {
+      setSsoLoading(false)
+    }
+  }
 
   return (
     <CandidatoContext.Provider value={{ isAdmin }}>
@@ -131,6 +153,20 @@ export default function CandidatoLayout({ children }: { children: React.ReactNod
               </>
             )}
           </nav>
+
+          {/* Profep MAX access */}
+          {(canAccessProfep || isAdmin) && (
+            <div className={`px-3 pb-3 border-t pt-3 ${isAdmin ? 'border-indigo-900/40' : 'border-white/5'}`}>
+              <button
+                onClick={openProfepMax}
+                disabled={ssoLoading}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-60"
+              >
+                {ssoLoading ? <span className="animate-spin">⏳</span> : <ExternalLink className="w-3.5 h-3.5" />}
+                Acessar Profep MAX
+              </button>
+            </div>
+          )}
 
           {/* User */}
           <div className={`p-4 border-t ${isAdmin ? 'border-indigo-900/40' : 'border-white/5'}`}>
