@@ -351,6 +351,8 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   const [stNomeUsuario, setStNomeUsuario] = useState<string>('');
   const [stRole, setStRole] = useState<string>('');
   const [savingStakeholder, setSavingStakeholder] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
   // Quick actions state
   const [qaAction, setQaAction] = useState<'renovar' | 'graduacao' | null>(null);
   const [qaNovaData, setQaNovaData] = useState('');
@@ -835,6 +837,46 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
                   <span className="text-gray-200 text-sm font-medium">{stRole || '—'}</span>
                 )}
               </div>
+              {editMode && (isMaster || isFederacao || roles.some(r => r.role === 'professor') || isSelfAthlete) && (
+                <div className="flex flex-col gap-1 pt-2 border-t border-white/10">
+                  <span className="text-gray-400 text-sm">Nova Senha</span>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    className={inputCls}
+                    placeholder="Mínimo 6 caracteres"
+                    autoComplete="new-password"
+                  />
+                  {newPassword.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        if (!atletaId) return;
+                        setSavingPassword(true);
+                        try {
+                          const res = await fetch(`/api/atletas/${atletaId}/update-password`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ password: newPassword }),
+                          });
+                          const json = await res.json();
+                          if (!res.ok) throw new Error(json.error || 'Erro ao alterar senha');
+                          setNewPassword('');
+                          setMessage('Senha alterada com sucesso.');
+                        } catch (err: any) {
+                          setMessage(err.message || 'Erro ao alterar senha.');
+                        } finally {
+                          setSavingPassword(false);
+                        }
+                      }}
+                      disabled={savingPassword || newPassword.length < 6}
+                      className="self-start px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+                    >
+                      {savingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Alterar Senha'}
+                    </button>
+                  )}
+                </div>
+              )}
               {editMode && (isMaster || isFederacao || roles.some(r => r.role === 'professor') || isSelfAthlete) && (
                 <button
                   onClick={async () => {
