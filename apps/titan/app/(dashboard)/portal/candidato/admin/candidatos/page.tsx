@@ -55,18 +55,25 @@ function EditModal({ candidato, onClose, onSave }: { candidato: Candidato; onClo
   const [statusPagamento, setStatusPagamento] = useState(candidato.inscricao?.status_pagamento || 'PENDENTE')
   const [observacoes, setObservacoes] = useState(candidato.inscricao?.observacoes || '')
   const [saving, setSaving] = useState(false)
+  const [erro, setErro] = useState('')
 
   const handleSave = async () => {
     setSaving(true)
-    await onSave({
-      inscricao_id: candidato.inscricao?.id,
-      stakeholder_id: candidato.id,
-      graduacao_pretendida: graduacao,
-      status_inscricao: statusInscricao,
-      status_pagamento: statusPagamento,
-      observacoes,
-    })
-    setSaving(false)
+    setErro('')
+    try {
+      await onSave({
+        inscricao_id: candidato.inscricao?.id,
+        stakeholder_id: candidato.id,
+        graduacao_pretendida: graduacao,
+        status_inscricao: statusInscricao,
+        status_pagamento: statusPagamento,
+        observacoes,
+      })
+    } catch (e: any) {
+      setErro(e.message || 'Erro ao salvar')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -124,9 +131,11 @@ function EditModal({ candidato, onClose, onSave }: { candidato: Candidato; onClo
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
+        {erro && <p className="mt-4 text-red-400 text-xs font-semibold">{erro}</p>}
+
+        <div className="flex gap-3 mt-4">
           <button onClick={onClose} className="flex-1 py-3 border border-slate-700 rounded-lg text-slate-400 text-sm hover:text-white transition-colors">Cancelar</button>
-          <button onClick={handleSave} disabled={saving || !candidato.inscricao}
+          <button onClick={handleSave} disabled={saving}
             className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg text-white font-bold text-sm flex items-center justify-center gap-2">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             Salvar
@@ -169,6 +178,7 @@ export default function AdminCandidatosPage() {
       body: JSON.stringify(data),
     })
     const result = await res.json()
+    if (!res.ok) throw new Error(result.error || 'Erro ao salvar')
     if (result.inscricao) {
       setCandidatos(prev => prev.map(c => {
         if (data.inscricao_id && c.inscricao?.id === data.inscricao_id) return { ...c, inscricao: result.inscricao }
