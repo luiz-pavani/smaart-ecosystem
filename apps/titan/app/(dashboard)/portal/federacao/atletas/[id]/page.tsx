@@ -465,7 +465,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         plano_tipo: formData.plano_tipo ?? null,
         status_plano: formData.status_plano ?? null,
         data_expiracao: formData.data_expiracao || null,
-        tamanho_patch: formData.tamanho_patch ?? null,
+        tamanho_patch: formData.tamanho_patch || null,
         lote_id: formData.lote_id ?? null,
         observacoes: formData.observacoes ?? null,
       };
