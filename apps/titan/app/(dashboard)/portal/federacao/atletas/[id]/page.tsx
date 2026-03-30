@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft, Loader2, User, Mail, Award, Building2, FileText, CreditCard, CheckCircle2, XCircle, RefreshCw, Zap } from "lucide-react";
+import { ArrowLeft, Loader2, User, Mail, Award, Building2, FileText, CreditCard, CheckCircle2, XCircle, RefreshCw, Zap, ShieldCheck } from "lucide-react";
 import AtletaDocumentos from "@/components/AtletaDocumentos";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -348,6 +348,9 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   const [federacoes, setFederacoes] = useState<Federacao[]>([]);
   const [federacaoFiltro, setFederacaoFiltro] = useState<string>('');
   const [atletaId, setAtletaId] = useState<string | null>(null);
+  const [stNomeUsuario, setStNomeUsuario] = useState<string>('');
+  const [stRole, setStRole] = useState<string>('');
+  const [savingStakeholder, setSavingStakeholder] = useState(false);
   // Quick actions state
   const [qaAction, setQaAction] = useState<'renovar' | 'graduacao' | null>(null);
   const [qaNovaData, setQaNovaData] = useState('');
@@ -379,11 +382,13 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           fedListRes,
           { data: kdData },
           { data: fedData, error: fedErr },
+          { data: stData },
         ] = await Promise.all([
           fetch('/api/academias/listar').then(r => r.json()),
           fetch('/api/federacoes/listar').then(r => r.json()),
           supabase.from("kyu_dan").select("id, cor_faixa, kyu_dan").order("id"),
           supabase.from("user_fed_lrsj").select("*").eq("stakeholder_id", id).maybeSingle(),
+          supabase.from("stakeholders").select("nome_usuario, role").eq("id", id).maybeSingle(),
         ]);
 
         const acadList = (acadRes.academias || []) as Academia[];
@@ -392,6 +397,8 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         setFederacoes((fedListRes.federacoes || []) as Federacao[]);
 
         if (fedErr) console.error("Erro ao buscar atleta:", fedErr);
+        setStNomeUsuario(stData?.nome_usuario ?? '');
+        setStRole(stData?.role ?? '');
 
         // Pre-select the federation matching the athlete's current academy
         if (fedData?.academia_id) {
@@ -797,6 +804,68 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
             <EditableRow label="Data de Expiração" field="data_expiracao" type="date" ctx={ctx} />
             <EditableRow label="Status do Membro" field="status_membro" type="select" ctx={ctx} />
             <EditableRow label="Lote" field="lote_id" ctx={ctx} />
+          </InfoCard>
+
+          {/* Acesso */}
+          <InfoCard title="Acesso" icon={ShieldCheck}>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-gray-400 text-sm">Nome de Usuário</span>
+                {editMode && (isMaster || isFederacao || roles.some(r => r.role === 'professor') || isSelfAthlete) ? (
+                  <input
+                    value={stNomeUsuario}
+                    onChange={e => setStNomeUsuario(e.target.value)}
+                    className={inputCls}
+                    placeholder="nome_usuario"
+                  />
+                ) : (
+                  <span className="text-gray-200 text-sm font-medium">{stNomeUsuario || '—'}</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-gray-400 text-sm">Nível de Acesso</span>
+                {editMode && isMaster ? (
+                  <select value={stRole} onChange={e => setStRole(e.target.value)} className={selectCls}>
+                    <option value="">Selecione</option>
+                    {['atleta', 'professor', 'federacao_admin', 'master_access'].map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-gray-200 text-sm font-medium">{stRole || '—'}</span>
+                )}
+              </div>
+              {editMode && (isMaster || isFederacao || roles.some(r => r.role === 'professor') || isSelfAthlete) && (
+                <button
+                  onClick={async () => {
+                    if (!atletaId) return;
+                    setSavingStakeholder(true);
+                    try {
+                      const body: Record<string, string> = { nome_usuario: stNomeUsuario };
+                      if (isMaster) body.role = stRole;
+                      const res = await fetch(`/api/atletas/${atletaId}/update-stakeholder`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                      });
+                      const json = await res.json();
+                      if (!res.ok) throw new Error(json.error || 'Erro ao salvar');
+                      setStNomeUsuario(json.data.nome_usuario ?? '');
+                      setStRole(json.data.role ?? '');
+                      setMessage('Dados de acesso salvos.');
+                    } catch (err: any) {
+                      setMessage(err.message || 'Erro ao salvar acesso.');
+                    } finally {
+                      setSavingStakeholder(false);
+                    }
+                  }}
+                  disabled={savingStakeholder}
+                  className="self-start px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
+                >
+                  {savingStakeholder ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Acesso'}
+                </button>
+              )}
+            </div>
           </InfoCard>
 
           <InfoCard title="Documentos" icon={FileText}>
