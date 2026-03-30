@@ -11,7 +11,7 @@ interface CandidatoData {
     email: string
     telefone: string
     candidato: boolean
-    kyu_dan: { id: number; graduacao: string; cor_faixa: string } | null
+    kyu_dan: { id: number; kyu_dan: string; cor_faixa: string } | null
     data_ultima_graduacao: string | null
   }
   inscricao: {
@@ -22,7 +22,7 @@ interface CandidatoData {
     progresso: Record<string, unknown>
     created_at: string
   } | null
-  kyu_dan_list: { id: number; graduacao: string; cor_faixa: string }[]
+  kyu_dan_list: { id: number; kyu_dan: string; cor_faixa: string }[]
 }
 
 const GRADUACOES = [
@@ -145,7 +145,7 @@ export default function VisaoGeralPage() {
           </div>
           <div>
             <p className="text-xs font-black tracking-widest text-slate-500 uppercase mb-1">Graduação Atual</p>
-            <p className="text-white text-sm">{stakeholder.kyu_dan?.graduacao || '—'}</p>
+            <p className="text-white text-sm">{stakeholder.kyu_dan?.kyu_dan || '—'}</p>
           </div>
           <div>
             <p className="text-xs font-black tracking-widest text-slate-500 uppercase mb-1">Última Promoção</p>

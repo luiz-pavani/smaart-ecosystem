@@ -157,6 +157,12 @@ export default function PerfilAtletaPage() {
   const [fotoFile, setFotoFile] = useState<File | null>(null)
   const [savingAcad, setSavingAcad] = useState(false)
   const [acadMsg, setAcadMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [isMasterAccess, setIsMasterAccess] = useState(false)
+  const [roleSearch, setRoleSearch] = useState('')
+  const [roleResults, setRoleResults] = useState<{ id: string; nome_completo: string; email: string; role: string }[]>([])
+  const [roleSearching, setRoleSearching] = useState(false)
+  const [savingRole, setSavingRole] = useState<string | null>(null)
+  const [roleMsg, setRoleMsg] = useState<{ id: string; type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -179,6 +185,8 @@ export default function PerfilAtletaPage() {
         ])
 
         const { stakeholder: stakeholderData, fedLrsj: fedData, federacoes: fedsData, academias: acadData, kyuDans: kdData } = perfilRes
+
+        if (stakeholderData?.role === 'master_access') setIsMasterAccess(true)
 
         if (stakeholderData) {
           setStakeholder(stakeholderData as StakeholderPerfil)
@@ -857,6 +865,100 @@ export default function PerfilAtletaPage() {
             )}
           </div>
         )}
+
+        {/* ── MASTER ACCESS: Gestão de Roles ── */}
+        {isMasterAccess && (
+          <div className="bg-white/5 backdrop-blur border border-indigo-500/20 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <ShieldCheck className="w-5 h-5 text-indigo-400" />
+              <h2 className="text-lg font-semibold text-white">Gestão de Acesso</h2>
+              <span className="text-[10px] font-black tracking-widest uppercase bg-indigo-600/20 text-indigo-300 border border-indigo-600/30 px-2 py-0.5 rounded-full ml-1">Master Access</span>
+            </div>
+            <p className="text-slate-400 text-sm mb-4">Busque um usuário pelo nome ou e-mail e atribua o nível de acesso.</p>
+
+            {/* Search */}
+            <div className="flex gap-2 mb-4">
+              <input
+                value={roleSearch}
+                onChange={e => setRoleSearch(e.target.value)}
+                onKeyDown={async e => {
+                  if (e.key !== 'Enter' || !roleSearch.trim()) return
+                  setRoleSearching(true)
+                  const res = await fetch(`/api/atletas/self/buscar-usuario?q=${encodeURIComponent(roleSearch)}`).then(r => r.json()).catch(() => ({}))
+                  setRoleResults(res.usuarios || [])
+                  setRoleSearching(false)
+                }}
+                placeholder="Nome ou e-mail... (Enter para buscar)"
+                className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+              />
+              <button
+                onClick={async () => {
+                  if (!roleSearch.trim()) return
+                  setRoleSearching(true)
+                  const res = await fetch(`/api/atletas/self/buscar-usuario?q=${encodeURIComponent(roleSearch)}`).then(r => r.json()).catch(() => ({}))
+                  setRoleResults(res.usuarios || [])
+                  setRoleSearching(false)
+                }}
+                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+              >
+                {roleSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
+              </button>
+            </div>
+
+            {/* Results */}
+            {roleResults.length > 0 && (
+              <div className="space-y-2">
+                {roleResults.map(u => (
+                  <div key={u.id} className="bg-black/30 border border-white/5 rounded-xl px-4 py-3 flex items-center gap-4 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{u.nome_completo}</p>
+                      <p className="text-slate-500 text-xs truncate">{u.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <select
+                          defaultValue={u.role}
+                          onChange={async e => {
+                            const newRole = e.target.value
+                            setSavingRole(u.id)
+                            setRoleMsg(null)
+                            const res = await fetch('/api/atletas/self/update-role', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ target_id: u.id, role: newRole }),
+                            }).then(r => r.json()).catch(() => null)
+                            if (res?.stakeholder) {
+                              setRoleResults(prev => prev.map(x => x.id === u.id ? { ...x, role: res.stakeholder.role } : x))
+                              setRoleMsg({ id: u.id, type: 'success', text: 'Salvo!' })
+                            } else {
+                              setRoleMsg({ id: u.id, type: 'error', text: 'Erro ao salvar' })
+                            }
+                            setSavingRole(null)
+                          }}
+                          className="bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-white text-xs appearance-none focus:outline-none focus:border-indigo-500 pr-7"
+                        >
+                          <option value="atleta">Atleta</option>
+                          <option value="professor">Professor</option>
+                          <option value="federacao_admin">Federação Admin</option>
+                          <option value="master_access">Master Access</option>
+                        </select>
+                        <ChevronDown className="absolute right-2 top-2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                      </div>
+                      {savingRole === u.id && <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />}
+                      {roleMsg?.id === u.id && (
+                        <span className={`text-xs font-semibold ${roleMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>{roleMsg.text}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {roleResults.length === 0 && roleSearch && !roleSearching && (
+              <p className="text-slate-500 text-sm text-center py-4">Nenhum usuário encontrado.</p>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   )
