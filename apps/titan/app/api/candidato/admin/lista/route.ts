@@ -23,28 +23,38 @@ export async function GET() {
 
   const ids = candidatos.map((c: any) => c.id)
 
-  // Fetch inscricoes for all
-  const { data: inscricoes } = await supabaseAdmin
-    .from('candidato_inscricoes')
-    .select('*')
-    .in('stakeholder_id', ids)
+  // Fetch inscricoes + user_fed_lrsj (for kyu_dan_id fallback) in parallel
+  const [{ data: inscricoes }, { data: fedRows }] = await Promise.all([
+    supabaseAdmin.from('candidato_inscricoes').select('*').in('stakeholder_id', ids),
+    supabaseAdmin.from('user_fed_lrsj').select('stakeholder_id, kyu_dan_id').in('stakeholder_id', ids),
+  ])
 
-  // Fetch kyu_dan
-  const kyuDanIds = [...new Set(candidatos.map((c: any) => c.kyu_dan_id).filter(Boolean))]
+  // Build fed kyu_dan_id map
+  const fedKyuDanMap: Record<string, number> = {}
+  fedRows?.forEach((r: any) => { if (r.kyu_dan_id) fedKyuDanMap[r.stakeholder_id] = r.kyu_dan_id })
+
+  // Collect all kyu_dan ids needed
+  const resolvedKyuDanIds = [...new Set(candidatos.map((c: any) => {
+    return c.kyu_dan_id || fedKyuDanMap[c.id] || null
+  }).filter(Boolean))]
+
   let kyuDanMap: Record<number, any> = {}
-  if (kyuDanIds.length) {
-    const { data: kdList } = await supabaseAdmin.from('kyu_dan').select('id, kyu_dan, cor_faixa').in('id', kyuDanIds)
+  if (resolvedKyuDanIds.length) {
+    const { data: kdList } = await supabaseAdmin.from('kyu_dan').select('id, kyu_dan, cor_faixa').in('id', resolvedKyuDanIds)
     kdList?.forEach((kd: any) => { kyuDanMap[kd.id] = kd })
   }
 
   const inscricaoMap: Record<string, any> = {}
   inscricoes?.forEach((i: any) => { inscricaoMap[i.stakeholder_id] = i })
 
-  const result = candidatos.map((c: any) => ({
-    ...c,
-    kyu_dan: kyuDanMap[c.kyu_dan_id] || null,
-    inscricao: inscricaoMap[c.id] || null,
-  }))
+  const result = candidatos.map((c: any) => {
+    const kyuDanId = c.kyu_dan_id || fedKyuDanMap[c.id] || null
+    return {
+      ...c,
+      kyu_dan: kyuDanId ? (kyuDanMap[kyuDanId] || null) : null,
+      inscricao: inscricaoMap[c.id] || null,
+    }
+  })
 
   return NextResponse.json({ candidatos: result })
 }
