@@ -94,6 +94,16 @@ export async function PATCH(
       }).catch(() => {}) // fire-and-forget
     }
 
+    // Audit log (fire-and-forget)
+    const { data: actorSt } = await supabaseAdmin.from('stakeholders').select('nome_completo').eq('id', user.id).single()
+    supabaseAdmin.from('profile_audit_log').insert({
+      target_id: id,
+      actor_id: user.id,
+      actor_nome: actorSt?.nome_completo ?? user.email,
+      action: 'update_fed',
+      fields: Object.keys(payload),
+    }).then(() => {}, () => {})
+
     return NextResponse.json({ data })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })

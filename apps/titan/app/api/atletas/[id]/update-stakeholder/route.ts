@@ -38,6 +38,11 @@ export async function PATCH(
       payload['nome_usuario'] = body.nome_usuario === '' ? null : (body.nome_usuario ?? null)
     }
 
+    // candidato: editable by federacao_admin or master_access
+    if ('candidato' in body && (isMaster || callerRole === 'federacao_admin')) {
+      payload['candidato'] = Boolean(body.candidato)
+    }
+
     // role: only master_access
     if ('role' in body) {
       if (!isMaster) return NextResponse.json({ error: 'Apenas Master Access pode alterar o nível de acesso' }, { status: 403 })
@@ -57,6 +62,17 @@ export async function PATCH(
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Audit log (fire-and-forget)
+    const { data: actorSt } = await supabaseAdmin.from('stakeholders').select('nome_completo').eq('id', user.id).single()
+    supabaseAdmin.from('profile_audit_log').insert({
+      target_id: targetId,
+      actor_id: user.id,
+      actor_nome: actorSt?.nome_completo ?? user.email,
+      action: 'update_stakeholder',
+      fields: Object.keys(payload),
+    }).then(() => {}, () => {})
+
     return NextResponse.json({ data })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })

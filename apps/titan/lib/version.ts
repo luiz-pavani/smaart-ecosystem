@@ -3,10 +3,10 @@
  * Auto-updated with each release
  */
 
-export const APP_VERSION = '101.0.0'
-export const APP_VERSION_NAME = 'Beta 101'
+export const APP_VERSION = '102.0.0'
+export const APP_VERSION_NAME = 'Beta 102'
 export const APP_RELEASE_DATE = '2026-03-30'
-export const APP_BUILD = 'Campos nome_usuario + role no perfil do atleta + tamanho/cor patch corrigidos'
+export const APP_BUILD = 'Card Acesso: nome_usuario, role, candidato, senha + Log de Alterações'
 
 export const getVersionString = () => {
   return `${APP_VERSION_NAME} (v${APP_VERSION})`

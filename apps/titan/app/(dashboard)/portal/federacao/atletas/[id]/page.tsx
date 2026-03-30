@@ -353,6 +353,8 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   const [savingStakeholder, setSavingStakeholder] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+  const [stCandidato, setStCandidato] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<{ id: string; actor_nome: string; action: string; fields: string[]; created_at: string }[]>([]);
   // Quick actions state
   const [qaAction, setQaAction] = useState<'renovar' | 'graduacao' | null>(null);
   const [qaNovaData, setQaNovaData] = useState('');
@@ -390,7 +392,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           fetch('/api/federacoes/listar').then(r => r.json()),
           supabase.from("kyu_dan").select("id, cor_faixa, kyu_dan").order("id"),
           supabase.from("user_fed_lrsj").select("*").eq("stakeholder_id", id).maybeSingle(),
-          supabase.from("stakeholders").select("nome_usuario, role").eq("id", id).maybeSingle(),
+          supabase.from("stakeholders").select("nome_usuario, role, candidato").eq("id", id).maybeSingle(),
         ]);
 
         const acadList = (acadRes.academias || []) as Academia[];
@@ -401,6 +403,13 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         if (fedErr) console.error("Erro ao buscar atleta:", fedErr);
         setStNomeUsuario(stData?.nome_usuario ?? '');
         setStRole(stData?.role ?? '');
+        setStCandidato(stData?.candidato ?? false);
+
+        // Fetch audit log
+        fetch(`/api/atletas/${id}/audit-log`)
+          .then(r => r.json())
+          .then(j => setAuditLogs(j.logs || []))
+          .catch(() => {});
 
         // Pre-select the federation matching the athlete's current academy
         if (fedData?.academia_id) {
@@ -837,6 +846,25 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
                   <span className="text-gray-200 text-sm font-medium">{stRole || '—'}</span>
                 )}
               </div>
+              {/* Candidato toggle — federacao_admin or master */}
+              {(isMaster || isFederacao) && (
+                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                  <span className="text-gray-400 text-sm">Candidato PROFEP</span>
+                  {editMode ? (
+                    <button
+                      onClick={() => setStCandidato(v => !v)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${stCandidato ? 'bg-emerald-600 text-white' : 'bg-white/10 text-gray-400'}`}
+                    >
+                      {stCandidato ? 'Sim' : 'Não'}
+                    </button>
+                  ) : (
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${stCandidato ? 'bg-emerald-600/20 text-emerald-300' : 'bg-white/10 text-gray-400'}`}>
+                      {stCandidato ? 'Sim' : 'Não'}
+                    </span>
+                  )}
+                </div>
+              )}
+
               {editMode && (isMaster || isFederacao || roles.some(r => r.role === 'professor') || isSelfAthlete) && (
                 <div className="flex flex-col gap-1 pt-2 border-t border-white/10">
                   <span className="text-gray-400 text-sm">Nova Senha</span>
@@ -883,8 +911,9 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
                     if (!atletaId) return;
                     setSavingStakeholder(true);
                     try {
-                      const body: Record<string, string> = { nome_usuario: stNomeUsuario };
+                      const body: Record<string, unknown> = { nome_usuario: stNomeUsuario };
                       if (isMaster) body.role = stRole;
+                      if (isMaster || isFederacao) body.candidato = stCandidato;
                       const res = await fetch(`/api/atletas/${atletaId}/update-stakeholder`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
@@ -947,6 +976,40 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
             kyuDanId={atleta.kyu_dan_id != null ? Number(atleta.kyu_dan_id) : null}
           />
         </div>
+
+        {/* Log de Alterações */}
+        {auditLogs.length > 0 && (
+          <div className="mt-6 bg-white/5 backdrop-blur rounded-xl p-6 border border-white/10">
+            <div className="flex items-center gap-3 mb-4">
+              <FileText className="w-5 h-5 text-gray-400" />
+              <h2 className="text-lg font-semibold text-white">Log de Alterações</h2>
+            </div>
+            <div className="space-y-2">
+              {auditLogs.map(log => {
+                const dt = new Date(log.created_at)
+                const dateStr = dt.toLocaleDateString('pt-BR')
+                const timeStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                const actionLabel: Record<string, string> = {
+                  update_fed: 'Dados de filiação',
+                  update_stakeholder: 'Dados de acesso',
+                  update_password: 'Senha',
+                  update_role: 'Nível de acesso',
+                }
+                return (
+                  <div key={log.id} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm border-b border-white/5 pb-2">
+                    <span className="text-gray-500 text-xs whitespace-nowrap">{dateStr} {timeStr}</span>
+                    <span className="text-gray-300 font-medium">{log.actor_nome || '—'}</span>
+                    <span className="text-gray-500">alterou</span>
+                    <span className="text-blue-300">{actionLabel[log.action] || log.action}</span>
+                    {log.fields?.length > 0 && (
+                      <span className="text-gray-500 text-xs">({log.fields.join(', ')})</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

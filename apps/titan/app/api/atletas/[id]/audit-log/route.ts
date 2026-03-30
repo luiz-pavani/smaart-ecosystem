@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
-export async function PATCH(
+export async function GET(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
@@ -22,29 +22,17 @@ export async function PATCH(
     const isSelf = user.id === targetId
     const allowed = isSelf || ['professor', 'federacao_admin', 'master_access'].includes(callerRole)
 
-    if (!allowed) {
-      return NextResponse.json({ error: 'Sem permissão para alterar esta senha' }, { status: 403 })
-    }
+    if (!allowed) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
-    const { password } = await req.json()
-    if (!password || String(password).length < 6) {
-      return NextResponse.json({ error: 'Senha deve ter no mínimo 6 caracteres' }, { status: 400 })
-    }
+    const { data, error } = await supabaseAdmin
+      .from('profile_audit_log')
+      .select('id, actor_nome, action, fields, created_at')
+      .eq('target_id', targetId)
+      .order('created_at', { ascending: false })
+      .limit(50)
 
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(targetId, { password })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    // Audit log (fire-and-forget)
-    const { data: actorSt } = await supabaseAdmin.from('stakeholders').select('nome_completo').eq('id', user.id).single()
-    supabaseAdmin.from('profile_audit_log').insert({
-      target_id: targetId,
-      actor_id: user.id,
-      actor_nome: actorSt?.nome_completo ?? user.email,
-      action: 'update_password',
-      fields: ['password'],
-    }).then(() => {}, () => {})
-
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ logs: data || [] })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
   }
