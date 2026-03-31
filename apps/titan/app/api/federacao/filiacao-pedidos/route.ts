@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     .from('filiacao_pedidos')
     .select(`
       id, status, created_at, observacao,
+      url_documento_id, url_comprovante_pagamento, dados_formulario,
       stakeholder:stakeholder_id (id, nome_completo, email, telefone, kyu_dan_id),
       academia:academia_id (id, nome, endereco_cidade, endereco_estado)
     `)

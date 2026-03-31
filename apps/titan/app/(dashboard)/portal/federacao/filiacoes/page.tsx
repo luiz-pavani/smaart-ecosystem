@@ -4,8 +4,239 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Loader2, CheckCircle2, XCircle, Clock, RefreshCw,
-  CheckSquare, Square, ChevronRight, CalendarDays, AlertTriangle,
+  CheckSquare, Square, ChevronRight, CalendarDays, AlertTriangle, UserPlus,
+  FileText, X, ExternalLink,
 } from 'lucide-react'
+
+interface DadosFormulario {
+  cpf?: string
+  cidade?: string
+  estado?: string
+  pais?: string
+  nacionalidade?: string
+  nome_patch?: string
+  tamanho_patch?: string
+  cor_patch?: string
+  kyu_dan_id?: number
+  observacoes?: string
+}
+
+interface FiliacaoPedido {
+  id: string
+  status: string
+  created_at: string
+  url_documento_id: string | null
+  url_comprovante_pagamento: string | null
+  dados_formulario: DadosFormulario | null
+  stakeholder: { id: string; nome_completo: string; email: string; telefone: string | null; kyu_dan_id: number | null } | null
+  academia: { id: string; nome: string; endereco_cidade: string; endereco_estado: string } | null
+}
+
+function Row({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null
+  return (
+    <div className="flex justify-between items-start gap-4 py-2 border-b border-white/5 last:border-0">
+      <span className="text-gray-400 text-sm shrink-0">{label}</span>
+      <span className="text-gray-200 text-sm font-medium text-right">{value}</span>
+    </div>
+  )
+}
+
+function ReviewModal({
+  pedido,
+  onClose,
+  onReview,
+  acting,
+}: {
+  pedido: FiliacaoPedido
+  onClose: () => void
+  onReview: (id: string, status: 'APROVADO' | 'REJEITADO') => void
+  acting: boolean
+}) {
+  const df = pedido.dados_formulario || {}
+  const st = pedido.stakeholder
+  const ac = pedido.academia
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-[#111827] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
+          <div>
+            <h2 className="text-white font-bold text-lg">{st?.nome_completo || '—'}</h2>
+            <p className="text-gray-400 text-xs mt-0.5">Solicitação de Filiação · {new Date(pedido.created_at).toLocaleDateString('pt-BR')}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
+          {/* Dados pessoais */}
+          <div>
+            <p className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-2">Dados Pessoais</p>
+            <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-1">
+              <Row label="E-mail" value={st?.email} />
+              <Row label="Telefone" value={st?.telefone} />
+              <Row label="CPF" value={df.cpf} />
+              <Row label="Nacionalidade" value={df.nacionalidade} />
+              <Row label="Cidade" value={df.cidade ? `${df.cidade}${df.estado ? `/${df.estado}` : ''}` : null} />
+              <Row label="País" value={df.pais} />
+            </div>
+          </div>
+
+          {/* Academia */}
+          {ac && (
+            <div>
+              <p className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-2">Academia</p>
+              <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-1">
+                <Row label="Nome" value={ac.nome} />
+                <Row label="Cidade" value={`${ac.endereco_cidade}/${ac.endereco_estado}`} />
+              </div>
+            </div>
+          )}
+
+          {/* Dados esportivos */}
+          <div>
+            <p className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-2">Dados Esportivos</p>
+            <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-1">
+              <Row label="Nome no Patch" value={df.nome_patch} />
+              <Row label="Tamanho do Patch" value={df.tamanho_patch} />
+              <Row label="Cor do Patch" value={df.cor_patch} />
+              <Row label="Observações" value={df.observacoes} />
+            </div>
+          </div>
+
+          {/* Documentos */}
+          {(pedido.url_documento_id || pedido.url_comprovante_pagamento) && (
+            <div>
+              <p className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-2">Documentos</p>
+              <div className="space-y-2">
+                {pedido.url_documento_id && (
+                  <a
+                    href={pedido.url_documento_id}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors group"
+                  >
+                    <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span className="text-sm text-white flex-1">Documento de Identidade</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition-colors" />
+                  </a>
+                )}
+                {pedido.url_comprovante_pagamento && (
+                  <a
+                    href={pedido.url_comprovante_pagamento}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors group"
+                  >
+                    <FileText className="w-4 h-4 text-green-400 shrink-0" />
+                    <span className="text-sm text-white flex-1">Comprovante de Pagamento</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition-colors" />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex gap-3 px-6 py-4 border-t border-white/10 shrink-0">
+          <button
+            onClick={() => onReview(pedido.id, 'REJEITADO')}
+            disabled={acting}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 font-medium transition-colors disabled:opacity-50"
+          >
+            <XCircle className="w-4 h-4" />
+            Rejeitar
+          </button>
+          <button
+            onClick={() => onReview(pedido.id, 'APROVADO')}
+            disabled={acting}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-500/20 border border-green-500/30 text-green-300 hover:bg-green-500/30 font-medium transition-colors disabled:opacity-50"
+          >
+            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Aprovar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SolicitacoesSection({ onRefresh }: { onRefresh: () => void }) {
+  const [pedidos, setPedidos] = useState<FiliacaoPedido[]>([])
+  const [loading, setLoading] = useState(true)
+  const [acting, setActing] = useState(false)
+  const [selected, setSelected] = useState<FiliacaoPedido | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch('/api/federacao/filiacao-pedidos').then(r => r.json()).catch(() => ({}))
+    setPedidos((res.pedidos || []).filter((p: FiliacaoPedido) => p.status === 'PENDENTE'))
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const review = async (pedidoId: string, status: 'APROVADO' | 'REJEITADO') => {
+    setActing(true)
+    await fetch('/api/federacao/filiacao-pedidos', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pedido_id: pedidoId, status }),
+    })
+    setActing(false)
+    setSelected(null)
+    await load()
+    onRefresh()
+  }
+
+  if (loading) return null
+  if (pedidos.length === 0) return null
+
+  return (
+    <>
+      {selected && (
+        <ReviewModal
+          pedido={selected}
+          onClose={() => setSelected(null)}
+          onReview={review}
+          acting={acting}
+        />
+      )}
+      <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <UserPlus className="w-4 h-4 text-yellow-400" />
+          <h2 className="font-semibold text-white text-sm">Solicitações de Filiação ({pedidos.length})</h2>
+          <span className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-full">Novo</span>
+        </div>
+        <div className="space-y-2">
+          {pedidos.map(p => (
+            <button
+              key={p.id}
+              onClick={() => setSelected(p)}
+              className="w-full text-left flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-colors"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium text-sm">{p.stakeholder?.nome_completo || '—'}</p>
+                <div className="flex flex-wrap gap-2 mt-0.5 text-xs text-gray-400">
+                  <span>{p.stakeholder?.email}</span>
+                  {p.stakeholder?.telefone && <span>· {p.stakeholder.telefone}</span>}
+                  {p.academia && <span>· {p.academia.nome} — {p.academia.endereco_cidade}/{p.academia.endereco_estado}</span>}
+                  <span className="text-gray-600">· {new Date(p.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
 
 interface Atleta {
   id: string
@@ -273,6 +504,8 @@ export default function FiliacoesPage() {
           </button>
         </div>
       </div>
+
+      <SolicitacoesSection onRefresh={load} />
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-slate-400">
