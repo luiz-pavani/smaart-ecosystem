@@ -63,7 +63,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
-  const { pedido_id, status, observacao } = await req.json()
+  const { pedido_id, status, observacao, data_expiracao_override } = await req.json()
   if (!pedido_id || !['APROVADO', 'REJEITADO'].includes(status)) {
     return NextResponse.json({ error: 'pedido_id e status (APROVADO|REJEITADO) obrigatórios' }, { status: 400 })
   }
@@ -107,11 +107,20 @@ export async function PATCH(req: NextRequest) {
       .maybeSingle()
 
     const hoje = new Date().toISOString().split('T')[0]
-    const expiracao = new Date()
-    expiracao.setFullYear(expiracao.getFullYear() + 1)
-    const dataExpiracao = expiracao.toISOString().split('T')[0]
+    // data_expiracao: override manual ou 365 dias a partir da data de criação do pedido
+    let dataExpiracao: string
+    if (data_expiracao_override) {
+      dataExpiracao = data_expiracao_override
+    } else {
+      const base = new Date(pedido.created_at ?? Date.now())
+      base.setFullYear(base.getFullYear() + 1)
+      dataExpiracao = base.toISOString().split('T')[0]
+    }
 
     const kyuDanId = (df.kyu_dan_id as number | undefined) ?? st?.kyu_dan_id ?? null
+
+    // cor_patch must be uppercase per DB check constraint
+    const corPatch = (df.cor_patch as string | undefined)?.toUpperCase() ?? null
 
     // Upsert user_fed_lrsj
     await supabaseAdmin.from('user_fed_lrsj').upsert(
@@ -130,6 +139,7 @@ export async function PATCH(req: NextRequest) {
         estado: (df.estado as string | undefined) ?? null,
         nome_patch: (df.nome_patch as string | undefined) ?? null,
         tamanho_patch: (df.tamanho_patch as string | undefined) ?? null,
+        cor_patch: corPatch,
         academias: acad?.nome ?? null,
         kyu_dan_id: kyuDanId,
         status_membro: 'Aceito',

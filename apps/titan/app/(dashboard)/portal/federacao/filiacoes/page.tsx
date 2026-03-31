@@ -54,7 +54,7 @@ function ReviewModal({
   pedido: FiliacaoPedido
   kyuDanMap: Record<number, string>
   onClose: () => void
-  onReview: (id: string, status: 'APROVADO' | 'REJEITADO') => void
+  onReview: (id: string, status: 'APROVADO' | 'REJEITADO', dataExpiracao: string) => void
   acting: boolean
 }) {
   const df = pedido.dados_formulario || {}
@@ -70,6 +70,14 @@ function ReviewModal({
   const nascimento = df.data_nascimento ?? st?.data_nascimento ?? null
 
   const isPendente = pedido.status === 'PENDENTE'
+
+  // Default expiracao = 365 dias a partir da criação do pedido
+  const defaultExp = (() => {
+    const d = new Date(pedido.created_at)
+    d.setFullYear(d.getFullYear() + 1)
+    return d.toISOString().split('T')[0]
+  })()
+  const [dataExpiracao, setDataExpiracao] = useState(defaultExp)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -165,23 +173,34 @@ function ReviewModal({
 
         {/* Footer actions — only for pending */}
         {isPendente && (
-          <div className="flex gap-3 px-6 py-4 border-t border-white/10 shrink-0">
-            <button
-              onClick={() => onReview(pedido.id, 'REJEITADO')}
-              disabled={acting}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 font-medium transition-colors disabled:opacity-50"
-            >
-              <XCircle className="w-4 h-4" />
-              Rejeitar
-            </button>
-            <button
-              onClick={() => onReview(pedido.id, 'APROVADO')}
-              disabled={acting}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-500/20 border border-green-500/30 text-green-300 hover:bg-green-500/30 font-medium transition-colors disabled:opacity-50"
-            >
-              {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              Aprovar
-            </button>
+          <div className="px-6 py-4 border-t border-white/10 shrink-0 space-y-3">
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-gray-400 shrink-0">Validade da filiação</label>
+              <input
+                type="date"
+                value={dataExpiracao}
+                onChange={e => setDataExpiracao(e.target.value)}
+                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-blue-400 transition-colors"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => onReview(pedido.id, 'REJEITADO', dataExpiracao)}
+                disabled={acting}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 font-medium transition-colors disabled:opacity-50"
+              >
+                <XCircle className="w-4 h-4" />
+                Rejeitar
+              </button>
+              <button
+                onClick={() => onReview(pedido.id, 'APROVADO', dataExpiracao)}
+                disabled={acting}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-500/20 border border-green-500/30 text-green-300 hover:bg-green-500/30 font-medium transition-colors disabled:opacity-50"
+              >
+                {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Aprovar
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -216,12 +235,12 @@ function SolicitacoesSection({ onRefresh }: { onRefresh: () => void }) {
 
   useEffect(() => { load() }, [load])
 
-  const review = async (pedidoId: string, status: 'APROVADO' | 'REJEITADO') => {
+  const review = async (pedidoId: string, status: 'APROVADO' | 'REJEITADO', dataExpiracao?: string) => {
     setActing(true)
     await fetch('/api/federacao/filiacao-pedidos', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pedido_id: pedidoId, status }),
+      body: JSON.stringify({ pedido_id: pedidoId, status, data_expiracao_override: dataExpiracao }),
     })
     setActing(false)
     setSelected(null)
