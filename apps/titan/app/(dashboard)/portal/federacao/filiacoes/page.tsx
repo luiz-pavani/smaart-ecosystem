@@ -166,16 +166,19 @@ function ReviewModal({
   )
 }
 
+type SolTab = 'PENDENTE' | 'APROVADO' | 'REJEITADO'
+
 function SolicitacoesSection({ onRefresh }: { onRefresh: () => void }) {
-  const [pedidos, setPedidos] = useState<FiliacaoPedido[]>([])
+  const [todos, setTodos] = useState<FiliacaoPedido[]>([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
   const [selected, setSelected] = useState<FiliacaoPedido | null>(null)
+  const [tab, setTab] = useState<SolTab>('PENDENTE')
 
   const load = useCallback(async () => {
     setLoading(true)
     const res = await fetch('/api/federacao/filiacao-pedidos').then(r => r.json()).catch(() => ({}))
-    setPedidos((res.pedidos || []).filter((p: FiliacaoPedido) => p.status === 'PENDENTE'))
+    setTodos(res.pedidos || [])
     setLoading(false)
   }, [])
 
@@ -195,7 +198,18 @@ function SolicitacoesSection({ onRefresh }: { onRefresh: () => void }) {
   }
 
   if (loading) return null
-  if (pedidos.length === 0) return null
+  if (todos.length === 0) return null
+
+  const pendentes = todos.filter(p => p.status === 'PENDENTE')
+  const aprovadas = todos.filter(p => p.status === 'APROVADO')
+  const rejeitadas = todos.filter(p => p.status === 'REJEITADO')
+  const lista = tab === 'PENDENTE' ? pendentes : tab === 'APROVADO' ? aprovadas : rejeitadas
+
+  const solTabs: { key: SolTab; label: string; count: number; color: string }[] = [
+    { key: 'PENDENTE', label: 'Pendentes', count: pendentes.length, color: 'text-yellow-400 border-yellow-400' },
+    { key: 'APROVADO', label: 'Aprovadas', count: aprovadas.length, color: 'text-green-400 border-green-400' },
+    { key: 'REJEITADO', label: 'Rejeitadas', count: rejeitadas.length, color: 'text-red-400 border-red-400' },
+  ]
 
   return (
     <>
@@ -207,32 +221,61 @@ function SolicitacoesSection({ onRefresh }: { onRefresh: () => void }) {
           acting={acting}
         />
       )}
-      <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <UserPlus className="w-4 h-4 text-yellow-400" />
-          <h2 className="font-semibold text-white text-sm">Solicitações de Filiação ({pedidos.length})</h2>
-          <span className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-full">Novo</span>
+      <div className="bg-white/3 border border-white/10 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-yellow-400" />
+            <h2 className="font-semibold text-white text-sm">Solicitações de Filiação</h2>
+            {pendentes.length > 0 && (
+              <span className="text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-full">{pendentes.length} novo{pendentes.length !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          {/* Mini tabs */}
+          <div className="flex gap-1">
+            {solTabs.map(t => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all border ${
+                  tab === t.key
+                    ? `bg-white/10 ${t.color}`
+                    : 'text-gray-500 border-transparent hover:text-gray-300'
+                }`}
+              >
+                {t.label} {t.count > 0 && `(${t.count})`}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="space-y-2">
-          {pedidos.map(p => (
-            <button
-              key={p.id}
-              onClick={() => setSelected(p)}
-              className="w-full text-left flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium text-sm">{p.stakeholder?.nome_completo || '—'}</p>
-                <div className="flex flex-wrap gap-2 mt-0.5 text-xs text-gray-400">
-                  <span>{p.stakeholder?.email}</span>
-                  {p.stakeholder?.telefone && <span>· {p.stakeholder.telefone}</span>}
-                  {p.academia && <span>· {p.academia.nome} — {p.academia.endereco_cidade}/{p.academia.endereco_estado}</span>}
-                  <span className="text-gray-600">· {new Date(p.created_at).toLocaleDateString('pt-BR')}</span>
+
+        {lista.length === 0 ? (
+          <p className="text-center text-gray-500 text-sm py-4">Nenhuma solicitação {tab === 'PENDENTE' ? 'pendente' : tab === 'APROVADO' ? 'aprovada' : 'rejeitada'}</p>
+        ) : (
+          <div className="space-y-2">
+            {lista.map(p => (
+              <button
+                key={p.id}
+                onClick={() => setSelected(p)}
+                className="w-full text-left flex items-center gap-3 bg-white/5 border border-white/10 rounded-lg px-4 py-3 hover:bg-white/10 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-white font-medium text-sm">{p.stakeholder?.nome_completo || '—'}</p>
+                    {p.status === 'APROVADO' && <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-full">Aprovado</span>}
+                    {p.status === 'REJEITADO' && <span className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-full">Rejeitado</span>}
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-0.5 text-xs text-gray-400">
+                    <span>{p.stakeholder?.email}</span>
+                    {p.stakeholder?.telefone && <span>· {p.stakeholder.telefone}</span>}
+                    {p.academia && <span>· {p.academia.nome} — {p.academia.endereco_cidade}/{p.academia.endereco_estado}</span>}
+                    <span className="text-gray-600">· {new Date(p.created_at).toLocaleDateString('pt-BR')}</span>
+                  </div>
                 </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
-            </button>
-          ))}
-        </div>
+                <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </>
   )
