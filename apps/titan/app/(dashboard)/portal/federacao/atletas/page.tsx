@@ -28,6 +28,7 @@ interface AtletaRow {
 export default function AtletasFedaracaoPage() {
   const router = useRouter()
   const supabase = createClient()
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [atletas, setAtletas] = useState<AtletaRow[]>([])
@@ -46,6 +47,12 @@ export default function AtletasFedaracaoPage() {
   const [sortOrder, setSortOrder] = useState<'asc'|'desc'>('asc')
   const pageSize = 100
 
+  // Debounce search input — only trigger fetch after 300ms of no typing
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(0) }, 300)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
   useEffect(() => {
     const loadOptions = async () => {
       const [gradRes, acadRes] = await Promise.all([
@@ -56,7 +63,7 @@ export default function AtletasFedaracaoPage() {
       setAcademiasOptions(acadRes.data || [])
     }
     loadOptions()
-  }, [supabase])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const load = async () => {
@@ -186,7 +193,7 @@ export default function AtletasFedaracaoPage() {
     }
 
     load()
-  }, [supabase, page, search, filterGraduacao, filterAcademia, filterSituacao, filterStatusMembro])
+  }, [page, search, filterGraduacao, filterAcademia, filterSituacao, filterStatusMembro]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function atualizarStatus(atletaId: string, novoStatus: 'Aceito' | 'Rejeitado') {
     if (!atletaId) return
@@ -212,6 +219,7 @@ export default function AtletasFedaracaoPage() {
   }
 
   const clearFilters = () => {
+    setSearchInput('')
     setSearch('')
     setFilterGraduacao('')
     setFilterAcademia('')
@@ -420,7 +428,7 @@ export default function AtletasFedaracaoPage() {
         <div className="max-w-6xl mx-auto px-4">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all text-sm"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar
@@ -438,8 +446,8 @@ export default function AtletasFedaracaoPage() {
             <input
               type="text"
               placeholder="Buscar atleta..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-gray-300 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
