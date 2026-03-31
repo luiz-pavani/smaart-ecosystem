@@ -20,17 +20,25 @@ export async function GET(req: NextRequest) {
   }
 
   const federacaoId = req.nextUrl.searchParams.get('federacao_id') || me.federacao_id
-  if (!federacaoId) return NextResponse.json({ pedidos: [] })
 
-  const { data: pedidos } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('filiacao_pedidos')
     .select(`
       id, status, created_at, observacao,
       stakeholder:stakeholder_id (id, nome_completo, email, telefone, kyu_dan_id),
       academia:academia_id (id, nome, endereco_cidade, endereco_estado)
     `)
-    .eq('federacao_id', federacaoId)
     .order('created_at', { ascending: false })
+
+  // Non-master users must be scoped to their federation
+  if (!me.master_access) {
+    if (!federacaoId) return NextResponse.json({ pedidos: [] })
+    query = query.eq('federacao_id', federacaoId)
+  } else if (federacaoId) {
+    query = query.eq('federacao_id', federacaoId)
+  }
+
+  const { data: pedidos } = await query
 
   return NextResponse.json({ pedidos: pedidos || [] })
 }
