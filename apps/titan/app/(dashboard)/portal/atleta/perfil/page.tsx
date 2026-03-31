@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Calendar, Clock, X, Camera, Check, Pencil, Building2, ShieldCheck, ExternalLink, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertCircle, User, Mail, Award, CreditCard, Calendar, Clock, X, Camera, Check, Pencil, Building2, ShieldCheck, ExternalLink, ChevronDown, Upload, FileText } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
@@ -99,21 +99,26 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-function InputField({ label, value, onChange, placeholder, type = 'text' }: {
+function InputField({ label, value, onChange, placeholder, type = 'text', maxLength }: {
   label: string
   value: string
   onChange: (v: string) => void
   placeholder?: string
   type?: string
+  maxLength?: number
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-xs text-gray-400 font-medium">{label}</label>
+      <label className="text-xs text-gray-400 font-medium flex items-center justify-between">
+        <span>{label}</span>
+        {maxLength && <span className={`text-[10px] ${value.length >= maxLength ? 'text-red-400' : 'text-gray-600'}`}>{value.length}/{maxLength}</span>}
+      </label>
       <input
         type={type}
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder || '—'}
+        maxLength={maxLength}
         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/8 transition-colors"
       />
     </div>
@@ -137,6 +142,7 @@ export default function PerfilAtletaPage() {
   const [academias, setAcademias] = useState<Academia[]>([])
   const [kyuDan, setKyuDan] = useState<KyuDan | null>(null)
   const [kyuDans, setKyuDans] = useState<KyuDan[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
   const [turmas, setTurmas] = useState<TurmaMatriculada[]>([])
   const [waitlistItems, setWaitlistItems] = useState<WaitlistItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -157,6 +163,16 @@ export default function PerfilAtletaPage() {
   const [fotoFile, setFotoFile] = useState<File | null>(null)
   const [savingAcad, setSavingAcad] = useState(false)
   const [acadMsg, setAcadMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [solicitandoFiliacao, setSolicitandoFiliacao] = useState(false)
+  const [filiacaoMsg, setFiliacaoMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showFiliacaoModal, setShowFiliacaoModal] = useState(false)
+  const [filiacaoForm, setFiliacaoForm] = useState({
+    nome_completo: '', telefone: '', genero: '', data_nascimento: '',
+    cpf: '', cidade: '', estado: '', pais: 'Brasil', nacionalidade: 'Brasileira',
+    nome_patch: '', tamanho_patch: '', cor_patch: '', kyu_dan_id: '', observacoes: '',
+  })
+  const [docIdFile, setDocIdFile] = useState<File | null>(null)
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null)
   const [isMasterAccess, setIsMasterAccess] = useState(false)
   const [roleSearch, setRoleSearch] = useState('')
   const [roleResults, setRoleResults] = useState<{ id: string; nome_completo: string; email: string; role: string }[]>([])
@@ -170,6 +186,7 @@ export default function PerfilAtletaPage() {
         setLoading(true)
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { setError('Usuário não autenticado'); return }
+        setUserId(user.id)
 
         const [perfilRes, { data: enrollData }, { data: waitData }] = await Promise.all([
           fetch('/api/atletas/self/perfil-dados').then(r => r.json()),
@@ -352,6 +369,62 @@ export default function PerfilAtletaPage() {
     } finally { setSavingAcad(false) }
   }
 
+  const openFiliacaoModal = () => {
+    if (!selectedAcadId && !stakeholder?.academia_id) {
+      setFiliacaoMsg({ type: 'error', text: 'Selecione e salve sua academia antes de solicitar filiação.' })
+      return
+    }
+    // Pre-fill with known data
+    setFiliacaoForm(f => ({
+      ...f,
+      nome_completo: stakeholder?.nome_completo || '',
+      telefone: stakeholder?.telefone || '',
+      genero: stakeholder?.genero || '',
+      data_nascimento: stakeholder?.data_nascimento || '',
+    }))
+    setFiliacaoMsg(null)
+    setDocIdFile(null)
+    setComprovanteFile(null)
+    setShowFiliacaoModal(true)
+  }
+
+  const solicitarFiliacao = async () => {
+    setSolicitandoFiliacao(true); setFiliacaoMsg(null)
+    try {
+      // Upload each file separately to the upload route, then send JSON with URLs
+      const uploadFile = async (file: File, field: string): Promise<string> => {
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('field', field)
+        const r = await fetch('/api/atletas/self/upload-doc', { method: 'POST', body: fd })
+        const j = await r.json()
+        if (!r.ok) throw new Error(j.error || 'Erro ao enviar arquivo')
+        return j.url as string
+      }
+
+      const [urlDocumentoId, urlComprovante] = await Promise.all([
+        docIdFile ? uploadFile(docIdFile, 'documento') : Promise.resolve(null),
+        comprovanteFile ? uploadFile(comprovanteFile, 'comprovante') : Promise.resolve(null),
+      ])
+
+      const payload: Record<string, unknown> = { ...filiacaoForm }
+      if (urlDocumentoId) payload.url_documento_id = urlDocumentoId
+      if (urlComprovante) payload.url_comprovante_pagamento = urlComprovante
+
+      const res = await fetch('/api/atletas/self/solicitar-filiacao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erro ao solicitar filiação')
+      setFiliacaoMsg({ type: 'success', text: 'Solicitação enviada! Aguarde a aprovação da federação.' })
+      setShowFiliacaoModal(false)
+    } catch (err: any) {
+      setFiliacaoMsg({ type: 'error', text: err.message || 'Erro ao solicitar filiação.' })
+    } finally { setSolicitandoFiliacao(false) }
+  }
+
   // Resolved display values (prefer atleta, fallback to stakeholder)
   const displayName = atleta?.nome_completo || stakeholder?.nome_completo || '—'
   const displayUsername = stakeholder?.nome_usuario
@@ -367,7 +440,7 @@ export default function PerfilAtletaPage() {
         <div className="max-w-4xl mx-auto px-4">
           <button
             onClick={() => router.push('/portal/atleta')}
-            className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all text-sm"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar
@@ -440,11 +513,15 @@ export default function PerfilAtletaPage() {
                         {kyuDan.icones ? `${kyuDan.icones} ` : ''}{kyuDan.cor_faixa} | {kyuDan.kyu_dan}
                       </span>
                     )}
-                    {atleta?.academias && (
-                      <span className="px-3 py-1 rounded-full text-xs font-medium border bg-orange-500/20 text-orange-300 border-orange-500/30">
-                        🥋 {atleta.academias}
-                      </span>
-                    )}
+                    {(() => {
+                      const acadNome = atleta?.academias ||
+                        academias.find(a => a.id === (stakeholder?.academia_id || selectedAcadId))?.nome
+                      return acadNome ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-medium border bg-orange-500/20 text-orange-300 border-orange-500/30">
+                          🥋 {acadNome}
+                        </span>
+                      ) : null
+                    })()}
                     {atleta?.status_plano && (
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColor(atleta.status_plano)}`}>
                         Plano {atleta.status_plano}
@@ -594,13 +671,14 @@ export default function PerfilAtletaPage() {
                         placeholder="ex: RS"
                       />
                       <InputField
-                        label="Nome no Patch"
+                        label="Nome no Backnumber (patch)"
                         value={atletaForm.nome_patch}
                         onChange={v => setAtletaForm(f => ({ ...f, nome_patch: v }))}
-                        placeholder="Apelido ou nome curto"
+                        placeholder="Nome e sobrenome (não é permitido apelido)"
+                        maxLength={15}
                       />
                       <div className="space-y-1">
-                        <label className="text-xs text-gray-400 font-medium">Tamanho do Patch</label>
+                        <label className="text-xs text-gray-400 font-medium">Tamanho do Backnumber (patch)</label>
                         <div className="relative">
                           <select
                             value={atletaForm.tamanho_patch || ''}
@@ -697,8 +775,8 @@ export default function PerfilAtletaPage() {
                 <Row label="Gênero" value={displayGenero} />
                 <Row label="Data de Nascimento" value={displayNascimento} />
                 {atleta?.nacionalidade && <Row label="Nacionalidade" value={atleta.nacionalidade} />}
-                {atleta?.tamanho_patch && <Row label="Tamanho do Patch" value={atleta.tamanho_patch} />}
-                {atleta?.nome_patch && <Row label="Nome no Patch" value={atleta.nome_patch} />}
+                {atleta?.tamanho_patch && <Row label="Tamanho do Backnumber (patch)" value={atleta.tamanho_patch} />}
+                {atleta?.nome_patch && <Row label="Nome no Backnumber (patch)" value={atleta.nome_patch} />}
               </div>
 
               {/* Contato */}
@@ -774,14 +852,21 @@ export default function PerfilAtletaPage() {
                       )}
                     </div>
                     <div className="border-t border-white/10 pt-4">
-                      <p className="text-xs text-gray-400 mb-3">Para se filiar a uma federação, acesse a página de filiação.</p>
-                      <a
-                        href="/filiacao"
-                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all text-sm"
+                      <p className="text-xs text-gray-400 mb-3">
+                        Após salvar sua academia, solicite sua filiação. A federação irá analisar e aprovar seu pedido.
+                      </p>
+                      {filiacaoMsg && (
+                        <p className={`text-xs mb-2 ${filiacaoMsg.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                          {filiacaoMsg.text}
+                        </p>
+                      )}
+                      <button
+                        onClick={openFiliacaoModal}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all text-sm"
                       >
                         <ShieldCheck className="w-4 h-4" />
                         Solicitar Filiação
-                      </a>
+                      </button>
                       {federacoes.length > 0 && (
                         <div className="mt-3 space-y-1">
                           {federacoes.map(f => f.site ? (
@@ -973,6 +1058,181 @@ export default function PerfilAtletaPage() {
         )}
 
       </div>
+
+      {/* ── Modal Solicitar Filiação ── */}
+      {showFiliacaoModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-5 h-5 text-blue-400" />
+                <div>
+                  <h2 className="text-white font-bold text-lg">Solicitar Filiação</h2>
+                  <p className="text-gray-400 text-xs">Preencha os dados e envie os documentos</p>
+                </div>
+              </div>
+              <button onClick={() => setShowFiliacaoModal(false)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Dados Pessoais */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wider">Dados Pessoais</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs text-gray-400">Nome Completo *</label>
+                    <input className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      value={filiacaoForm.nome_completo} onChange={e => setFiliacaoForm(f => ({ ...f, nome_completo: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">CPF *</label>
+                    <input className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      placeholder="000.000.000-00" value={filiacaoForm.cpf} onChange={e => setFiliacaoForm(f => ({ ...f, cpf: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Data de Nascimento *</label>
+                    <input type="date" className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      value={filiacaoForm.data_nascimento} onChange={e => setFiliacaoForm(f => ({ ...f, data_nascimento: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Gênero *</label>
+                    <select className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      value={filiacaoForm.genero} onChange={e => setFiliacaoForm(f => ({ ...f, genero: e.target.value }))}>
+                      <option value="">Selecione</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Telefone / WhatsApp *</label>
+                    <input className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      placeholder="(DDD) 99999-9999" value={filiacaoForm.telefone} onChange={e => setFiliacaoForm(f => ({ ...f, telefone: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Nacionalidade</label>
+                    <input className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      value={filiacaoForm.nacionalidade} onChange={e => setFiliacaoForm(f => ({ ...f, nacionalidade: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Cidade</label>
+                    <input className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      value={filiacaoForm.cidade} onChange={e => setFiliacaoForm(f => ({ ...f, cidade: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Estado (UF)</label>
+                    <input className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      placeholder="ex: RS" value={filiacaoForm.estado} onChange={e => setFiliacaoForm(f => ({ ...f, estado: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dados Esportivos */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wider">Dados Esportivos</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Graduação (Faixa) *</label>
+                    <select className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      value={filiacaoForm.kyu_dan_id} onChange={e => setFiliacaoForm(f => ({ ...f, kyu_dan_id: e.target.value }))}>
+                      <option value="">Selecione</option>
+                      {kyuDans.map(k => <option key={k.id} value={k.id}>{k.cor_faixa} — {k.kyu_dan}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400 flex justify-between"><span>Nome no Backnumber (patch)</span><span className={`text-[10px] ${filiacaoForm.nome_patch.length >= 15 ? 'text-red-400' : 'text-gray-600'}`}>{filiacaoForm.nome_patch.length}/15</span></label>
+                    <input className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      placeholder="Nome e sobrenome (não é permitido apelido)" maxLength={15} value={filiacaoForm.nome_patch} onChange={e => setFiliacaoForm(f => ({ ...f, nome_patch: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Tamanho do Backnumber (patch)</label>
+                    <select className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      value={filiacaoForm.tamanho_patch} onChange={e => setFiliacaoForm(f => ({ ...f, tamanho_patch: e.target.value }))}>
+                      <option value="">— selecione —</option>
+                      <option value="P">P</option>
+                      <option value="M">M</option>
+                      <option value="G">G</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Cor do Backnumber (patch)</label>
+                    <select className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                      value={filiacaoForm.cor_patch} onChange={e => setFiliacaoForm(f => ({ ...f, cor_patch: e.target.value }))}>
+                      <option value="">— selecione —</option>
+                      <option value="AZUL">Azul</option>
+                      <option value="ROSA">Rosa</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-xs text-gray-400">Observações</label>
+                    <textarea className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 resize-none"
+                      rows={2} value={filiacaoForm.observacoes} onChange={e => setFiliacaoForm(f => ({ ...f, observacoes: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Documentos */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wider">Documentos</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Documento de Identidade *</label>
+                    <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl px-4 py-5 cursor-pointer transition-colors ${docIdFile ? 'border-green-500/40 bg-green-500/5' : 'border-white/10 bg-white/5 hover:border-blue-500/40 hover:bg-blue-500/5'}`}>
+                      <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => setDocIdFile(e.target.files?.[0] || null)} />
+                      {docIdFile ? (
+                        <>
+                          <FileText className="w-6 h-6 text-green-400" />
+                          <span className="text-xs text-green-400 font-medium text-center truncate max-w-full">{docIdFile.name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-500" />
+                          <span className="text-xs text-gray-400 text-center">RG, CNH ou passaporte<br />(imagem ou PDF)</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-400">Comprovante de Pagamento *</label>
+                    <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl px-4 py-5 cursor-pointer transition-colors ${comprovanteFile ? 'border-green-500/40 bg-green-500/5' : 'border-white/10 bg-white/5 hover:border-blue-500/40 hover:bg-blue-500/5'}`}>
+                      <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => setComprovanteFile(e.target.files?.[0] || null)} />
+                      {comprovanteFile ? (
+                        <>
+                          <FileText className="w-6 h-6 text-green-400" />
+                          <span className="text-xs text-green-400 font-medium text-center truncate max-w-full">{comprovanteFile.name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-500" />
+                          <span className="text-xs text-gray-400 text-center">Recibo, PIX ou boleto<br />(imagem ou PDF)</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {filiacaoMsg && (
+                <div className={`rounded-lg px-4 py-3 text-sm ${filiacaoMsg.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-400' : 'bg-red-500/10 border border-red-500/30 text-red-400'}`}>
+                  {filiacaoMsg.text}
+                </div>
+              )}
+
+              {/* Submit */}
+              <button
+                onClick={solicitarFiliacao}
+                disabled={solicitandoFiliacao || !filiacaoForm.nome_completo || !filiacaoForm.cpf || !filiacaoForm.data_nascimento || !filiacaoForm.genero}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl transition-all text-sm"
+              >
+                {solicitandoFiliacao ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                Submeter Pedido de Filiação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
