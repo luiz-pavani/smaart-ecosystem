@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck, ChevronRight, Clock, Tag, XCircle, AlertOctagon } from 'lucide-react'
+import { ArrowLeft, Building2, Users, Trophy, TrendingUp, UserCheck, AlertTriangle, CheckCircle2, Phone, FileText, ShieldCheck, ChevronRight, Clock, Tag, XCircle, AlertOctagon, UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -68,6 +68,7 @@ export default function PortalFederacaoPage() {
   const [healthData, setHealthData] = useState<AcademiaHealth[]>([])
   const [filiacoes, setFiliacoes] = useState<{ pendentes: number; vencendo: number; vencidas: number } | null>(null)
   const [metricas, setMetricas] = useState<{ total: number; ativos: number; vencidos: number; vencendo: number; lotes: { lote: string; count: number }[] } | null>(null)
+  const [pedidosPendentes, setPedidosPendentes] = useState(0)
 
   useEffect(() => {
     loadDashboardData()
@@ -105,6 +106,13 @@ export default function PortalFederacaoPage() {
         const h = await healthRes.json()
         setHealthData(h.academias || [])
       }
+
+      // Fire-and-forget: solicitações de filiação pendentes
+      fetch('/api/federacao/filiacao-pedidos').then(r => r.ok ? r.json() : null).then(d => {
+        if (d?.pedidos) {
+          setPedidosPendentes(d.pedidos.filter((p: { status: string }) => p.status === 'PENDENTE').length)
+        }
+      }).catch(() => {})
 
       // Fire-and-forget: filiações pendentes
       fetch('/api/federacao/filiacoes').then(r => r.ok ? r.json() : null).then(f => {
@@ -230,6 +238,27 @@ export default function PortalFederacaoPage() {
           </button>
         </div>
       </div>
+
+      {/* Widget Solicitações de Filiação */}
+      {pedidosPendentes > 0 && (
+        <button
+          onClick={() => router.push('/portal/federacao/filiacoes')}
+          className="w-full text-left bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-5 hover:bg-yellow-500/10 transition-all group"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <UserPlus className="w-5 h-5 text-yellow-400" />
+              <div>
+                <h3 className="font-semibold text-white">Solicitações de Filiação</h3>
+                <p className="text-sm text-yellow-300 mt-0.5">
+                  {pedidosPendentes} nova{pedidosPendentes !== 1 ? 's' : ''} solicitaç{pedidosPendentes !== 1 ? 'ões' : 'ão'} aguardando revisão
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-yellow-500 group-hover:text-yellow-300 transition-colors" />
+          </div>
+        </button>
+      )}
 
       {/* Widget Filiações */}
       {filiacoes && (filiacoes.pendentes > 0 || filiacoes.vencendo > 0 || filiacoes.vencidas > 0) && (
