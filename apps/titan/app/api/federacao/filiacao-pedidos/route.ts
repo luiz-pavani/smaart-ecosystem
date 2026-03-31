@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest) {
   // Fetch the pedido to get stakeholder/academia/federacao and dados_formulario
   const { data: pedido } = await supabaseAdmin
     .from('filiacao_pedidos')
-    .select('stakeholder_id, academia_id, federacao_id, dados_formulario, url_documento_id')
+    .select('stakeholder_id, academia_id, federacao_id, dados_formulario, url_documento_id, created_at')
     .eq('id', pedido_id)
     .single()
 
