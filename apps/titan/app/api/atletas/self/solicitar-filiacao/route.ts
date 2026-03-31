@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
     await supabaseAdmin.from('stakeholders').update(stUpdate).eq('id', user.id).then(() => {}, () => {})
   }
 
-  // Collect extra fields for the request record
+  // Collect extra fields for the request record (include genero/data_nascimento for the modal)
   const dadosForm: Record<string, unknown> = {}
-  const extraFields = ['cpf', 'cidade', 'estado', 'pais', 'nacionalidade', 'nome_patch', 'tamanho_patch', 'cor_patch', 'kyu_dan_id', 'observacoes']
+  const extraFields = ['cpf', 'cidade', 'estado', 'pais', 'nacionalidade', 'genero', 'data_nascimento', 'nome_patch', 'tamanho_patch', 'cor_patch', 'kyu_dan_id', 'observacoes']
   for (const f of extraFields) {
     if (body[f] !== undefined && body[f] !== '') {
       dadosForm[f] = f === 'kyu_dan_id' ? Number(body[f]) : body[f]

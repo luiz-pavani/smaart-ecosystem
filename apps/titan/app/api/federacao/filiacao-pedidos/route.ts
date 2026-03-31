@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id, status, created_at, observacao,
       url_documento_id, url_comprovante_pagamento, dados_formulario,
-      stakeholder:stakeholder_id (id, nome_completo, email, telefone, kyu_dan_id),
+      stakeholder:stakeholder_id (id, nome_completo, email, telefone, kyu_dan_id, genero, data_nascimento),
       academia:academia_id (id, nome, endereco_cidade, endereco_estado)
     `)
     .order('created_at', { ascending: false })

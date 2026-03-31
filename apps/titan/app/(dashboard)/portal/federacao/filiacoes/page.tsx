@@ -14,6 +14,8 @@ interface DadosFormulario {
   estado?: string
   pais?: string
   nacionalidade?: string
+  genero?: string
+  data_nascimento?: string
   nome_patch?: string
   tamanho_patch?: string
   cor_patch?: string
@@ -28,7 +30,7 @@ interface FiliacaoPedido {
   url_documento_id: string | null
   url_comprovante_pagamento: string | null
   dados_formulario: DadosFormulario | null
-  stakeholder: { id: string; nome_completo: string; email: string; telefone: string | null; kyu_dan_id: number | null } | null
+  stakeholder: { id: string; nome_completo: string; email: string; telefone: string | null; kyu_dan_id: number | null; genero: string | null; data_nascimento: string | null } | null
   academia: { id: string; nome: string; endereco_cidade: string; endereco_estado: string } | null
 }
 
@@ -44,11 +46,13 @@ function Row({ label, value }: { label: string; value?: string | null }) {
 
 function ReviewModal({
   pedido,
+  kyuDanMap,
   onClose,
   onReview,
   acting,
 }: {
   pedido: FiliacaoPedido
+  kyuDanMap: Record<number, string>
   onClose: () => void
   onReview: (id: string, status: 'APROVADO' | 'REJEITADO') => void
   acting: boolean
@@ -57,13 +61,27 @@ function ReviewModal({
   const st = pedido.stakeholder
   const ac = pedido.academia
 
+  // Resolve graduação: prefer dados_formulario.kyu_dan_id, fallback stakeholder.kyu_dan_id
+  const kyuDanId = df.kyu_dan_id ?? st?.kyu_dan_id ?? null
+  const graduacao = kyuDanId ? (kyuDanMap[kyuDanId] ?? `ID ${kyuDanId}`) : null
+
+  // Prefer dados_formulario for genero/nascimento, fallback to stakeholder
+  const genero = df.genero ?? st?.genero ?? null
+  const nascimento = df.data_nascimento ?? st?.data_nascimento ?? null
+
+  const isPendente = pedido.status === 'PENDENTE'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className="bg-[#111827] border border-white/10 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
           <div>
-            <h2 className="text-white font-bold text-lg">{st?.nome_completo || '—'}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-white font-bold text-lg">{st?.nome_completo || '—'}</h2>
+              {pedido.status === 'APROVADO' && <span className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">Aprovado</span>}
+              {pedido.status === 'REJEITADO' && <span className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">Rejeitado</span>}
+            </div>
             <p className="text-gray-400 text-xs mt-0.5">Solicitação de Filiação · {new Date(pedido.created_at).toLocaleDateString('pt-BR')}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
@@ -80,8 +98,10 @@ function ReviewModal({
               <Row label="E-mail" value={st?.email} />
               <Row label="Telefone" value={st?.telefone} />
               <Row label="CPF" value={df.cpf} />
+              <Row label="Data de Nascimento" value={nascimento ? new Date(nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : null} />
+              <Row label="Gênero" value={genero} />
               <Row label="Nacionalidade" value={df.nacionalidade} />
-              <Row label="Cidade" value={df.cidade ? `${df.cidade}${df.estado ? `/${df.estado}` : ''}` : null} />
+              <Row label="Cidade/Estado" value={df.cidade ? `${df.cidade}${df.estado ? `/${df.estado}` : ''}` : null} />
               <Row label="País" value={df.pais} />
             </div>
           </div>
@@ -101,6 +121,7 @@ function ReviewModal({
           <div>
             <p className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-2">Dados Esportivos</p>
             <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-1">
+              <Row label="Graduação" value={graduacao} />
               <Row label="Nome no Patch" value={df.nome_patch} />
               <Row label="Tamanho do Patch" value={df.tamanho_patch} />
               <Row label="Cor do Patch" value={df.cor_patch} />
@@ -142,25 +163,27 @@ function ReviewModal({
           )}
         </div>
 
-        {/* Footer actions */}
-        <div className="flex gap-3 px-6 py-4 border-t border-white/10 shrink-0">
-          <button
-            onClick={() => onReview(pedido.id, 'REJEITADO')}
-            disabled={acting}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 font-medium transition-colors disabled:opacity-50"
-          >
-            <XCircle className="w-4 h-4" />
-            Rejeitar
-          </button>
-          <button
-            onClick={() => onReview(pedido.id, 'APROVADO')}
-            disabled={acting}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-500/20 border border-green-500/30 text-green-300 hover:bg-green-500/30 font-medium transition-colors disabled:opacity-50"
-          >
-            {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            Aprovar
-          </button>
-        </div>
+        {/* Footer actions — only for pending */}
+        {isPendente && (
+          <div className="flex gap-3 px-6 py-4 border-t border-white/10 shrink-0">
+            <button
+              onClick={() => onReview(pedido.id, 'REJEITADO')}
+              disabled={acting}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30 font-medium transition-colors disabled:opacity-50"
+            >
+              <XCircle className="w-4 h-4" />
+              Rejeitar
+            </button>
+            <button
+              onClick={() => onReview(pedido.id, 'APROVADO')}
+              disabled={acting}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-green-500/20 border border-green-500/30 text-green-300 hover:bg-green-500/30 font-medium transition-colors disabled:opacity-50"
+            >
+              {acting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Aprovar
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -170,6 +193,7 @@ type SolTab = 'PENDENTE' | 'APROVADO' | 'REJEITADO'
 
 function SolicitacoesSection({ onRefresh }: { onRefresh: () => void }) {
   const [todos, setTodos] = useState<FiliacaoPedido[]>([])
+  const [kyuDanMap, setKyuDanMap] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(true)
   const [acting, setActing] = useState(false)
   const [selected, setSelected] = useState<FiliacaoPedido | null>(null)
@@ -177,8 +201,16 @@ function SolicitacoesSection({ onRefresh }: { onRefresh: () => void }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/federacao/filiacao-pedidos').then(r => r.json()).catch(() => ({}))
+    const [res, kdRes] = await Promise.all([
+      fetch('/api/federacao/filiacao-pedidos').then(r => r.json()).catch(() => ({})),
+      fetch('/api/kyu-dan').then(r => r.json()).catch(() => ({})),
+    ])
     setTodos(res.pedidos || [])
+    if (kdRes.kyu_dan) {
+      const map: Record<number, string> = {}
+      for (const k of kdRes.kyu_dan) map[k.id] = k.kyu_dan
+      setKyuDanMap(map)
+    }
     setLoading(false)
   }, [])
 
@@ -216,6 +248,7 @@ function SolicitacoesSection({ onRefresh }: { onRefresh: () => void }) {
       {selected && (
         <ReviewModal
           pedido={selected}
+          kyuDanMap={kyuDanMap}
           onClose={() => setSelected(null)}
           onReview={review}
           acting={acting}
