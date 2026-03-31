@@ -10,12 +10,12 @@ export async function GET(req: NextRequest) {
 
   const { data: me } = await supabaseAdmin
     .from('stakeholders')
-    .select('role, master_access, federacao_id')
+    .select('role, federacao_id')
     .eq('id', user.id)
     .single()
 
   const allowed = ['master_access', 'federacao_admin', 'federacao_gestor', 'federacao_staff', 'admin']
-  if (!me || (!me.master_access && !allowed.includes(me.role))) {
+  if (!me || !allowed.includes(me.role)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
@@ -30,8 +30,10 @@ export async function GET(req: NextRequest) {
     `)
     .order('created_at', { ascending: false })
 
+  const isMaster = me.role === 'master_access'
+
   // Non-master users must be scoped to their federation
-  if (!me.master_access) {
+  if (!isMaster) {
     if (!federacaoId) return NextResponse.json({ pedidos: [] })
     query = query.eq('federacao_id', federacaoId)
   } else if (federacaoId) {
@@ -51,12 +53,12 @@ export async function PATCH(req: NextRequest) {
 
   const { data: me } = await supabaseAdmin
     .from('stakeholders')
-    .select('role, master_access, nome_completo')
+    .select('role, nome_completo')
     .eq('id', user.id)
     .single()
 
   const allowed = ['master_access', 'federacao_admin', 'federacao_gestor', 'admin']
-  if (!me || (!me.master_access && !allowed.includes(me.role))) {
+  if (!me || !allowed.includes(me.role)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
