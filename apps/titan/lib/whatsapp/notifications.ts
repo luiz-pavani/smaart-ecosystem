@@ -80,7 +80,7 @@ export async function notifyFederacaoNovoCadastro(atleta: {
   email?: string | null
   telefone?: string | null
 }) {
-  const coordPhone = process.env.FEDERATION_COORD_PHONE || '5551968340131'
+  const coordPhone = process.env.FEDERATION_COORD_PHONE || '5555984085000'
   const contato = atleta.email || atleta.telefone || 'não informado'
 
   return sendTemplate(coordPhone, 'lrsj_fed_novo_cadastro', [

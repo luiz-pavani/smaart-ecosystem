@@ -49,7 +49,7 @@ export default function AtletasAcademiaPage() {
       setGraduacoes((data as KyuDanOption[]) || [])
     }
     loadGraduacoes()
-  }, [supabase])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const load = async () => {
@@ -94,7 +94,7 @@ export default function AtletasAcademiaPage() {
       }
     }
     load()
-  }, [supabase, page, search, filterGraduacao, filterSituacao, filterStatusMembro])
+  }, [page, search, filterGraduacao, filterSituacao, filterStatusMembro]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearFilters = () => {
     setSearch('')
@@ -166,7 +166,7 @@ export default function AtletasAcademiaPage() {
         <div className="max-w-6xl mx-auto px-4">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all text-sm"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar

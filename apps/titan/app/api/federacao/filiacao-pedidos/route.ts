@@ -43,7 +43,34 @@ export async function GET(req: NextRequest) {
 
   const { data: pedidos } = await query
 
-  return NextResponse.json({ pedidos: pedidos || [] })
+  // Enrich pedidos with payment info from pagamentos table
+  const pedidoIds = (pedidos || []).map((p: any) => p.id)
+  let pagamentosMap: Record<string, any> = {}
+
+  if (pedidoIds.length > 0) {
+    const { data: pagamentos } = await supabaseAdmin
+      .from('pagamentos')
+      .select('referencia_id, safe2pay_id, tipo, valor, status, created_at, updated_at, metadata')
+      .in('referencia_tipo', ['filiacao_pedido', 'filiacao_atleta'])
+      .in('referencia_id', pedidoIds)
+      .order('created_at', { ascending: false })
+
+    if (pagamentos) {
+      for (const pg of pagamentos) {
+        // Keep only the most recent payment per pedido
+        if (!pagamentosMap[pg.referencia_id]) {
+          pagamentosMap[pg.referencia_id] = pg
+        }
+      }
+    }
+  }
+
+  const enriched = (pedidos || []).map((p: any) => ({
+    ...p,
+    pagamento: pagamentosMap[p.id] || null,
+  }))
+
+  return NextResponse.json({ pedidos: enriched })
 }
 
 // PATCH — approve or reject a request
@@ -64,8 +91,8 @@ export async function PATCH(req: NextRequest) {
   }
 
   const { pedido_id, status, observacao, data_expiracao_override } = await req.json()
-  if (!pedido_id || !['APROVADO', 'REJEITADO'].includes(status)) {
-    return NextResponse.json({ error: 'pedido_id e status (APROVADO|REJEITADO) obrigatórios' }, { status: 400 })
+  if (!pedido_id || !['APROVADO', 'REJEITADO', 'PENDENTE'].includes(status)) {
+    return NextResponse.json({ error: 'pedido_id e status (APROVADO|REJEITADO|PENDENTE) obrigatórios' }, { status: 400 })
   }
 
   // Fetch the pedido to get stakeholder/academia/federacao and dados_formulario
@@ -122,11 +149,25 @@ export async function PATCH(req: NextRequest) {
     // cor_patch must be uppercase per DB check constraint
     const corPatch = (df.cor_patch as string | undefined)?.toUpperCase() ?? null
 
+    // Resolve integer federacao_id for user_fed_lrsj (column is INTEGER, not UUID)
+    // filiacao_pedidos.federacao_id is UUID → lookup the integer id used in user_fed_lrsj
+    let fedIdInt: number = 1 // default LRSJ
+    if (pedido.federacao_id) {
+      const { data: fedRow } = await supabaseAdmin
+        .from('user_fed_lrsj')
+        .select('federacao_id')
+        .eq('stakeholder_id', pedido.stakeholder_id)
+        .maybeSingle()
+      if (fedRow?.federacao_id) {
+        fedIdInt = fedRow.federacao_id
+      }
+    }
+
     // Upsert user_fed_lrsj
-    await supabaseAdmin.from('user_fed_lrsj').upsert(
+    const { error: upsertError } = await supabaseAdmin.from('user_fed_lrsj').upsert(
       {
         stakeholder_id: pedido.stakeholder_id,
-        federacao_id: pedido.federacao_id,
+        federacao_id: fedIdInt,
         academia_id: pedido.academia_id,
         nome_completo: (df.nome_completo as string | undefined) ?? st?.nome_completo ?? null,
         email: st?.email ?? null,
@@ -152,6 +193,10 @@ export async function PATCH(req: NextRequest) {
       },
       { onConflict: 'stakeholder_id,federacao_id' }
     )
+
+    if (upsertError) {
+      console.error('[filiacao-pedidos] Erro ao upsert user_fed_lrsj:', upsertError)
+    }
 
     // Update stakeholder federacao_id and kyu_dan_id if set
     const stUpdate: Record<string, unknown> = { federacao_id: pedido.federacao_id }

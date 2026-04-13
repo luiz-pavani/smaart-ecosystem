@@ -7,14 +7,25 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-  // Buscar academia do atleta
+  // Buscar academia do atleta — fallback para user_fed_lrsj se stakeholder.academia_id for null
   const { data: stakeholder } = await supabaseAdmin
     .from('stakeholders')
     .select('academia_id')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!stakeholder?.academia_id) {
+  let academiaId = stakeholder?.academia_id ?? null
+
+  if (!academiaId) {
+    const { data: fedRow } = await supabaseAdmin
+      .from('user_fed_lrsj')
+      .select('academia_id')
+      .eq('stakeholder_id', user.id)
+      .maybeSingle()
+    academiaId = fedRow?.academia_id ?? null
+  }
+
+  if (!academiaId) {
     return NextResponse.json({ classes: [], semAcademia: true })
   }
 
@@ -23,7 +34,7 @@ export async function GET() {
     supabaseAdmin
       .from('classes')
       .select('id, name, instructor_name, location, capacity, current_enrollment, class_schedules(day_of_week, start_time, end_time)')
-      .eq('academy_id', stakeholder.academia_id)
+      .eq('academy_id', academiaId)
       .eq('is_active', true)
       .order('name'),
     supabaseAdmin

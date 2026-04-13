@@ -29,6 +29,7 @@ interface StakeholderPerfil {
   email: string | null
   telefone: string | null
   funcao: string | null
+  role: string | null
   academia_id: string | null
   federacao_id: string | null
   kyu_dan_id: number | null
@@ -174,6 +175,7 @@ export default function PerfilAtletaPage() {
   const [docIdFile, setDocIdFile] = useState<File | null>(null)
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null)
   const [isMasterAccess, setIsMasterAccess] = useState(false)
+  const [isEntity, setIsEntity] = useState(false)  // FEDERACAO or academia admin — hide athlete fields
   const [roleSearch, setRoleSearch] = useState('')
   const [roleResults, setRoleResults] = useState<{ id: string; nome_completo: string; email: string; role: string }[]>([])
   const [roleSearching, setRoleSearching] = useState(false)
@@ -204,6 +206,7 @@ export default function PerfilAtletaPage() {
         const { stakeholder: stakeholderData, fedLrsj: fedData, federacoes: fedsData, academias: acadData, kyuDans: kdData } = perfilRes
 
         if (stakeholderData?.role === 'master_access') setIsMasterAccess(true)
+        if (stakeholderData?.funcao === 'FEDERACAO') setIsEntity(true)
 
         if (stakeholderData) {
           setStakeholder(stakeholderData as StakeholderPerfil)
@@ -445,8 +448,8 @@ export default function PerfilAtletaPage() {
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
-          <h1 className="text-3xl font-bold text-white">Meu Perfil</h1>
-          <p className="text-gray-400 mt-1">Dados pessoais e de filiação</p>
+          <h1 className="text-3xl font-bold text-white">{isEntity ? 'Perfil da Entidade' : 'Meu Perfil'}</h1>
+          <p className="text-gray-400 mt-1">{isEntity ? 'Dados da organização' : 'Dados pessoais e de filiação'}</p>
         </div>
       </div>
 
@@ -481,7 +484,7 @@ export default function PerfilAtletaPage() {
                       <User className="w-14 h-14 text-blue-300" />
                     </div>
                   )}
-                  {editingProfile && atleta && (
+                  {editingProfile && !isEntity && atleta && (
                     <>
                       <button
                         onClick={() => fileInputRef.current?.click()}
@@ -508,29 +511,52 @@ export default function PerfilAtletaPage() {
                     <p className="text-gray-400 text-sm mb-2">@{displayUsername}</p>
                   )}
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {kyuDan && (
-                      <span className="px-3 py-1 rounded-full text-xs font-medium border bg-blue-500/20 text-blue-300 border-blue-500/30">
-                        {kyuDan.icones ? `${kyuDan.icones} ` : ''}{kyuDan.cor_faixa} | {kyuDan.kyu_dan}
-                      </span>
-                    )}
-                    {(() => {
-                      const acadNome = atleta?.academias ||
-                        academias.find(a => a.id === (stakeholder?.academia_id || selectedAcadId))?.nome
-                      return acadNome ? (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium border bg-orange-500/20 text-orange-300 border-orange-500/30">
-                          🥋 {acadNome}
+                    {isEntity ? (
+                      <>
+                        <span className="px-3 py-1 rounded-full text-xs font-medium border bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
+                          <Building2 className="w-3 h-3 inline mr-1 -mt-0.5" />
+                          {stakeholder?.funcao === 'FEDERACAO' ? 'Federação' : 'Entidade'}
                         </span>
-                      ) : null
-                    })()}
-                    {atleta?.status_plano && (
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColor(atleta.status_plano)}`}>
-                        Plano {atleta.status_plano}
-                      </span>
-                    )}
-                    {atleta?.status_membro && (
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColor(atleta.status_membro)}`}>
-                        {atleta.status_membro}
-                      </span>
+                        {stakeholder?.role && (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium border bg-purple-500/20 text-purple-300 border-purple-500/30">
+                            {stakeholder.role === 'master_access' ? 'Master Access' : stakeholder.role === 'federacao_admin' ? 'Admin' : stakeholder.role}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {kyuDan && (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium border bg-blue-500/20 text-blue-300 border-blue-500/30">
+                            {kyuDan.icones ? `${kyuDan.icones} ` : ''}{kyuDan.cor_faixa} | {kyuDan.kyu_dan}
+                          </span>
+                        )}
+                        {(() => {
+                          const acadNome = atleta?.academias ||
+                            academias.find(a => a.id === (stakeholder?.academia_id || selectedAcadId))?.nome
+                          return acadNome ? (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium border bg-orange-500/20 text-orange-300 border-orange-500/30">
+                              🥋 {acadNome}
+                            </span>
+                          ) : null
+                        })()}
+                        {atleta?.status_plano && (() => {
+                          const exp = atleta.data_expiracao
+                          const isVencido = exp
+                            ? new Date(exp + 'T23:59:59') < new Date()
+                            : atleta.status_plano === 'Vencido'
+                          const label = isVencido ? 'Vencido' : atleta.status_plano
+                          return (
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColor(label)}`}>
+                              Plano {label}
+                            </span>
+                          )
+                        })()}
+                        {atleta?.status_membro && (
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColor(atleta.status_membro)}`}>
+                            {atleta.status_membro}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -622,42 +648,49 @@ export default function PerfilAtletaPage() {
                       onChange={e => setStForm(f => ({ ...f, instagram: e.target.value }))}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Gênero</label>
-                    <select
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.genero}
-                      onChange={e => setStForm(f => ({ ...f, genero: e.target.value }))}
-                    >
-                      <option value="">Selecione</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="Feminino">Feminino</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Data de Nascimento</label>
-                    <input type="date"
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.data_nascimento}
-                      onChange={e => setStForm(f => ({ ...f, data_nascimento: e.target.value }))}
-                    />
-                  </div>
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs text-gray-400 font-medium">Graduação (Faixa)</label>
-                    <select
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
-                      value={stForm.kyu_dan_id}
-                      onChange={e => setStForm(f => ({ ...f, kyu_dan_id: e.target.value }))}
-                    >
-                      <option value="">Selecione sua faixa</option>
-                      {kyuDans.map(k => (
-                        <option key={k.id} value={k.id}>{k.cor_faixa} — {k.kyu_dan}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {!isEntity && (
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400 font-medium">Gênero</label>
+                      <select
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                        value={stForm.genero}
+                        onChange={e => setStForm(f => ({ ...f, genero: e.target.value }))}
+                      >
+                        <option value="">Selecione</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Feminino">Feminino</option>
+                      </select>
+                    </div>
+                  )}
+                  {!isEntity && (
+                    <div className="space-y-1">
+                      <label className="text-xs text-gray-400 font-medium">Data de Nascimento</label>
+                      <input type="date"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                        value={stForm.data_nascimento}
+                        onChange={e => setStForm(f => ({ ...f, data_nascimento: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                  {/* Graduação — athletes only */}
+                  {!isEntity && (
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-xs text-gray-400 font-medium">Graduação (Faixa)</label>
+                      <select
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                        value={stForm.kyu_dan_id}
+                        onChange={e => setStForm(f => ({ ...f, kyu_dan_id: e.target.value }))}
+                      >
+                        <option value="">Selecione sua faixa</option>
+                        {kyuDans.map(k => (
+                          <option key={k.id} value={k.id}>{k.cor_faixa} — {k.kyu_dan}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-                  {/* Atleta-specific fields (only for users with federation record) */}
-                  {atleta && (
+                  {/* Atleta-specific fields (only for athletes with federation record) */}
+                  {!isEntity && atleta && (
                     <>
                       <InputField
                         label="Cidade"
@@ -709,8 +742,8 @@ export default function PerfilAtletaPage() {
               </div>
             )}
 
-            {/* Renovation banner (only for users with federation plan) */}
-            {atleta && (() => {
+            {/* Renovation banner (only for athletes with federation plan) */}
+            {!isEntity && atleta && (() => {
               const exp = atleta.data_expiracao
               const today = new Date().toISOString().split('T')[0]
               const diffDays = exp
@@ -754,8 +787,8 @@ export default function PerfilAtletaPage() {
               )
             })()}
 
-            {/* Documentos (only for users with federation record) */}
-            {atleta && (
+            {/* Documentos (only for athletes with federation record) */}
+            {!isEntity && atleta && (
               <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
                 <AtletaDocumentos
                   atletaId={atleta.stakeholder_id}
@@ -772,11 +805,13 @@ export default function PerfilAtletaPage() {
                   <User className="w-4 h-4 text-blue-400" />
                   <h3 className="font-semibold text-white">Dados Pessoais</h3>
                 </div>
-                <Row label="Gênero" value={displayGenero} />
-                <Row label="Data de Nascimento" value={displayNascimento} />
-                {atleta?.nacionalidade && <Row label="Nacionalidade" value={atleta.nacionalidade} />}
-                {atleta?.tamanho_patch && <Row label="Tamanho do Backnumber (patch)" value={atleta.tamanho_patch} />}
-                {atleta?.nome_patch && <Row label="Nome no Backnumber (patch)" value={atleta.nome_patch} />}
+                {!isEntity && <Row label="Gênero" value={displayGenero} />}
+                {!isEntity && <Row label="Data de Nascimento" value={displayNascimento} />}
+                {!isEntity && atleta?.nacionalidade && <Row label="Nacionalidade" value={atleta.nacionalidade} />}
+                {!isEntity && atleta?.tamanho_patch && <Row label="Tamanho do Backnumber (patch)" value={atleta.tamanho_patch} />}
+                {!isEntity && atleta?.nome_patch && <Row label="Nome no Backnumber (patch)" value={atleta.nome_patch} />}
+                {isEntity && <Row label="Nome de Usuário" value={stakeholder?.nome_usuario ? `@${stakeholder.nome_usuario}` : '—'} />}
+                {isEntity && <Row label="Função" value={stakeholder?.funcao === 'FEDERACAO' ? 'Federação' : stakeholder?.funcao || '—'} />}
               </div>
 
               {/* Contato */}
@@ -793,19 +828,39 @@ export default function PerfilAtletaPage() {
                 {atleta?.pais && <Row label="País" value={atleta.pais} />}
               </div>
 
-              {/* Graduação */}
-              <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Award className="w-4 h-4 text-blue-400" />
-                  <h3 className="font-semibold text-white">Graduação</h3>
+              {/* Graduação (athletes only) */}
+              {!isEntity && (
+                <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Award className="w-4 h-4 text-blue-400" />
+                    <h3 className="font-semibold text-white">Graduação</h3>
+                  </div>
+                  <Row
+                    label="Faixa"
+                    value={kyuDan ? `${kyuDan.cor_faixa} | ${kyuDan.kyu_dan}` : '—'}
+                  />
                 </div>
-                <Row
-                  label="Faixa"
-                  value={kyuDan ? `${kyuDan.cor_faixa} | ${kyuDan.kyu_dan}` : '—'}
-                />
-              </div>
+              )}
 
-              {/* Filiação */}
+              {/* Filiação (athletes only) / Entidade info */}
+              {isEntity ? (
+                <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Building2 className="w-4 h-4 text-indigo-400" />
+                    <h3 className="font-semibold text-white">Entidade</h3>
+                  </div>
+                  <Row label="Tipo" value={stakeholder?.funcao === 'FEDERACAO' ? 'Federação' : 'Entidade'} />
+                  <Row label="Nível de Acesso" value={
+                    stakeholder?.role === 'master_access' ? 'Master Access' :
+                    stakeholder?.role === 'federacao_admin' ? 'Administrador de Federação' :
+                    stakeholder?.role || '—'
+                  } />
+                  {stakeholder?.federacao_id && (() => {
+                    const fed = federacoes.find(f => f.id === stakeholder?.federacao_id)
+                    return fed ? <Row label="Federação" value={`${fed.sigla} — ${fed.nome}`} /> : null
+                  })()}
+                </div>
+              ) : (
               <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <CreditCard className="w-4 h-4 text-blue-400" />
@@ -881,9 +936,11 @@ export default function PerfilAtletaPage() {
                   </div>
                 )}
               </div>
+              )}
             </div>
 
-            {/* Minhas Turmas */}
+            {/* Minhas Turmas (athletes only) */}
+            {!isEntity && (
             <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="w-4 h-4 text-purple-400" />
@@ -922,9 +979,10 @@ export default function PerfilAtletaPage() {
                 </div>
               )}
             </div>
+            )}
 
-            {/* Fila de Espera */}
-            {waitlistItems.length > 0 && (
+            {/* Fila de Espera (athletes only) */}
+            {!isEntity && waitlistItems.length > 0 && (
               <div className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Clock className="w-4 h-4 text-orange-400" />

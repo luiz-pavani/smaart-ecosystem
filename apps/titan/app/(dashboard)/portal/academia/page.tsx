@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User, Award, UserSearch, MessageSquare, Star, BookText, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User, Award, UserSearch, MessageSquare, Star, BookText, ShieldAlert, DollarSign } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { MetricCard } from '@/components/dashboard/MetricCard'
@@ -480,6 +480,20 @@ export default function PortalAcademiaPage() {
       color: 'from-red-500 to-orange-600'
     },
     {
+      title: 'Filiação em Grupo',
+      description: 'Filiar ou renovar vários atletas de uma vez',
+      icon: <Users className="w-6 h-6" />,
+      href: '/portal/academia/filiacoes',
+      color: 'from-blue-600 to-indigo-600'
+    },
+    {
+      title: 'Área Comercial',
+      description: 'Planos, cupons e pagamentos',
+      icon: <DollarSign className="w-6 h-6" />,
+      href: '/portal/academia/comercial',
+      color: 'from-emerald-500 to-teal-600'
+    },
+    {
       title: 'Relatórios',
       description: 'Gere PDFs com dados da academia',
       icon: <BookText className="w-6 h-6" />,
@@ -495,7 +509,7 @@ export default function PortalAcademiaPage() {
         <div className="max-w-7xl mx-auto px-4">
           <button
             onClick={() => router.push('/portal')}
-            className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all text-sm"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar

@@ -173,7 +173,7 @@ export default function PortalFederacaoPage() {
           </button>
 
           <button
-            onClick={() => router.push('/portal/federacao/atletas')}
+            onClick={() => router.push('/portal/federacao/filiacoes')}
             className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-green-500/10 to-green-600/5
                      hover:from-green-500/20 hover:to-green-600/10 border border-green-500/20 hover:border-green-500/40
                      transition-all duration-300 text-left"
@@ -181,8 +181,8 @@ export default function PortalFederacaoPage() {
             <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <Users className="w-6 h-6 text-green-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Atletas</h3>
-            <p className="text-sm text-slate-400">Ver todos os atletas filiados</p>
+            <h3 className="text-lg font-semibold text-white mb-2">Atletas & Filiações</h3>
+            <p className="text-sm text-slate-400">Solicitações, aprovações e lista de filiados</p>
           </button>
 
           <button
@@ -212,7 +212,7 @@ export default function PortalFederacaoPage() {
           </button>
 
           <button
-            onClick={() => router.push('/portal/federacao/filiacoes')}
+            onClick={() => router.push('/portal/federacao/backnumbers')}
             className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/5
                      hover:from-orange-500/20 hover:to-orange-600/10 border border-orange-500/20 hover:border-orange-500/40
                      transition-all duration-300 text-left"
@@ -220,8 +220,8 @@ export default function PortalFederacaoPage() {
             <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <ShieldCheck className="w-6 h-6 text-orange-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Filiações</h3>
-            <p className="text-sm text-slate-400">Aprovações e renovações</p>
+            <h3 className="text-lg font-semibold text-white mb-2">Backnumbers</h3>
+            <p className="text-sm text-slate-400">Gerar e baixar BNs em massa</p>
           </button>
 
           <button

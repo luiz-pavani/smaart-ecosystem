@@ -1,16 +1,27 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { ExternalLink } from 'lucide-react'
+'use client'
 
-export default async function CursosPage() {
-  const supabase = await createClient()
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+import { useState } from 'react'
+import { ExternalLink, Loader2 } from 'lucide-react'
 
-  if (!user) {
-    redirect('/login')
+const PROFEP_URL = process.env.NEXT_PUBLIC_PROFEP_URL || 'https://www.profepmax.com.br'
+
+export default function CursosPage() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleAccess() {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/candidato/sso/token')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao gerar acesso')
+      window.open(`${PROFEP_URL}/auth/titan?token=${encodeURIComponent(data.token)}`, '_blank')
+    } catch (e: any) {
+      setError(e.message || 'Erro ao acessar ProfepMax')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -34,15 +45,20 @@ export default async function CursosPage() {
         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
           Clique no botão abaixo para acessar a plataforma ProfepMax de cursos e treinamentos
         </p>
-        <a
-          href="https://www.profepmax.com.br/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-all active:scale-[0.98]"
+        {error && (
+          <p className="text-red-500 text-sm font-semibold mb-4">{error}</p>
+        )}
+        <button
+          onClick={handleAccess}
+          disabled={loading}
+          className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-3 px-6 rounded-lg transition-all active:scale-[0.98] disabled:opacity-60"
         >
-          <span>Abrir ProfepMax em nova janela</span>
-          <ExternalLink className="w-5 h-5" />
-        </a>
+          {loading ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Preparando acesso...</>
+          ) : (
+            <><span>Abrir ProfepMax em nova janela</span><ExternalLink className="w-5 h-5" /></>
+          )}
+        </button>
       </div>
     </div>
   )

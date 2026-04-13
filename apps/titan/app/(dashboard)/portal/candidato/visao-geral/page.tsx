@@ -67,6 +67,7 @@ export default function VisaoGeralPage() {
     fetch('/api/candidato/dados')
       .then(r => r.json())
       .then(d => {
+        if (d.error) { setError(d.error); return }
         setData(d)
         setEditGraduacao(d.inscricao?.graduacao_pretendida || 'Shodan (1º Dan)')
       })

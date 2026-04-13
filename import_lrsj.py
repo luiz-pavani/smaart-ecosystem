@@ -198,6 +198,21 @@ def normalize_text(text):
     # Normalização NFD para decompor acentos e recompor em NFC
     return unicodedata.normalize("NFC", text)
 
+def normalize_tamanho_patch(val):
+    if not val:
+        return None
+    v = val.upper().strip()
+    if "GRANDE" in v or v == "G":
+        return "G"
+    if "MÉDIO" in v or "MEDIO" in v or v == "M":
+        return "M"
+    if "PEQUENO" in v or v == "P":
+        return "P"
+    # Already P/M/G
+    if v in ("P", "M", "G"):
+        return v
+    return None  # invalid → null (skip)
+
 def extract_first_academia(academies_field):
     if not academies_field.strip():
         return None
@@ -362,7 +377,7 @@ def transform_row(row, academia_map, stakeholder_cache):
         "url_foto": row.get("Foto", "").strip() or None,
         "url_documento_id": row.get("Imagem da Carteira de Identidade ou Certidão de Nascimento ", "").strip() or None,
         "url_certificado_dan": row.get("Certificado de dan", "").strip() or None,
-        "tamanho_patch": row.get("TAMANHO DO PATCH (BACKNUMBER)", "").strip() or None,
+        "tamanho_patch": normalize_tamanho_patch(row.get("TAMANHO DO PATCH (BACKNUMBER)", "").strip()),
         "lote_id": normalize_lote(row.get("LOTE", "")),
         "observacoes": row.get("OBSERVAÇÕES", "").strip() or None,
         "federacao_id": LRSJ_FED_ID_INT,

@@ -269,6 +269,22 @@ export default function CalculadoraPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_20rem] gap-6">
         <div className="space-y-6">
 
+          {/* Seletor de graduação pretendida */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase block mb-2">Graduação Pretendida</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+              {(['shodan','nidan','sandan','yondan','godan','rokudan'] as const).map(g => (
+                <button
+                  key={g}
+                  onClick={() => setTargetGrade(g)}
+                  className={`py-2 rounded-lg text-xs font-bold capitalize transition-all border ${targetGrade === g ? 'bg-red-600 border-red-600 text-white shadow' : 'bg-black border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'}`}
+                >
+                  {g === 'shodan' ? '1º Dan' : g === 'nidan' ? '2º Dan' : g === 'sandan' ? '3º Dan' : g === 'yondan' ? '4º Dan' : g === 'godan' ? '5º Dan' : '6º Dan'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Seletor de trilha */}
           <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
             <button onClick={() => setTrack('exam')} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${track === 'exam' ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Com Exame</button>

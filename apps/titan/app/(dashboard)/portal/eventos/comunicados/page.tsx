@@ -67,7 +67,7 @@ export default function ComunicadosEventosPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-6xl mx-auto px-4">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors">
+          <button onClick={() => router.back()} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all text-sm">
             <ArrowLeft className="w-5 h-5" />Voltar
           </button>
           <h1 className="text-3xl font-bold text-white">Comunicados</h1>

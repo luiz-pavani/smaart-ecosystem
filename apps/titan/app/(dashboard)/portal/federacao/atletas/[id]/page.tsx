@@ -309,6 +309,7 @@ function EditableRow({
           type={type}
           value={type === "date" ? normalizeDate(formData[field]) : String(formData[field] ?? "")}
           onChange={e => setField(field, e.target.value)}
+          maxLength={field === "nome_patch" ? 15 : undefined}
           className={inputCls}
         />
       </div>
@@ -569,7 +570,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
-      <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-300 hover:text-white mb-6 transition-colors">
+      <button onClick={() => router.back()} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all text-sm">
         <ArrowLeft className="w-5 h-5" /> Voltar
       </button>
 
@@ -589,7 +590,15 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
             </div>
 
             <div className="flex-1">
-              <h1 className="text-4xl font-bold text-white mb-2">{atleta.nome_completo}</h1>
+              {editMode && canEdit ? (
+                <input
+                  className="text-4xl font-bold text-white bg-white/10 border border-white/20 rounded-xl px-4 py-2 mb-2 w-full focus:outline-none focus:border-blue-400"
+                  value={formData.nome_completo ?? atleta.nome_completo ?? ''}
+                  onChange={e => ctx.setField('nome_completo', e.target.value)}
+                />
+              ) : (
+                <h1 className="text-4xl font-bold text-white mb-2">{atleta.nome_completo}</h1>
+              )}
               {atleta.nome_patch && <p className="text-lg text-gray-400 mb-4">"{atleta.nome_patch}"</p>}
               <div className="flex flex-wrap gap-3 mb-4">
                 {kyuDanAtual && (
@@ -766,9 +775,9 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
           <InfoCard title="Graduação e Arbitragem" icon={Award}>
             <EditableRow label="Graduação (Kyu/Dan)" field="kyu_dan_id" type="select" ctx={ctx} />
             <EditableRow label="Nível de Arbitragem" field="nivel_arbitragem" type="select" ctx={ctx} />
-            <EditableRow label="Tamanho do Patch" field="tamanho_patch" type="select" ctx={ctx} />
-            <EditableRow label="Cor do Patch" field="cor_patch" type="select" ctx={ctx} />
-            <EditableRow label="Nome no Patch" field="nome_patch" ctx={ctx} />
+            <EditableRow label="Tamanho do Backnumber (patch)" field="tamanho_patch" type="select" ctx={ctx} />
+            <EditableRow label="Cor do Backnumber (patch)" field="cor_patch" type="select" ctx={ctx} />
+            <EditableRow label="Nome no Backnumber (patch)" field="nome_patch" ctx={ctx} />
           </InfoCard>
 
           <InfoCard title="Academia" icon={Building2}>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen, QrCode, AlertTriangle, X, ClipboardCheck, GraduationCap, MapPin, Clock } from 'lucide-react'
+import { ArrowLeft, Trophy, Calendar, TrendingUp, Target, Loader2, Building2, Zap, Users, ChevronRight, BookOpen, QrCode, AlertTriangle, X, ClipboardCheck, GraduationCap, MapPin, Clock, CreditCard } from 'lucide-react'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { TopList } from '@/components/dashboard/TopList'
@@ -350,8 +350,10 @@ export default function PortalAtletaPage() {
       {/* Quick Access Grid */}
       <div className="pt-4">
         <h2 className="text-xl font-semibold text-white mb-4">Acesso Rápido</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Check-in Rápido */}
+
+        {/* Linha 1 — 4 cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          {/* Treinos & Check-in */}
           <button
             onClick={() => router.push('/portal/atleta/turmas')}
             className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10
@@ -363,14 +365,52 @@ export default function PortalAtletaPage() {
                             group-hover:scale-110 transition-transform">
                 <ClipboardCheck className="w-6 h-6 text-emerald-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Check-in Rápido</h3>
-              <p className="text-sm text-emerald-400 font-medium">Registrar presença →</p>
+              <h3 className="text-lg font-semibold text-white mb-1">Treinos & Check-in</h3>
+              <p className="text-sm text-emerald-400 font-medium">Turmas, horários e presença →</p>
             </div>
           </button>
 
-          {/* Minhas Turmas */}
+          {/* Meu Perfil */}
           <button
-            onClick={() => router.push('/portal/atleta/turmas')}
+            onClick={() => router.push('/portal/atleta/perfil')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5
+                     hover:from-blue-500/20 hover:to-blue-600/10 border border-blue-500/20 hover:border-blue-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-600/0
+                          group-hover:from-blue-500/10 group-hover:to-blue-600/5 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <Target className="w-6 h-6 text-blue-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-1">Meu Perfil</h3>
+              <p className="text-sm text-slate-400">Dados cadastrais</p>
+            </div>
+          </button>
+
+          {/* Eventos */}
+          <button
+            onClick={() => router.push('/portal/atleta/eventos')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5
+                     hover:from-yellow-500/20 hover:to-yellow-600/10 border border-yellow-500/20 hover:border-yellow-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-600/0
+                          group-hover:from-yellow-500/10 group-hover:to-yellow-600/5 transition-all duration-300" />
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <Trophy className="w-6 h-6 text-yellow-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-1">Eventos</h3>
+              <p className="text-sm text-slate-400">Competições e treinos</p>
+            </div>
+          </button>
+
+          {/* Minha Academia */}
+          <button
+            onClick={() => router.push('/portal/atleta/academia')}
             className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-purple-500/10 to-purple-600/5
                      hover:from-purple-500/20 hover:to-purple-600/10 border border-purple-500/20 hover:border-purple-500/40
                      transition-all duration-300 text-left"
@@ -380,105 +420,30 @@ export default function PortalAtletaPage() {
             <div className="relative z-10">
               <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4
                             group-hover:scale-110 transition-transform">
-                <BookOpen className="w-6 h-6 text-purple-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Minhas Turmas</h3>
-              <p className="text-sm text-slate-400">Horários e check-in</p>
-            </div>
-          </button>
-
-          {/* Frequência */}
-          <button
-            onClick={() => router.push('/portal/atleta/frequencia')}
-            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-green-500/10 to-green-600/5
-                     hover:from-green-500/20 hover:to-green-600/10 border border-green-500/20 hover:border-green-500/40
-                     transition-all duration-300 text-left"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/0 to-green-600/0
-                          group-hover:from-green-500/10 group-hover:to-green-600/5 transition-all duration-300" />
-            <div className="relative z-10">
-              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4
-                            group-hover:scale-110 transition-transform">
-                <Calendar className="w-6 h-6 text-green-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Frequência</h3>
-              <p className="text-sm text-slate-400">Histórico de presença</p>
-            </div>
-          </button>
-
-          {/* Progressão */}
-          <button
-            onClick={() => router.push('/portal/atleta/desempenho')}
-            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/5
-                     hover:from-orange-500/20 hover:to-orange-600/10 border border-orange-500/20 hover:border-orange-500/40
-                     transition-all duration-300 text-left"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/0 to-orange-600/0
-                          group-hover:from-orange-500/10 group-hover:to-orange-600/5 transition-all duration-300" />
-            <div className="relative z-10">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center mb-4
-                            group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-6 h-6 text-orange-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Progressão</h3>
-              <p className="text-sm text-slate-400">Progresso para próxima faixa</p>
-            </div>
-          </button>
-
-          {/* Perfil */}
-          <button
-            onClick={() => router.push('/portal/atleta/perfil')}
-            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 
-                     hover:from-blue-500/20 hover:to-blue-600/10 border border-blue-500/20 hover:border-blue-500/40 
-                     transition-all duration-300 text-left"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-blue-600/0 
-                          group-hover:from-blue-500/10 group-hover:to-blue-600/5 transition-all duration-300" />
-            <div className="relative z-10">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4 
-                            group-hover:scale-110 transition-transform">
-                <Target className="w-6 h-6 text-blue-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Meu Perfil</h3>
-              <p className="text-sm text-slate-400">Dados cadastrais</p>
-            </div>
-          </button>
-
-          {/* Eventos */}
-          <button
-            onClick={() => router.push('/portal/atleta/eventos')}
-            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 
-                     hover:from-yellow-500/20 hover:to-yellow-600/10 border border-yellow-500/20 hover:border-yellow-500/40 
-                     transition-all duration-300 text-left"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/0 to-yellow-600/0 
-                          group-hover:from-yellow-500/10 group-hover:to-yellow-600/5 transition-all duration-300" />
-            <div className="relative z-10">
-              <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center mb-4 
-                            group-hover:scale-110 transition-transform">
-                <Trophy className="w-6 h-6 text-yellow-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Eventos</h3>
-              <p className="text-sm text-slate-400">Competições e treinos</p>
-            </div>
-          </button>
-
-          {/* Minha Academia */}
-          <button
-            onClick={() => router.push('/portal/atleta/academia')}
-            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-purple-500/10 to-purple-600/5 
-                     hover:from-purple-500/20 hover:to-purple-600/10 border border-purple-500/20 hover:border-purple-500/40 
-                     transition-all duration-300 text-left"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-600/0 
-                          group-hover:from-purple-500/10 group-hover:to-purple-600/5 transition-all duration-300" />
-            <div className="relative z-10">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4 
-                            group-hover:scale-110 transition-transform">
                 <Building2 className="w-6 h-6 text-purple-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Minha Academia</h3>
+              <h3 className="text-lg font-semibold text-white mb-1">Minha Academia</h3>
               <p className="text-sm text-slate-400">Informações da academia</p>
+            </div>
+          </button>
+        </div>
+
+        {/* Linha 2 — 5 cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Planos & Mensalidades — destaque */}
+          <button
+            onClick={() => router.push('/portal/atleta/planos')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-green-500/20 to-emerald-600/10
+                     hover:from-green-500/30 hover:to-emerald-600/20 border border-green-500/40 hover:border-green-500/60
+                     transition-all duration-300 text-left ring-1 ring-green-500/20"
+          >
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-green-500/30 flex items-center justify-center mb-4
+                            group-hover:scale-110 transition-transform">
+                <CreditCard className="w-6 h-6 text-green-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-1">Planos</h3>
+              <p className="text-sm text-green-400 font-medium">Mensalidades e assinaturas →</p>
             </div>
           </button>
 
@@ -496,8 +461,8 @@ export default function PortalAtletaPage() {
                             group-hover:scale-110 transition-transform">
                 <Zap className="w-6 h-6 text-yellow-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Meus Pontos</h3>
-              <p className="text-sm text-slate-400">Ranking e histórico de pontos</p>
+              <h3 className="text-lg font-semibold text-white mb-1">Meus Pontos</h3>
+              <p className="text-sm text-slate-400">Ranking e histórico</p>
             </div>
           </button>
 
@@ -515,8 +480,8 @@ export default function PortalAtletaPage() {
                             group-hover:scale-110 transition-transform">
                 <Users className="w-6 h-6 text-pink-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Conta Família</h3>
-              <p className="text-sm text-slate-400">Dependentes e membros da família</p>
+              <h3 className="text-lg font-semibold text-white mb-1">Conta Família</h3>
+              <p className="text-sm text-slate-400">Dependentes e membros</p>
             </div>
           </button>
 
@@ -534,27 +499,25 @@ export default function PortalAtletaPage() {
                             group-hover:scale-110 transition-transform">
                 <BookOpen className="w-6 h-6 text-amber-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Cursos</h3>
+              <h3 className="text-lg font-semibold text-white mb-1">Cursos</h3>
               <p className="text-sm text-slate-400">Conteúdos e formações</p>
             </div>
           </button>
 
-          {/* Carteirinha */}
+          {/* Carteirinha — destaque */}
           <button
             onClick={() => router.push('/portal/atleta/carteira')}
-            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5
-                     hover:from-cyan-500/20 hover:to-cyan-600/10 border border-cyan-500/20 hover:border-cyan-500/40
-                     transition-all duration-300 text-left"
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10
+                     hover:from-cyan-500/30 hover:to-cyan-600/20 border border-cyan-500/40 hover:border-cyan-500/60
+                     transition-all duration-300 text-left ring-1 ring-cyan-500/20"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/0 to-cyan-600/0
-                          group-hover:from-cyan-500/10 group-hover:to-cyan-600/5 transition-all duration-300" />
             <div className="relative z-10">
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center mb-4
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/30 flex items-center justify-center mb-4
                             group-hover:scale-110 transition-transform">
                 <QrCode className="w-6 h-6 text-cyan-400" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Carteirinha</h3>
-              <p className="text-sm text-slate-400">QR de presença e identidade</p>
+              <h3 className="text-lg font-semibold text-white mb-1">Carteirinha</h3>
+              <p className="text-sm text-cyan-400 font-medium">QR de presença e identidade →</p>
             </div>
           </button>
         </div>

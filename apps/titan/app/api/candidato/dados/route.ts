@@ -11,15 +11,26 @@ export async function GET() {
     }
 
     // Fetch stakeholder data
-    const { data: stakeholderData, error: stakeholderError } = await supabaseAdmin
+    const { data: stakeholderData } = await supabaseAdmin
       .from('stakeholders')
       .select('id, nome_completo, data_nascimento, kyu_dan_id, email, telefone, candidato')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (stakeholderError) {
+    if (!stakeholderData) {
       return NextResponse.json({ error: 'Stakeholder not found' }, { status: 404 })
     }
+
+    // cpf/cidade/estado podem não existir como colunas — buscar separadamente com fallback
+    let extraFields: { cpf?: string | null; cidade?: string | null; estado?: string | null } = {}
+    try {
+      const { data: extra } = await supabaseAdmin
+        .from('stakeholders')
+        .select('cpf, cidade, estado')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (extra) extraFields = extra
+    } catch { /* colunas não existem ainda */ }
 
     // Fetch kyu_dan info for current graduation
     let kyuDanInfo = null
@@ -32,14 +43,22 @@ export async function GET() {
       kyuDanInfo = kd
     }
 
-    // Fetch user_fed_lrsj for additional data
-    const { data: lrsjData } = await supabaseAdmin
+    // Fetch user_fed_lrsj — prefer stakeholder_id match, fallback to email
+    const { data: lrsjById } = await supabaseAdmin
       .from('user_fed_lrsj')
-      .select('kyu_dan_id, data_ultima_graduacao')
-      .eq('email', user.email)
+      .select('kyu_dan_id, data_ultima_graduacao, nome_completo, data_nascimento, telefone, email')
+      .eq('stakeholder_id', user.id)
       .maybeSingle()
 
-    // If lrsj has kyu_dan_id and stakeholder doesn't, use lrsj's
+    const { data: lrsjByEmail } = !lrsjById ? await supabaseAdmin
+      .from('user_fed_lrsj')
+      .select('kyu_dan_id, data_ultima_graduacao, nome_completo, data_nascimento, telefone, email')
+      .eq('email', user.email!)
+      .maybeSingle() : { data: null }
+
+    const lrsjData = lrsjById || lrsjByEmail
+
+    // Resolve kyu_dan_id: stakeholder > lrsj
     let finalKyuDanId = stakeholderData.kyu_dan_id || lrsjData?.kyu_dan_id
     if (!kyuDanInfo && finalKyuDanId) {
       const { data: kd } = await supabaseAdmin
@@ -56,6 +75,20 @@ export async function GET() {
       .select('*')
       .eq('stakeholder_id', user.id)
       .maybeSingle()
+
+    // Fetch pagamento mais recente do candidato (tipo profep)
+    let pagamento = null
+    if (inscricao?.id) {
+      const { data: pg } = await supabaseAdmin
+        .from('pagamentos')
+        .select('id, tipo, valor, status, pix_qr_code, pix_qr_code_url, pix_expiracao, safe2pay_id')
+        .eq('stakeholder_id', user.id)
+        .eq('referencia_tipo', 'profep')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      pagamento = pg ?? null
+    }
 
     // Fetch candidato_documentos
     const { data: documentos } = await supabaseAdmin
@@ -97,10 +130,16 @@ export async function GET() {
     return NextResponse.json({
       stakeholder: {
         ...stakeholderData,
+        ...extraFields,
+        nome_completo: stakeholderData.nome_completo || lrsjData?.nome_completo || null,
+        data_nascimento: stakeholderData.data_nascimento || lrsjData?.data_nascimento || null,
+        telefone: stakeholderData.telefone || lrsjData?.telefone || null,
+        email: stakeholderData.email || lrsjData?.email || null,
         kyu_dan: kyuDanInfo,
         data_ultima_graduacao: lrsjData?.data_ultima_graduacao || null,
       },
       inscricao: inscricao || null,
+      pagamento: pagamento || null,
       documentos: documentos || [],
       federation_schedule: federationSchedule,
       kyu_dan_list: kyuDanList || [],

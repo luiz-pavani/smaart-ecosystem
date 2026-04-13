@@ -1,14 +1,17 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Calendar, MapPin, Trophy, Loader2, ChevronDown, ChevronUp, FileDown, PlusCircle, X } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Trophy, Loader2, ChevronDown, ChevronUp, FileDown, PlusCircle, X, Scale } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import CheckoutModal, { type CheckoutProduto } from '@/components/checkout/CheckoutModal'
+import CategorySelector from '@/components/eventos/CategorySelector'
 
 interface RegistroEvento {
   id: string
   status: string
   registration_date: string
+  category_id: string | null
   event: {
     id: string
     nome: string
@@ -24,11 +27,15 @@ interface EventoDisponivel {
   id: string
   nome: string
   data_evento: string
+  data_evento_fim: string | null
+  hora_inicio: string | null
   local: string | null
   cidade: string | null
   descricao: string | null
   status: string | null
   limite_inscritos: number | null
+  valor_inscricao: number | null
+  tipo_evento: string | null
   _inscritos?: number
 }
 
@@ -49,6 +56,11 @@ export default function EventosAtletaPage() {
   const [canceling, setCanceling] = useState<string | null>(null)
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+  const [checkoutProduto, setCheckoutProduto] = useState<CheckoutProduto | null>(null)
+  const [atletaInfo, setAtletaInfo] = useState<{ nome: string; email: string; genero?: string; idade?: number; peso?: number } | null>(null)
+
+  // Category selection modal
+  const [categoryModalEvent, setCategoryModalEvent] = useState<EventoDisponivel | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -68,7 +80,7 @@ export default function EventosAtletaPage() {
       const [regRes, atletaRes, eventosRes] = await Promise.all([
         supabase
           .from('event_registrations')
-          .select('id, status, registration_date, event:eventos(id, nome, data_evento, local, cidade, descricao, status)')
+          .select('id, status, registration_date, category_id, event:eventos(id, nome, data_evento, local, cidade, descricao, status)')
           .eq('atleta_id', user.id)
           .order('registration_date', { ascending: false }),
         supabase
@@ -79,12 +91,29 @@ export default function EventosAtletaPage() {
           .maybeSingle(),
         supabase
           .from('eventos')
-          .select('id, nome, data_evento, local, cidade, descricao, status, limite_inscritos')
+          .select('id, nome, data_evento, data_evento_fim, hora_inicio, local, cidade, descricao, status, limite_inscritos, valor_inscricao, tipo_evento')
+          .eq('publicado', true)
           .gte('data_evento', now)
           .order('data_evento', { ascending: true }),
       ])
 
       if (atletaRes.data?.nome_completo) setNomeAtleta(atletaRes.data.nome_completo)
+
+      // Fetch athlete profile info for category matching
+      const perfilRes = await fetch('/api/atletas/self/perfil-dados')
+      const perfilData = await perfilRes.json()
+      if (perfilData.stakeholder) {
+        const s = perfilData.stakeholder
+        const birth = s.data_nascimento ? new Date(s.data_nascimento) : null
+        const age = birth ? Math.floor((Date.now() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : undefined
+        setAtletaInfo({
+          nome: s.nome_completo || '',
+          email: s.email || '',
+          genero: s.genero || undefined,
+          idade: age,
+          peso: s.peso_atual || undefined,
+        })
+      }
 
       const today = new Date()
       const upcoming: RegistroEvento[] = []
@@ -102,7 +131,6 @@ export default function EventosAtletaPage() {
       setUpcomingEvents(upcoming)
       setPastEvents(past)
 
-      // Eventos disponíveis = próximos que o atleta ainda não está inscrito
       const disponiveis = (eventosRes.data || []).filter((e: any) => !registeredSet.has(e.id))
       setAvailable(disponiveis)
     } finally {
@@ -110,21 +138,54 @@ export default function EventosAtletaPage() {
     }
   }
 
-  async function inscrever(eventId: string) {
+  async function handleInscrever(evento: EventoDisponivel) {
+    // Verificar se evento tem categorias
+    try {
+      const res = await fetch(`/api/eventos/${evento.id}/categories`)
+      const json = await res.json()
+      if (res.ok && json.categories && json.categories.length > 0) {
+        // Evento tem categorias — abrir seletor
+        setCategoryModalEvent(evento)
+        return
+      }
+    } catch {
+      // Se falhar a verificação, inscreve sem categoria
+    }
+
+    // Sem categorias — inscrição direta
+    await inscrever(evento.id, evento.nome)
+  }
+
+  async function inscrever(eventId: string, eventoNome: string, categoryId?: string) {
     setRegistering(eventId)
     try {
+      const body: Record<string, any> = { event_id: eventId }
+      if (categoryId) body.category_id = categoryId
+
       const res = await fetch('/api/eventos/self/inscricao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event_id: eventId }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok) { showToast(json.error || 'Erro ao inscrever', false); return }
-      showToast('Inscrição confirmada!')
-      await load()
-      setActiveTab('upcoming')
+
+      if (json.needs_payment && json.data?.id) {
+        const descCat = json.categoria ? ` (${json.categoria})` : ''
+        setCheckoutProduto({
+          produto: 'evento',
+          referencia_id: json.data.id,
+          valor: json.valor,
+          descricao: `Inscricao — ${eventoNome}${descCat}`,
+        })
+      } else {
+        showToast(json.categoria ? `Inscricao confirmada na categoria ${json.categoria}!` : 'Inscricao confirmada!')
+        await load()
+        setActiveTab('upcoming')
+      }
     } finally {
       setRegistering(null)
+      setCategoryModalEvent(null)
     }
   }
 
@@ -132,8 +193,8 @@ export default function EventosAtletaPage() {
     setCanceling(eventId)
     try {
       const res = await fetch(`/api/eventos/self/inscricao?event_id=${eventId}`, { method: 'DELETE' })
-      if (!res.ok) { showToast('Erro ao cancelar inscrição', false); return }
-      showToast('Inscrição cancelada')
+      if (!res.ok) { showToast('Erro ao cancelar inscricao', false); return }
+      showToast('Inscricao cancelada')
       await load()
     } finally {
       setCanceling(null)
@@ -153,7 +214,7 @@ export default function EventosAtletaPage() {
       doc.setLineWidth(0.5); doc.rect(13, 13, W - 26, H - 26)
 
       doc.setTextColor(255, 255, 255); doc.setFontSize(28); doc.setFont('helvetica', 'bold')
-      doc.text('CERTIFICADO DE PARTICIPAÇÃO', W / 2, 55, { align: 'center' })
+      doc.text('CERTIFICADO DE PARTICIPACAO', W / 2, 55, { align: 'center' })
 
       doc.setDrawColor(236, 72, 153); doc.setLineWidth(0.8); doc.line(60, 62, W - 60, 62)
 
@@ -179,7 +240,7 @@ export default function EventosAtletaPage() {
       if (localTxt) doc.text(localTxt, W / 2, 153, { align: 'center' })
 
       doc.setFontSize(9); doc.setTextColor(100, 100, 120)
-      doc.text('SMAART PRO — Sistema de Gestão Esportiva', W / 2, H - 18, { align: 'center' })
+      doc.text('SMAART PRO — Sistema de Gestao Esportiva', W / 2, H - 18, { align: 'center' })
 
       doc.save(`certificado_${reg.event.nome.replace(/\s+/g, '_').toLowerCase()}.pdf`)
     } finally {
@@ -188,9 +249,9 @@ export default function EventosAtletaPage() {
   }
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'available', label: 'Disponíveis', count: available.length },
-    { key: 'upcoming', label: 'Minhas Inscrições', count: upcomingEvents.length },
-    { key: 'past', label: 'Histórico', count: pastEvents.length },
+    { key: 'available', label: 'Disponiveis', count: available.length },
+    { key: 'upcoming', label: 'Minhas Inscricoes', count: upcomingEvents.length },
+    { key: 'past', label: 'Historico', count: pastEvents.length },
   ]
 
   return (
@@ -205,17 +266,47 @@ export default function EventosAtletaPage() {
         </div>
       )}
 
+      {/* Category Selection Modal */}
+      {categoryModalEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-white/10 rounded-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Scale className="w-5 h-5 text-cyan-400" />Selecionar Categoria
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">{categoryModalEvent.nome}</p>
+              </div>
+              <button onClick={() => setCategoryModalEvent(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <CategorySelector
+                eventoId={categoryModalEvent.id}
+                atletaGenero={atletaInfo?.genero}
+                atletaIdade={atletaInfo?.idade}
+                atletaPeso={atletaInfo?.peso}
+                onSelect={(cat) => {
+                  inscrever(categoryModalEvent.id, categoryModalEvent.nome, cat.id)
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-black/30 backdrop-blur border-b border-white/10 py-6">
         <div className="max-w-4xl mx-auto px-4">
           <button
             onClick={() => router.push('/portal/atleta')}
-            className="flex items-center gap-2 text-gray-300 hover:text-white mb-3 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all text-sm"
           >
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
           <h1 className="text-3xl font-bold text-white">Eventos</h1>
-          <p className="text-gray-400 mt-1">Inscreva-se em competições e acompanhe seu histórico</p>
+          <p className="text-gray-400 mt-1">Inscreva-se em competicoes e acompanhe seu historico</p>
         </div>
       </div>
 
@@ -245,11 +336,11 @@ export default function EventosAtletaPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* ── Disponíveis ─────────────────────────────────────────── */}
+            {/* Disponiveis */}
             {activeTab === 'available' && (available.length === 0 ? (
               <div className="bg-white/5 border border-white/10 rounded-xl p-10 text-center text-gray-400">
                 <Calendar className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-                Nenhum evento disponível no momento
+                Nenhum evento disponivel no momento
               </div>
             ) : available.map(ev => (
               <div key={ev.id} className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden hover:border-pink-500/30 transition-all">
@@ -261,6 +352,7 @@ export default function EventosAtletaPage() {
                         <div className="flex items-center gap-2 text-gray-400">
                           <Calendar className="w-4 h-4" />
                           {new Date(ev.data_evento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                          {ev.data_evento_fim && ` - ${new Date(ev.data_evento_fim).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}`}
                         </div>
                         {(ev.local || ev.cidade) && (
                           <div className="flex items-center gap-2 text-gray-400">
@@ -270,34 +362,41 @@ export default function EventosAtletaPage() {
                         )}
                       </div>
                     </div>
-                    {ev.status && (
-                      <span className="px-2 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-300 text-xs font-semibold shrink-0">
-                        {ev.status}
-                      </span>
-                    )}
+                    <div className="flex flex-col items-end gap-1">
+                      {ev.status && (
+                        <span className="px-2 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-300 text-xs font-semibold shrink-0">
+                          {ev.status}
+                        </span>
+                      )}
+                      {ev.tipo_evento && (
+                        <span className="text-xs text-slate-500">{ev.tipo_evento}</span>
+                      )}
+                    </div>
                   </div>
                   {ev.descricao && (
                     <p className="text-gray-400 text-sm mb-4 line-clamp-2">{ev.descricao}</p>
                   )}
-                  {ev.limite_inscritos && (
-                    <p className="text-gray-500 text-xs mb-3">Limite: {ev.limite_inscritos} vagas</p>
-                  )}
-                  <button
-                    onClick={() => inscrever(ev.id)}
-                    disabled={registering === ev.id}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all"
-                  >
-                    {registering === ev.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
-                    {registering === ev.id ? 'Inscrevendo...' : 'Inscrever-se'}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleInscrever(ev)}
+                      disabled={registering === ev.id}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all"
+                    >
+                      {registering === ev.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
+                      {registering === ev.id ? 'Inscrevendo...' : 'Inscrever-se'}
+                    </button>
+                    {ev.valor_inscricao && ev.valor_inscricao > 0 && (
+                      <span className="text-green-400 text-sm font-medium">R$ {Number(ev.valor_inscricao).toFixed(2)}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             )))}
 
-            {/* ── Minhas Inscrições (próximos) ─────────────────────────── */}
+            {/* Minhas Inscricoes */}
             {activeTab === 'upcoming' && (upcomingEvents.length === 0 ? (
               <div className="bg-white/5 border border-white/10 rounded-lg p-6 text-gray-400">
-                Nenhuma inscrição em evento futuro.
+                Nenhuma inscricao em evento futuro.
               </div>
             ) : upcomingEvents.map(reg => (
               <div key={reg.id} className="bg-white/5 backdrop-blur border border-white/10 rounded-lg overflow-hidden hover:border-pink-500/30 transition-all">
@@ -344,13 +443,13 @@ export default function EventosAtletaPage() {
                   <div className="px-6 pb-6 border-t border-white/5 pt-4 space-y-2 text-sm">
                     {reg.event?.descricao && <p className="text-gray-300 leading-relaxed">{reg.event.descricao}</p>}
                     {reg.event?.status && <p className="text-gray-400">Status: <span className="text-white font-medium">{reg.event.status}</span></p>}
-                    {!reg.event?.descricao && !reg.event?.status && <p className="text-gray-500 italic">Sem informações adicionais</p>}
+                    {!reg.event?.descricao && !reg.event?.status && <p className="text-gray-500 italic">Sem informacoes adicionais</p>}
                   </div>
                 )}
               </div>
             )))}
 
-            {/* ── Histórico (passados) ─────────────────────────────────── */}
+            {/* Historico */}
             {activeTab === 'past' && (pastEvents.length === 0 ? (
               <div className="bg-white/5 border border-white/10 rounded-lg p-6 text-gray-400">
                 Nenhum evento passado encontrado.
@@ -373,7 +472,7 @@ export default function EventosAtletaPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-yellow-400" />
-                    <span className="text-yellow-400 font-semibold">Concluído</span>
+                    <span className="text-yellow-400 font-semibold">Concluido</span>
                   </div>
                 </div>
                 <button
@@ -389,6 +488,26 @@ export default function EventosAtletaPage() {
           </div>
         )}
       </div>
+
+      {/* Checkout para inscricao paga */}
+      {checkoutProduto && atletaInfo && (
+        <CheckoutModal
+          isOpen={!!checkoutProduto}
+          onClose={() => setCheckoutProduto(null)}
+          produto={checkoutProduto}
+          customer={{
+            name: atletaInfo.nome,
+            identity: '',
+            email: atletaInfo.email,
+          }}
+          onSuccess={() => {
+            setCheckoutProduto(null)
+            showToast('Pagamento confirmado! Inscricao ativa.')
+            load()
+            setActiveTab('upcoming')
+          }}
+        />
+      )}
     </div>
   )
 }

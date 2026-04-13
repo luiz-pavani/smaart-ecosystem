@@ -27,6 +27,16 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Nenhum campo válido enviado' }, { status: 400 })
     }
 
+    // When academia_id is set, auto-resolve federacao_id from that academy
+    if (payload.academia_id && !payload.federacao_id) {
+      const { data: acad } = await supabaseAdmin
+        .from('academias')
+        .select('federacao_id')
+        .eq('id', payload.academia_id)
+        .maybeSingle()
+      if (acad?.federacao_id) payload.federacao_id = acad.federacao_id
+    }
+
     const { data, error } = await supabaseAdmin
       .from('stakeholders')
       .update(payload)

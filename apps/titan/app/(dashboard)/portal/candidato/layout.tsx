@@ -17,6 +17,7 @@ import {
   Users,
   ShieldCheck,
   ExternalLink,
+  Wallet,
 } from 'lucide-react'
 import { CandidatoContext } from './context'
 
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { label: 'Documentos', href: '/portal/candidato/documentos', icon: FileText },
   { label: 'Regulamento', href: '/portal/candidato/regulamento', icon: ScrollText },
   { label: 'Inscrição', href: '/portal/candidato/inscricao', icon: UserCheck },
+  { label: 'Financeiro', href: '/portal/candidato/financeiro', icon: Wallet },
 ]
 
 const ADMIN_NAV_ITEMS = [
