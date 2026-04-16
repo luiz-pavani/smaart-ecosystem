@@ -483,6 +483,14 @@ export default function EventoDetalhePage() {
                   className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 transition-colors border border-purple-500/30 text-sm">
                   Comunicados
                 </button>
+                <button onClick={() => router.push(`/portal/eventos/${id}/termos`)}
+                  className="px-4 py-2 bg-fuchsia-500/20 text-fuchsia-300 rounded-lg hover:bg-fuchsia-500/30 transition-colors border border-fuchsia-500/30 text-sm">
+                  <FileText className="w-4 h-4 inline mr-1" />Termos & Waivers
+                </button>
+                <button onClick={() => router.push(`/portal/eventos/${id}/notificacoes`)}
+                  className="px-4 py-2 bg-green-500/20 text-green-300 rounded-lg hover:bg-green-500/30 transition-colors border border-green-500/30 text-sm">
+                  WhatsApp Atletas
+                </button>
               </div>
             </div>
 
