@@ -43,6 +43,7 @@ interface Category {
   tempo_luta_seg: number
   golden_score_seg: number | null
   intervalo_entre_lutas_seg: number | null
+  modo: 'competitivo' | 'festival'
   total_inscritos: number
   ativo: boolean
   age_group: { id: string; nome: string } | null
@@ -70,7 +71,7 @@ export default function CategoriasPage() {
   const [editFields, setEditFields] = useState<Record<string, unknown>>({})
   const [savingEdit, setSavingEdit] = useState(false)
   const [showAddCat, setShowAddCat] = useState(false)
-  const [newCat, setNewCat] = useState({ nome_display: '', genero: 'Masculino', tempo_luta_seg: 240, golden_score_seg: '', taxa_inscricao: 0 })
+  const [newCat, setNewCat] = useState({ nome_display: '', genero: 'Masculino', tempo_luta_seg: 240, golden_score_seg: '', taxa_inscricao: 0, modo: 'competitivo' as string })
   const [addingCat, setAddingCat] = useState(false)
 
   // --- Divisoes state ---
@@ -169,10 +170,11 @@ export default function CategoriasPage() {
           tempo_luta_seg: newCat.tempo_luta_seg,
           golden_score_seg: newCat.golden_score_seg ? parseInt(newCat.golden_score_seg) : null,
           taxa_inscricao: newCat.taxa_inscricao,
+          modo: newCat.modo,
         }),
       })
       setShowAddCat(false)
-      setNewCat({ nome_display: '', genero: 'Masculino', tempo_luta_seg: 240, golden_score_seg: '', taxa_inscricao: 0 })
+      setNewCat({ nome_display: '', genero: 'Masculino', tempo_luta_seg: 240, golden_score_seg: '', taxa_inscricao: 0, modo: 'competitivo' })
       await loadCategories()
     } catch { /* */ } finally { setAddingCat(false) }
   }
@@ -362,6 +364,22 @@ export default function CategoriasPage() {
                   <input type="number" placeholder="Taxa R$" value={newCat.taxa_inscricao}
                     onChange={e => setNewCat(p => ({ ...p, taxa_inscricao: parseFloat(e.target.value) || 0 }))} step="0.01" className={ic} />
                 </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-xs text-slate-400">Modo:</span>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="modo" value="competitivo" checked={newCat.modo === 'competitivo'}
+                      onChange={() => setNewCat(p => ({ ...p, modo: 'competitivo' }))} className="accent-cyan-500" />
+                    <span className="text-xs text-slate-300">Competitivo</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="modo" value="festival" checked={newCat.modo === 'festival'}
+                      onChange={() => setNewCat(p => ({ ...p, modo: 'festival' }))} className="accent-amber-500" />
+                    <span className="text-xs text-amber-300">Festival</span>
+                  </label>
+                  {newCat.modo === 'festival' && (
+                    <span className="text-[10px] text-amber-400/70">(Todos recebem 1o lugar)</span>
+                  )}
+                </div>
                 <button onClick={handleAddCat} disabled={addingCat || !newCat.nome_display.trim()}
                   className="flex items-center gap-1 px-4 py-2 bg-cyan-500/20 text-cyan-300 rounded-lg text-xs font-medium hover:bg-cyan-500/30 disabled:opacity-40">
                   {addingCat ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
@@ -439,7 +457,12 @@ export default function CategoriasPage() {
                                 onChange={e => setEditFields(p => ({ ...p, nome_display: e.target.value }))} className={icSm} />
                             ) : (
                               <div>
-                                <div className="font-medium text-white text-sm">{cat.nome_display}</div>
+                                <div className="font-medium text-white text-sm flex items-center gap-1.5">
+                                  {cat.nome_display}
+                                  {cat.modo === 'festival' && (
+                                    <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 text-[9px] font-bold rounded">FESTIVAL</span>
+                                  )}
+                                </div>
                                 {cat.age_group && <div className="text-xs text-slate-500">{cat.age_group.nome}</div>}
                               </div>
                             )}

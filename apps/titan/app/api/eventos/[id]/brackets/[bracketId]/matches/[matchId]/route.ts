@@ -85,6 +85,11 @@ export async function PATCH(
   // === PROGRESSION: advance winner to next match ===
   await advanceWinner(bracketId, match, winner_registration_id, loserId)
 
+  // === GROUP STAGE: check if all group matches done → advance to elimination ===
+  if (match.tipo === 'group') {
+    await checkAndAdvanceGroupStage(bracketId)
+  }
+
   // === DISCIPLINARY HANSOKU-MAKE: forfeit all subsequent fights for the loser ===
   if (resultado === 'hansoku-make-disciplinar' && loserId) {
     await forfeitAllSubsequentMatches(eventoId, loserId)
@@ -331,6 +336,40 @@ async function advanceWinner(
       .from('event_brackets')
       .update({ status: 'finished' })
       .eq('id', bracketId)
+
+    // Festival mode: all athletes get gold medal
+    const bracketConfig = bracket?.config as Record<string, unknown> | null
+    if (bracketConfig?.festival) {
+      // Get the evento_id from bracket
+      const { data: brData } = await supabaseAdmin
+        .from('event_brackets')
+        .select('evento_id')
+        .eq('id', bracketId)
+        .single()
+      if (brData) {
+        // Collect all unique athletes from matches
+        const { data: allMatches } = await supabaseAdmin
+          .from('event_matches')
+          .select('athlete1_registration_id, athlete2_registration_id')
+          .eq('bracket_id', bracketId)
+        const athleteIds = new Set<string>()
+        for (const m of allMatches || []) {
+          if (m.athlete1_registration_id) athleteIds.add(m.athlete1_registration_id)
+          if (m.athlete2_registration_id) athleteIds.add(m.athlete2_registration_id)
+        }
+        // Give everyone gold
+        const resultRows = Array.from(athleteIds).map(regId => ({
+          evento_id: brData.evento_id,
+          bracket_id: bracketId,
+          registration_id: regId,
+          medal: 'gold',
+          colocacao: 1,
+        }))
+        if (resultRows.length > 0) {
+          await supabaseAdmin.from('event_results').insert(resultRows)
+        }
+      }
+    }
   } else {
     // Ensure bracket is 'in_progress' once first result is recorded
     await supabaseAdmin
@@ -398,3 +437,126 @@ async function forfeitAllSubsequentMatches(eventoId: string, loserId: string) {
     }
   }
 }
+
+/**
+ * Group Stage Elimination: when all group matches are finished,
+ * rank athletes within each group and populate the elimination phase.
+ *
+ * Ranking: wins DESC > score_diff DESC > head-to-head.
+ * Group matches have posicao = 1000 + groupIndex*100 + N.
+ * Elimination matches have rodada >= 2 and tipo != 'group'.
+ */
+async function checkAndAdvanceGroupStage(bracketId: string) {
+  const { data: bracket } = await supabaseAdmin
+    .from('event_brackets')
+    .select('tipo, config')
+    .eq('id', bracketId)
+    .single()
+
+  if (!bracket || bracket.tipo !== 'group_stage_elimination') return
+
+  // Get all group matches
+  const { data: groupMatches } = await supabaseAdmin
+    .from('event_matches')
+    .select('id, posicao, status, athlete1_registration_id, athlete2_registration_id, winner_registration_id, pontos_athlete1, pontos_athlete2')
+    .eq('bracket_id', bracketId)
+    .eq('tipo', 'group')
+
+  if (!groupMatches) return
+
+  // Check if ALL group matches are done
+  const allDone = groupMatches.every(m => m.status === 'finished' || m.status === 'walkover')
+  if (!allDone) return
+
+  const config = (bracket.config || {}) as Record<string, unknown>
+  const advanceCount = (config.advance_count as number) || 2
+
+  // Discover groups by posicao ranges: group index = floor((posicao - 1000) / 100)
+  const groupMap = new Map<number, typeof groupMatches>()
+  for (const m of groupMatches) {
+    const groupIdx = Math.floor((m.posicao - 1000) / 100)
+    if (!groupMap.has(groupIdx)) groupMap.set(groupIdx, [])
+    groupMap.get(groupIdx)!.push(m)
+  }
+
+  // Rank each group
+  const advancedAthletes: string[] = []
+
+  for (const [, matches] of Array.from(groupMap.entries()).sort((a, b) => a[0] - b[0])) {
+    // Collect all athletes in this group
+    const athleteIds = new Set<string>()
+    for (const m of matches) {
+      if (m.athlete1_registration_id) athleteIds.add(m.athlete1_registration_id)
+      if (m.athlete2_registration_id) athleteIds.add(m.athlete2_registration_id)
+    }
+
+    // Build stats: wins, score differential
+    const stats = new Map<string, { wins: number; scoreDiff: number }>()
+    for (const id of athleteIds) stats.set(id, { wins: 0, scoreDiff: 0 })
+
+    for (const m of matches) {
+      const a1 = m.athlete1_registration_id
+      const a2 = m.athlete2_registration_id
+      if (!a1 || !a2) continue
+
+      const p1 = (m.pontos_athlete1 as Record<string, number> | null) || {}
+      const p2 = (m.pontos_athlete2 as Record<string, number> | null) || {}
+      const s1 = (p1.wazaari || 0) * 10 + (p1.yuko || 0)
+      const s2 = (p2.wazaari || 0) * 10 + (p2.yuko || 0)
+
+      const st1 = stats.get(a1)!
+      const st2 = stats.get(a2)!
+      st1.scoreDiff += (s1 - s2)
+      st2.scoreDiff += (s2 - s1)
+
+      if (m.winner_registration_id === a1) st1.wins++
+      else if (m.winner_registration_id === a2) st2.wins++
+    }
+
+    // Sort: wins DESC, scoreDiff DESC
+    const ranked = Array.from(stats.entries())
+      .sort((a, b) => b[1].wins - a[1].wins || b[1].scoreDiff - a[1].scoreDiff)
+
+    for (let i = 0; i < Math.min(advanceCount, ranked.length); i++) {
+      advancedAthletes.push(ranked[i][0])
+    }
+  }
+
+  if (advancedAthletes.length === 0) return
+
+  // Get elimination matches (rodada >= 2, tipo != 'group'), first round of elimination
+  const { data: elimMatches } = await supabaseAdmin
+    .from('event_matches')
+    .select('id, rodada, posicao, athlete1_registration_id, athlete2_registration_id')
+    .eq('bracket_id', bracketId)
+    .neq('tipo', 'group')
+    .order('rodada', { ascending: true })
+    .order('posicao', { ascending: true })
+
+  if (!elimMatches || elimMatches.length === 0) return
+
+  // Find the first elimination round
+  const firstElimRound = elimMatches[0].rodada
+  const firstRoundMatches = elimMatches.filter(m => m.rodada === firstElimRound)
+
+  // Place advanced athletes into first round of elimination
+  // Slot them in order: athlete[0] → match[0].a1, athlete[1] → match[0].a2, athlete[2] → match[1].a1, etc.
+  for (let i = 0; i < advancedAthletes.length; i++) {
+    const matchIdx = Math.floor(i / 2)
+    if (matchIdx >= firstRoundMatches.length) break
+    const m = firstRoundMatches[matchIdx]
+    const slot = i % 2 === 0 ? 'athlete1_registration_id' : 'athlete2_registration_id'
+    const updates: Record<string, unknown> = { [slot]: advancedAthletes[i] }
+
+    // Check if both athletes are now set → ready
+    const otherSlot = slot === 'athlete1_registration_id' ? m.athlete2_registration_id : m.athlete1_registration_id
+    const otherNewlySet = i % 2 === 1 // if we're setting a2, a1 was set in the previous iteration
+    if (otherSlot || otherNewlySet) updates.status = 'ready'
+
+    await supabaseAdmin
+      .from('event_matches')
+      .update(updates)
+      .eq('id', m.id)
+  }
+}
+

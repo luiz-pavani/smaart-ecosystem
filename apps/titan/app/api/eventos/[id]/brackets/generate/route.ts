@@ -70,6 +70,14 @@ export async function POST(
         continue
       }
 
+      // Get category mode (competitivo vs festival)
+      const { data: catData } = await supabaseAdmin
+        .from('event_categories')
+        .select('modo')
+        .eq('id', categoryId)
+        .maybeSingle()
+      const isFestival = catData?.modo === 'festival'
+
       // Get confirmed registrations for this category
       const { data: regs } = await supabaseAdmin
         .from('event_registrations')
@@ -84,8 +92,9 @@ export async function POST(
         continue
       }
 
-      // Resolve bracket type from rules (or use override)
-      const resolvedTipo = tipoOverride || resolveBracketType(regs.length, bracketRules)
+      // Festival mode: always round_robin regardless of athlete count or rules
+      // Competitivo: resolve bracket type from rules (or use override)
+      const resolvedTipo = isFestival ? 'round_robin' : (tipoOverride || resolveBracketType(regs.length, bracketRules))
 
       // Handle gold_medal (1 athlete — auto-win, no bracket needed)
       if (resolvedTipo === 'gold_medal') {
@@ -128,6 +137,7 @@ export async function POST(
       const bracket = generateBracket(resolvedTipo as BracketType, registrations, config)
 
       // Insert bracket
+      const bracketConfig = isFestival ? { ...config, festival: true } : config
       const { data: bracketRow, error: bracketErr } = await supabaseAdmin
         .from('event_brackets')
         .insert({
@@ -137,7 +147,7 @@ export async function POST(
           status: 'draft',
           num_rodadas: bracket.num_rodadas,
           seed_method: config.seed_method || 'random',
-          config,
+          config: bracketConfig,
         })
         .select('id')
         .single()
