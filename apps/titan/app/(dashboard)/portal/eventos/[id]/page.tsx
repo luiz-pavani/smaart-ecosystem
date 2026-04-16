@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Save, Loader2, Calendar, MapPin, Clock, Users, Trash2, Eye, EyeOff, Settings, FileText, Edit3, AlertTriangle, Scale, Swords, Trophy, ListOrdered, Play } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, Calendar, MapPin, Clock, Users, Trash2, Eye, EyeOff, Settings, FileText, Edit3, AlertTriangle, Scale, Swords, Trophy, ListOrdered, Play, Tv } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
 interface AreaMatch {
@@ -478,6 +478,10 @@ export default function EventoDetalhePage() {
                 <button onClick={() => window.open(`/eventos/${id}/placar`, '_blank')}
                   className="px-4 py-2 bg-red-500/20 text-red-300 rounded-lg hover:bg-red-500/30 transition-colors border border-red-500/30 text-sm">
                   Placar Espectador
+                </button>
+                <button onClick={() => router.push(`/portal/eventos/${id}/transmissao`)}
+                  className="px-4 py-2 bg-rose-500/20 text-rose-300 rounded-lg hover:bg-rose-500/30 transition-colors border border-rose-500/30 text-sm">
+                  <Tv className="w-4 h-4 inline mr-1" />Titan TV
                 </button>
                 <button onClick={() => router.push('/portal/eventos/comunicados')}
                   className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 transition-colors border border-purple-500/30 text-sm">
