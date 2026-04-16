@@ -114,7 +114,7 @@ async function advanceWinner(
   // Get bracket info
   const { data: bracket } = await supabaseAdmin
     .from('event_brackets')
-    .select('tipo, num_rodadas')
+    .select('tipo, num_rodadas, config')
     .eq('id', bracketId)
     .single()
 
