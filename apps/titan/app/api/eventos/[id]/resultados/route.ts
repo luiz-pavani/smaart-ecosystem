@@ -19,10 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: eventoId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-
+  // Public endpoint — no auth required
   // Get results
   const { data: results } = await supabaseAdmin
     .from('event_results')

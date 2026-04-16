@@ -199,6 +199,19 @@ export default function PortalFederacaoPage() {
           </button>
 
           <button
+            onClick={() => router.push('/portal/rankings')}
+            className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-amber-500/10 to-amber-600/5
+                     hover:from-amber-500/20 hover:to-amber-600/10 border border-amber-500/20 hover:border-amber-500/40
+                     transition-all duration-300 text-left"
+          >
+            <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+              <Trophy className="w-6 h-6 text-amber-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">Ranking</h3>
+            <p className="text-sm text-slate-400">Ranking de atletas cross-evento</p>
+          </button>
+
+          <button
             onClick={() => router.push('/portal/federacao/relatorios')}
             className="group relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5
                      hover:from-blue-500/20 hover:to-blue-600/10 border border-blue-500/20 hover:border-blue-500/40

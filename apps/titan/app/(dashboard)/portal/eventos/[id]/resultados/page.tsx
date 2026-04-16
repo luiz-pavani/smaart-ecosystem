@@ -38,6 +38,7 @@ export default function ResultadosPage() {
   const [medalBoard, setMedalBoard] = useState<MedalEntry[]>([])
   const [eventoNome, setEventoNome] = useState('')
   const [tab, setTab] = useState<'medalhas' | 'categorias'>('medalhas')
+  const [generatingRanking, setGeneratingRanking] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -98,6 +99,29 @@ export default function ResultadosPage() {
               {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
               Gerar Resultados
             </button>
+            <div className="flex gap-2 mt-2">
+              <a href={`/api/eventos/${eventoId}/resultados/pdf`} target="_blank" className="flex items-center gap-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 text-sm transition-all">
+                <Download className="w-3.5 h-3.5" /> PDF
+              </a>
+              <button onClick={() => window.open(`/eventos/${eventoId}/resultados`, '_blank')} className="flex items-center gap-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 text-sm transition-all">
+                Página Pública ↗
+              </button>
+              <button
+                onClick={async () => {
+                  setGeneratingRanking(true)
+                  try {
+                    const res = await fetch(`/api/eventos/${eventoId}/resultados/ranking-points`, { method: 'POST' })
+                    const json = await res.json()
+                    if (res.ok) alert(`Ranking: ${json.total} pontuações geradas`)
+                    else alert(json.error || 'Erro')
+                  } catch { /* silent */ } finally { setGeneratingRanking(false) }
+                }}
+                disabled={generatingRanking}
+                className="flex items-center gap-1 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-300 hover:bg-yellow-500/20 text-sm transition-all disabled:opacity-50"
+              >
+                <Trophy className="w-3.5 h-3.5" /> {generatingRanking ? 'Gerando...' : 'Gerar Ranking'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

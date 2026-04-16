@@ -199,6 +199,15 @@ export default function EventosAcademiaPage() {
                   {evento.descricao && (
                     <p className="mt-3 text-xs text-gray-500 line-clamp-2">{evento.descricao}</p>
                   )}
+
+                  {(evento.status === 'Inscrições abertas' || evento.status === 'Inscrições') && (
+                    <button
+                      onClick={() => router.push(`/portal/academia/eventos/${evento.id}/inscricao-lote`)}
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-pink-500/20 text-pink-300 rounded-lg hover:bg-pink-500/30 border border-pink-500/30 text-sm font-medium transition-all"
+                    >
+                      <Users className="w-4 h-4" /> Inscrição em Lote
+                    </button>
+                  )}
                 </div>
               )
             })}
