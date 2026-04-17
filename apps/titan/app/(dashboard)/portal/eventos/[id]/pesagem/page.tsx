@@ -23,7 +23,7 @@ interface Row {
   peso_min: number | null
   peso_max: number | null
   pesagem: Pesagem | null
-  status: 'pendente' | 'aprovado' | 'rejeitado'
+  status: 'pendente' | 'aprovado' | 'rejeitado' | 'acima' | 'abaixo'
 }
 
 interface Counts {
@@ -31,6 +31,14 @@ interface Counts {
   pendente: number
   aprovado: number
   rejeitado: number
+  acima: number
+  abaixo: number
+}
+
+interface PesagemConfig {
+  acima_peso: string
+  abaixo_peso: string
+  tolerancia_g: number
 }
 
 export default function PesagemPage() {
@@ -40,7 +48,8 @@ export default function PesagemPage() {
 
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState<Row[]>([])
-  const [counts, setCounts] = useState<Counts>({ total: 0, pendente: 0, aprovado: 0, rejeitado: 0 })
+  const [counts, setCounts] = useState<Counts>({ total: 0, pendente: 0, aprovado: 0, rejeitado: 0, acima: 0, abaixo: 0 })
+  const [pesagemConfig, setPesagemConfig] = useState<PesagemConfig>({ acima_peso: 'desclassificar', abaixo_peso: 'ignorar', tolerancia_g: 0 })
   const [q, setQ] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -59,7 +68,8 @@ export default function PesagemPage() {
       const json = await res.json()
       if (res.ok) {
         setRows(json.rows || [])
-        setCounts(json.counts || { total: 0, pendente: 0, aprovado: 0, rejeitado: 0 })
+        setCounts(json.counts || { total: 0, pendente: 0, aprovado: 0, rejeitado: 0, acima: 0, abaixo: 0 })
+        if (json.pesagem_config) setPesagemConfig(json.pesagem_config)
       }
     } catch { /* silent */ } finally { setLoading(false) }
   }, [eventoId, q, statusFilter])
@@ -136,27 +146,55 @@ export default function PesagemPage() {
           </div>
         </div>
 
+        {/* Config info bar */}
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white/5 border border-white/10 rounded-xl text-xs text-slate-400">
+          <span className="font-bold text-white">Regras:</span>
+          <span>Acima do peso: <span className={pesagemConfig.acima_peso === 'desclassificar' ? 'text-red-400 font-bold' : pesagemConfig.acima_peso === 'registrar' ? 'text-yellow-400 font-bold' : 'text-slate-300'}>
+            {pesagemConfig.acima_peso === 'desclassificar' ? 'Desclassifica' : pesagemConfig.acima_peso === 'registrar' ? 'Apenas registra' : 'Ignora'}
+          </span></span>
+          <span className="text-slate-600">|</span>
+          <span>Abaixo do peso: <span className={pesagemConfig.abaixo_peso === 'desclassificar' ? 'text-red-400 font-bold' : pesagemConfig.abaixo_peso === 'registrar' ? 'text-yellow-400 font-bold' : 'text-slate-300'}>
+            {pesagemConfig.abaixo_peso === 'desclassificar' ? 'Desclassifica' : pesagemConfig.abaixo_peso === 'registrar' ? 'Apenas registra' : 'Ignora'}
+          </span></span>
+          {pesagemConfig.tolerancia_g > 0 && (
+            <>
+              <span className="text-slate-600">|</span>
+              <span>Tolerancia: <span className="text-cyan-400 font-bold">{pesagemConfig.tolerancia_g}g</span></span>
+            </>
+          )}
+        </div>
+
         {/* Counters */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
           <button onClick={() => setStatusFilter('')}
             className={`p-3 rounded-xl border text-left transition-all ${statusFilter === '' ? 'bg-white/10 border-white/20' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-            <div className="text-xs text-slate-400 uppercase tracking-wider">Total</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Total</div>
             <div className="text-2xl font-bold">{counts.total}</div>
           </button>
           <button onClick={() => setStatusFilter('pendente')}
             className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'pendente' ? 'bg-slate-500/20 border-slate-400/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-            <div className="text-xs text-slate-400 uppercase tracking-wider">Pendentes</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Pendentes</div>
             <div className="text-2xl font-bold text-slate-300">{counts.pendente}</div>
           </button>
           <button onClick={() => setStatusFilter('aprovado')}
             className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'aprovado' ? 'bg-green-500/20 border-green-400/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-            <div className="text-xs text-slate-400 uppercase tracking-wider">Aprovados</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Aprovados</div>
             <div className="text-2xl font-bold text-green-400">{counts.aprovado}</div>
           </button>
           <button onClick={() => setStatusFilter('rejeitado')}
             className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'rejeitado' ? 'bg-red-500/20 border-red-400/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
-            <div className="text-xs text-slate-400 uppercase tracking-wider">Rejeitados</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Rejeitados</div>
             <div className="text-2xl font-bold text-red-400">{counts.rejeitado}</div>
+          </button>
+          <button onClick={() => setStatusFilter('acima')}
+            className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'acima' ? 'bg-orange-500/20 border-orange-400/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Acima</div>
+            <div className="text-2xl font-bold text-orange-400">{counts.acima}</div>
+          </button>
+          <button onClick={() => setStatusFilter('abaixo')}
+            className={`p-3 rounded-xl border text-left transition-all ${statusFilter === 'abaixo' ? 'bg-yellow-500/20 border-yellow-400/40' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+            <div className="text-[10px] text-slate-400 uppercase tracking-wider">Abaixo</div>
+            <div className="text-2xl font-bold text-yellow-400">{counts.abaixo}</div>
           </button>
         </div>
 
@@ -180,6 +218,8 @@ export default function PesagemPage() {
               const isEditing = editingId === row.registration_id
               const statusBg = row.status === 'aprovado' ? 'border-green-500/30 bg-green-500/5'
                 : row.status === 'rejeitado' ? 'border-red-500/30 bg-red-500/5'
+                : row.status === 'acima' ? 'border-orange-500/30 bg-orange-500/5'
+                : row.status === 'abaixo' ? 'border-yellow-500/30 bg-yellow-500/5'
                 : 'border-white/10 bg-white/5'
               return (
                 <div key={row.registration_id} className={`rounded-xl border ${statusBg} p-4`}>
@@ -200,11 +240,19 @@ export default function PesagemPage() {
                     <div className="flex items-center gap-2">
                       {row.pesagem && !isEditing && (
                         <div className="text-right">
-                          <div className={`text-lg font-bold ${row.status === 'aprovado' ? 'text-green-400' : 'text-red-400'}`}>
+                          <div className={`text-lg font-bold ${
+                            row.status === 'aprovado' ? 'text-green-400' :
+                            row.status === 'rejeitado' ? 'text-red-400' :
+                            row.status === 'acima' ? 'text-orange-400' :
+                            row.status === 'abaixo' ? 'text-yellow-400' : 'text-slate-400'
+                          }`}>
                             {row.pesagem.peso_oficial}kg
                           </div>
                           <div className="text-[10px] uppercase tracking-wider text-slate-500">
-                            {row.status === 'aprovado' ? 'Aprovado' : 'Rejeitado'}
+                            {row.status === 'aprovado' ? 'Aprovado' :
+                             row.status === 'rejeitado' ? 'Rejeitado' :
+                             row.status === 'acima' ? 'Acima (registrado)' :
+                             row.status === 'abaixo' ? 'Abaixo (registrado)' : row.status}
                           </div>
                         </div>
                       )}

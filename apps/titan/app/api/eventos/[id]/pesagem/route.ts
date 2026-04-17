@@ -31,6 +31,18 @@ export async function GET(
   const statusFilter = req.nextUrl.searchParams.get('status')
   const q = req.nextUrl.searchParams.get('q')?.toLowerCase() || ''
 
+  // Fetch event config for pesagem rules
+  const { data: eventoData } = await supabaseAdmin
+    .from('eventos')
+    .select('config')
+    .eq('id', eventoId)
+    .maybeSingle()
+  const pesagemConfig = {
+    acima_peso: ((eventoData?.config as Record<string, unknown>)?.pesagem_acima_peso as string) || 'desclassificar',
+    abaixo_peso: ((eventoData?.config as Record<string, unknown>)?.pesagem_abaixo_peso as string) || 'ignorar',
+    tolerancia_g: Number((eventoData?.config as Record<string, unknown>)?.pesagem_tolerancia_g) || 0,
+  }
+
   const { data: regs, error } = await supabaseAdmin
     .from('event_registrations')
     .select(`
@@ -93,9 +105,11 @@ export async function GET(
     pendente: rows.filter(r => r.status === 'pendente').length,
     aprovado: rows.filter(r => r.status === 'aprovado').length,
     rejeitado: rows.filter(r => r.status === 'rejeitado').length,
+    acima: rows.filter(r => r.status === 'acima').length,
+    abaixo: rows.filter(r => r.status === 'abaixo').length,
   }
 
-  return NextResponse.json({ rows, counts })
+  return NextResponse.json({ rows, counts, pesagem_config: pesagemConfig })
 }
 
 // POST /api/eventos/[id]/pesagem — registra/atualiza pesagem
@@ -136,6 +150,19 @@ export async function POST(
 
   if (regErr || !reg) return NextResponse.json({ error: 'Inscrição não encontrada' }, { status: 404 })
 
+  // Busca config de pesagem do evento
+  const { data: eventoData } = await supabaseAdmin
+    .from('eventos')
+    .select('config')
+    .eq('id', eventoId)
+    .maybeSingle()
+
+  const config = (eventoData?.config || {}) as Record<string, unknown>
+  const regraAcima = (config.pesagem_acima_peso as string) || 'desclassificar'
+  const regraAbaixo = (config.pesagem_abaixo_peso as string) || 'ignorar'
+  const toleranciaG = Number(config.pesagem_tolerancia_g) || 0
+  const toleranciaKg = toleranciaG / 1000
+
   const cat = reg.category as unknown as {
     id: string
     weight_class: { peso_min: number | null; peso_max: number | null } | null
@@ -144,10 +171,26 @@ export async function POST(
   const pesoMin = wc?.peso_min ?? null
   const pesoMax = wc?.peso_max ?? null
 
-  const acimaMax = pesoMax !== null && peso_oficial > pesoMax
+  // Calcular se está acima/abaixo considerando tolerância
+  const limiteEfetivoMax = pesoMax !== null ? pesoMax + toleranciaKg : null
+  const acimaMax = limiteEfetivoMax !== null && peso_oficial > limiteEfetivoMax
   const abaixoMin = pesoMin !== null && peso_oficial < pesoMin
   const dentroLimite = !acimaMax && !abaixoMin
-  const status = dentroLimite ? 'aprovado' : 'rejeitado'
+
+  // Determinar status baseado nas regras do evento
+  let status: string
+  if (dentroLimite) {
+    status = 'aprovado'
+  } else if (acimaMax) {
+    if (regraAcima === 'desclassificar') status = 'rejeitado'
+    else if (regraAcima === 'registrar') status = 'acima'
+    else status = 'aprovado' // ignorar
+  } else {
+    // abaixoMin
+    if (regraAbaixo === 'desclassificar') status = 'rejeitado'
+    else if (regraAbaixo === 'registrar') status = 'abaixo'
+    else status = 'aprovado' // ignorar
+  }
 
   const { data: upserted, error: upErr } = await supabaseAdmin
     .from('event_weigh_ins')

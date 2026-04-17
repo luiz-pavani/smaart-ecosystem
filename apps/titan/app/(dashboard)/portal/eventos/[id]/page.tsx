@@ -356,6 +356,60 @@ export default function EventoDetalhePage() {
               </div>
               <div className="mb-4"><label className={label}>Banner URL</label><input type="url" name="banner_url" value={formData.banner_url || ''} onChange={handleChange} className={ic} /></div>
               <div><label className={label}>Regulamento</label><textarea name="regulamento" value={formData.regulamento || ''} onChange={handleChange} rows={5} className={`${ic} resize-none`} /></div>
+
+              {/* Pesagem Config */}
+              <div className="mt-6 pt-6 border-t border-white/10">
+                <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2"><Scale className="w-4 h-4 text-teal-400" />Configuracao de Pesagem</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={label}>Acima do peso</label>
+                    <select
+                      value={(formData.config as Record<string, unknown>)?.pesagem_acima_peso as string || 'desclassificar'}
+                      onChange={e => setFormData((prev: Record<string, any>) => ({
+                        ...prev,
+                        config: { ...(prev.config || {}), pesagem_acima_peso: e.target.value }
+                      }))}
+                      className={ic}
+                    >
+                      <option value="desclassificar">Desclassificar (rejeitar)</option>
+                      <option value="registrar">Apenas registrar (nao rejeitar)</option>
+                      <option value="ignorar">Nao verificar</option>
+                    </select>
+                    <p className="text-[10px] text-slate-500 mt-1">O que acontece quando o atleta pesa acima do limite da categoria</p>
+                  </div>
+                  <div>
+                    <label className={label}>Abaixo do peso</label>
+                    <select
+                      value={(formData.config as Record<string, unknown>)?.pesagem_abaixo_peso as string || 'ignorar'}
+                      onChange={e => setFormData((prev: Record<string, any>) => ({
+                        ...prev,
+                        config: { ...(prev.config || {}), pesagem_abaixo_peso: e.target.value }
+                      }))}
+                      className={ic}
+                    >
+                      <option value="desclassificar">Desclassificar (rejeitar)</option>
+                      <option value="registrar">Apenas registrar (nao rejeitar)</option>
+                      <option value="ignorar">Nao verificar</option>
+                    </select>
+                    <p className="text-[10px] text-slate-500 mt-1">O que acontece quando o atleta pesa abaixo do limite da categoria</p>
+                  </div>
+                  <div>
+                    <label className={label}>Tolerancia acima (gramas)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={(formData.config as Record<string, unknown>)?.pesagem_tolerancia_g as number || 0}
+                      onChange={e => setFormData((prev: Record<string, any>) => ({
+                        ...prev,
+                        config: { ...(prev.config || {}), pesagem_tolerancia_g: parseInt(e.target.value) || 0 }
+                      }))}
+                      className={ic}
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">Ex: 200 = permite ate 200g acima do limite (0 = sem tolerancia)</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
