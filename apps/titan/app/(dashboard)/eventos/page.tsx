@@ -148,7 +148,7 @@ export default function EventosPage() {
             {filtrados.map(evento => (
               <button
                 key={evento.id}
-                onClick={() => router.push(`/portal/eventos/${evento.id}`)}
+                onClick={() => router.push(`/eventos/${evento.id}`)}
                 className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:bg-white/[0.08] hover:border-cyan-500/30 transition-all text-left group"
               >
                 {/* Banner */}

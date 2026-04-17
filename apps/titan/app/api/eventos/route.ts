@@ -5,10 +5,6 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 const ADMIN_ROLES = ['master_access', 'federacao_admin', 'federacao_gestor']
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-
   const url = req.nextUrl
   const status = url.searchParams.get('status')
   const publicado = url.searchParams.get('publicado')
@@ -44,18 +40,27 @@ export async function GET(req: NextRequest) {
     query = query.eq('tipo_evento', tipo_evento)
   }
 
-  // Se não é admin, filtra apenas publicados ou criados pelo user
-  const { data: perfil } = await supabaseAdmin
-    .from('stakeholders')
-    .select('role')
-    .eq('id', user.id)
-    .maybeSingle()
+  // Try to get auth user (optional — public access allowed)
+  let user: { id: string } | null = null
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch { /* public */ }
 
-  const isAdmin = perfil && ADMIN_ROLES.includes(perfil.role)
-
-  if (!isAdmin && publicado !== 'true') {
-    // Non-admin sem filtro de publicado: mostra publicados + próprios
-    query = query.or(`publicado.eq.true,criado_por.eq.${user.id}`)
+  if (user) {
+    const { data: perfil } = await supabaseAdmin
+      .from('stakeholders')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+    const isAdmin = perfil && ADMIN_ROLES.includes(perfil.role)
+    if (!isAdmin && publicado !== 'true') {
+      query = query.or(`publicado.eq.true,criado_por.eq.${user.id}`)
+    }
+  } else if (publicado !== 'true') {
+    // Unauthenticated: only show published
+    query = query.eq('publicado', true)
   }
 
   const { data, error } = await query

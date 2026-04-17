@@ -13,15 +13,12 @@ async function getRole(userId: string) {
   return data?.role ?? null
 }
 
-// GET /api/eventos/[id] — detalhe completo do evento
+// GET /api/eventos/[id] — detalhe completo do evento (público para eventos publicados)
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const { data: evento, error } = await supabaseAdmin
     .from('eventos')
@@ -32,8 +29,17 @@ export async function GET(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!evento) return NextResponse.json({ error: 'Evento não encontrado' }, { status: 404 })
 
+  // Try to get authenticated user (optional)
+  let user: { id: string } | null = null
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch { /* public access */ }
+
   // Se não publicado, apenas admin ou criador pode ver
   if (!evento.publicado) {
+    if (!user) return NextResponse.json({ error: 'Evento não encontrado' }, { status: 404 })
     const role = await getRole(user.id)
     if (!ADMIN_ROLES.includes(role) && evento.criado_por !== user.id) {
       return NextResponse.json({ error: 'Evento não encontrado' }, { status: 404 })
@@ -46,17 +52,29 @@ export async function GET(
     .select('*', { count: 'exact', head: true })
     .eq('event_id', id)
 
-  // Verificar se o user está inscrito
-  const { data: myReg } = await supabaseAdmin
-    .from('event_registrations')
-    .select('id, status')
-    .eq('event_id', id)
-    .eq('atleta_id', user.id)
-    .maybeSingle()
+  // Contar categorias
+  const { count: catCount } = await supabaseAdmin
+    .from('event_categories')
+    .select('*', { count: 'exact', head: true })
+    .eq('evento_id', id)
+    .eq('ativo', true)
+
+  // Verificar se o user está inscrito (if authenticated)
+  let myReg = null
+  if (user) {
+    const { data } = await supabaseAdmin
+      .from('event_registrations')
+      .select('id, status, category_id')
+      .eq('event_id', id)
+      .eq('atleta_id', user.id)
+      .maybeSingle()
+    myReg = data
+  }
 
   return NextResponse.json({
     evento,
     total_inscritos: count || 0,
+    total_categorias: catCount || 0,
     minha_inscricao: myReg || null,
   })
 }

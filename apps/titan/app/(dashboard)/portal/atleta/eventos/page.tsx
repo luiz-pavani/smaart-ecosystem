@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Calendar, MapPin, Trophy, Loader2, ChevronDown, ChevronUp, FileDown, PlusCircle, X, Scale } from 'lucide-react'
+import { ArrowLeft, Calendar, MapPin, Trophy, Loader2, ChevronDown, ChevronUp, FileDown, PlusCircle, X, Scale, FileCheck, CheckCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import CheckoutModal, { type CheckoutProduto } from '@/components/checkout/CheckoutModal'
@@ -61,6 +61,17 @@ export default function EventosAtletaPage() {
 
   // Category selection modal
   const [categoryModalEvent, setCategoryModalEvent] = useState<EventoDisponivel | null>(null)
+
+  // Waiver signing modal
+  const [waiverModal, setWaiverModal] = useState<{
+    eventoId: string
+    registrationId: string
+    waivers: Array<{ waiver_id: string; titulo: string; conteudo?: string; obrigatorio: boolean; assinado: boolean }>
+    pendentes: number
+  } | null>(null)
+  const [signingWaivers, setSigningWaivers] = useState(false)
+  const [waiverChecked, setWaiverChecked] = useState<Set<string>>(new Set())
+  const [expandedWaiver, setExpandedWaiver] = useState<string | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -179,6 +190,27 @@ export default function EventosAtletaPage() {
           descricao: `Inscricao — ${eventoNome}${descCat}`,
         })
       } else {
+        // Check for waivers that need signing
+        if (json.data?.id) {
+          const waiverRes = await fetch(`/api/eventos/${eventId}/waivers/sign?registration_id=${json.data.id}`)
+          const waiverData = await waiverRes.json()
+          if (waiverRes.ok && waiverData.pendentes > 0) {
+            // Also fetch full waiver content
+            const fullRes = await fetch(`/api/eventos/${eventId}/waivers`)
+            const fullData = await fullRes.json()
+            const contentMap = new Map((fullData.waivers || []).map((w: any) => [w.id, w.conteudo]))
+            setWaiverModal({
+              eventoId: eventId,
+              registrationId: json.data.id,
+              waivers: waiverData.waivers.map((w: any) => ({ ...w, conteudo: contentMap.get(w.waiver_id) || '' })),
+              pendentes: waiverData.pendentes,
+            })
+            setWaiverChecked(new Set())
+            await load()
+            setActiveTab('upcoming')
+            return
+          }
+        }
         showToast(json.categoria ? `Inscricao confirmada na categoria ${json.categoria}!` : 'Inscricao confirmada!')
         await load()
         setActiveTab('upcoming')
@@ -198,6 +230,34 @@ export default function EventosAtletaPage() {
       await load()
     } finally {
       setCanceling(null)
+    }
+  }
+
+  async function signWaivers() {
+    if (!waiverModal) return
+    const unsignedObrigatorio = waiverModal.waivers.filter(w => w.obrigatorio && !w.assinado && !waiverChecked.has(w.waiver_id))
+    if (unsignedObrigatorio.length > 0) {
+      showToast('Aceite todos os termos obrigatórios', false)
+      return
+    }
+    setSigningWaivers(true)
+    try {
+      const ids = [...waiverChecked]
+      if (ids.length === 0) { setWaiverModal(null); return }
+      const res = await fetch(`/api/eventos/${waiverModal.eventoId}/waivers/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registration_id: waiverModal.registrationId, waiver_ids: ids }),
+      })
+      if (res.ok) {
+        showToast('Termos aceitos! Inscricao confirmada.')
+      } else {
+        const json = await res.json()
+        showToast(json.error || 'Erro ao assinar termos', false)
+      }
+    } finally {
+      setSigningWaivers(false)
+      setWaiverModal(null)
     }
   }
 
@@ -291,6 +351,75 @@ export default function EventosAtletaPage() {
                   inscrever(categoryModalEvent.id, categoryModalEvent.nome, cat.id)
                 }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Waiver Signing Modal */}
+      {waiverModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border border-white/10 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <FileCheck className="w-5 h-5 text-green-400" /> Termos & Regulamento
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">Aceite os termos para confirmar sua inscricao</p>
+              </div>
+              <button onClick={() => setWaiverModal(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              {waiverModal.waivers.map(w => {
+                const checked = w.assinado || waiverChecked.has(w.waiver_id)
+                return (
+                  <div key={w.waiver_id} className={`border rounded-xl overflow-hidden transition-all ${checked ? 'border-green-500/30 bg-green-500/5' : w.obrigatorio ? 'border-orange-500/30 bg-orange-500/5' : 'border-white/10 bg-white/5'}`}>
+                    <div className="p-4 flex items-start gap-3">
+                      <button
+                        onClick={() => {
+                          if (w.assinado) return
+                          setWaiverChecked(prev => {
+                            const next = new Set(prev)
+                            if (next.has(w.waiver_id)) next.delete(w.waiver_id)
+                            else next.add(w.waiver_id)
+                            return next
+                          })
+                        }}
+                        className={`mt-0.5 w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-all ${checked ? 'bg-green-500 border-green-500 text-white' : 'border-white/30 hover:border-white/50'}`}
+                      >
+                        {checked && <CheckCircle className="w-3.5 h-3.5" />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-white">{w.titulo}</span>
+                          {w.obrigatorio && <span className="text-[10px] px-1.5 py-0.5 bg-orange-500/20 text-orange-300 rounded font-medium">OBRIGATÓRIO</span>}
+                          {w.assinado && <span className="text-[10px] px-1.5 py-0.5 bg-green-500/20 text-green-300 rounded font-medium">JÁ ASSINADO</span>}
+                        </div>
+                        {w.conteudo && (
+                          <button onClick={() => setExpandedWaiver(expandedWaiver === w.waiver_id ? null : w.waiver_id)} className="text-xs text-cyan-400 hover:text-cyan-300 mt-1">
+                            {expandedWaiver === w.waiver_id ? 'Ocultar conteúdo' : 'Ver conteúdo completo'}
+                          </button>
+                        )}
+                        {expandedWaiver === w.waiver_id && w.conteudo && (
+                          <div className="mt-2 p-3 bg-black/20 rounded-lg text-xs text-slate-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">{w.conteudo}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="p-6 border-t border-white/10">
+              <button
+                onClick={signWaivers}
+                disabled={signingWaivers || waiverModal.waivers.some(w => w.obrigatorio && !w.assinado && !waiverChecked.has(w.waiver_id))}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50"
+              >
+                {signingWaivers ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCheck className="w-4 h-4" />}
+                Aceitar e Confirmar Inscricao
+              </button>
             </div>
           </div>
         </div>
