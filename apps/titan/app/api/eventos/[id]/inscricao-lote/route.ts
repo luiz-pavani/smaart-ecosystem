@@ -60,6 +60,17 @@ export async function POST(
     }
   }
 
+  // Check for mandatory waivers
+  const { data: mandatoryWaivers } = await supabaseAdmin
+    .from('event_waivers')
+    .select('id')
+    .eq('evento_id', eventoId)
+    .eq('ativo', true)
+    .eq('obrigatorio', true)
+
+  const hasMandatoryWaivers = (mandatoryWaivers || []).length > 0
+  const statusInicial = hasMandatoryWaivers ? 'pending_waivers' : 'confirmada'
+
   const results: { atleta_id: string; status: 'ok' | 'error'; message?: string; registration_id?: string }[] = []
 
   for (const insc of inscricoes) {
@@ -101,7 +112,7 @@ export async function POST(
             peso: insc.peso_inscricao || stkData.peso_atual,
             academia: '', // Will be enriched later
           } : {},
-          status: 'confirmada',
+          status: statusInicial,
           registration_date: new Date().toISOString().split('T')[0],
         })
         .select('id')
@@ -134,5 +145,5 @@ export async function POST(
   const ok = results.filter(r => r.status === 'ok').length
   const errors = results.filter(r => r.status === 'error').length
 
-  return NextResponse.json({ total: results.length, ok, errors, results })
+  return NextResponse.json({ total: results.length, ok, errors, results, needs_waivers: hasMandatoryWaivers })
 }

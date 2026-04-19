@@ -101,7 +101,16 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .maybeSingle()
 
-  const statusInicial = valorInscricao > 0 ? 'pending_payment' : 'confirmed'
+  // Check for mandatory waivers
+  const { data: mandatoryWaivers } = await supabaseAdmin
+    .from('event_waivers')
+    .select('id')
+    .eq('evento_id', event_id)
+    .eq('ativo', true)
+    .eq('obrigatorio', true)
+
+  const hasMandatoryWaivers = (mandatoryWaivers || []).length > 0
+  const statusInicial = valorInscricao > 0 ? 'pending_payment' : hasMandatoryWaivers ? 'pending_waivers' : 'confirmed'
 
   const { data, error } = await supabaseAdmin
     .from('event_registrations')
@@ -129,6 +138,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     data,
     needs_payment: valorInscricao > 0,
+    needs_waivers: hasMandatoryWaivers,
     valor: valorInscricao,
     categoria: categoryData?.nome_display || null,
   }, { status: 201 })

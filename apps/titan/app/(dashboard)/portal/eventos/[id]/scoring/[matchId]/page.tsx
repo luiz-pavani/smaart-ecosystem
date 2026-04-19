@@ -140,8 +140,28 @@ export default function ScoringPage() {
         setScore(prev => {
           if (!prev || !prev.clock_running) return prev
           if (prev.golden_score) {
-            // Golden Score: count UP
-            return { ...prev, clock_seconds: prev.clock_seconds + 1 }
+            // Golden Score: count UP, but respect golden_score_seg max if configured
+            const gsMax = match?.bracket?.category?.golden_score_seg
+            const nextGs = prev.clock_seconds + 1
+            if (gsMax && nextGs >= gsMax) {
+              // Golden score time expired — decide by score difference or hantei
+              const p1 = prev.pontos_athlete1
+              const p2 = prev.pontos_athlete2
+              const s1 = (p1.wazaari || 0) * 10 + (p1.yuko || 0)
+              const s2 = (p2.wazaari || 0) * 10 + (p2.yuko || 0)
+              if (s1 !== s2) {
+                const winner = s1 > s2 ? 1 : 2
+                setShowFinish(true)
+                setFinishWinner(winner as 1 | 2)
+                setFinishResultado('yusei-gachi')
+              } else {
+                // Still tied — operator decides (hantei)
+                setShowFinish(true)
+                setFinishResultado('hantei')
+              }
+              return { ...prev, clock_seconds: nextGs, clock_running: false }
+            }
+            return { ...prev, clock_seconds: nextGs }
           }
           const next = prev.clock_seconds - 1
           if (next <= 0) {

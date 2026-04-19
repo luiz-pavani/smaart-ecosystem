@@ -45,7 +45,33 @@ export async function POST(
     .upsert(rows, { onConflict: 'waiver_id,registration_id' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, signed: waiver_ids.length })
+
+  // Check if all mandatory waivers are now signed — upgrade status from pending_waivers
+  const { data: allWaivers } = await supabaseAdmin
+    .from('event_waivers')
+    .select('id')
+    .eq('evento_id', eventoId)
+    .eq('ativo', true)
+    .eq('obrigatorio', true)
+
+  const { data: allSigs } = await supabaseAdmin
+    .from('event_waiver_signatures')
+    .select('waiver_id')
+    .eq('registration_id', registration_id)
+
+  const signedSet = new Set((allSigs || []).map(s => s.waiver_id))
+  const allSigned = (allWaivers || []).every(w => signedSet.has(w.id))
+
+  if (allSigned) {
+    // Upgrade status if currently pending_waivers
+    await supabaseAdmin
+      .from('event_registrations')
+      .update({ status: 'confirmado' })
+      .eq('id', registration_id)
+      .eq('status', 'pending_waivers')
+  }
+
+  return NextResponse.json({ ok: true, signed: waiver_ids.length, all_signed: allSigned })
 }
 
 // GET /api/eventos/[id]/waivers/sign?registration_id=xxx — verificar assinaturas

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
-import { Tv, Radio, Loader2, Maximize, Volume2, Users } from 'lucide-react'
+import { Tv, Radio, Loader2, Maximize, Volume2, Users, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Stream {
@@ -12,6 +12,8 @@ interface Stream {
   tipo: string
   stream_url: string | null
   status: string
+  ppv_habilitado?: boolean
+  ppv_valor?: number
 }
 
 interface ScoreData {
@@ -169,6 +171,8 @@ export default function TitanTVPage() {
   const [streams, setStreams] = useState<Stream[]>([])
   const [areas, setAreas] = useState<AreaData[]>([])
   const [fullscreen, setFullscreen] = useState<number | null>(null)
+  const [ppvUnlocked, setPpvUnlocked] = useState<Set<string>>(new Set())
+  const [userId, setUserId] = useState<string | null>(null)
   const supabase = createClient()
 
   const load = useCallback(async () => {
@@ -176,11 +180,27 @@ export default function TitanTVPage() {
       fetch(`/api/eventos/${eventoId}/streams`).then(r => r.json()),
       fetch(`/api/eventos/${eventoId}/scoring/active-all`).then(r => r.json()),
     ])
-    setStreams(strRes.streams || [])
+    const allStreams: Stream[] = strRes.streams || []
+    setStreams(allStreams)
     setEventoNome(scoreRes.evento_nome || '')
     setAreas(scoreRes.areas || [])
+
+    // Check PPV access for PPV-enabled streams
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      setUserId(user.id)
+      const ppvStreams = allStreams.filter(s => s.ppv_habilitado)
+      if (ppvStreams.length > 0) {
+        const res = await fetch(`/api/eventos/${eventoId}/ppv-check`)
+        if (res.ok) {
+          const data = await res.json()
+          setPpvUnlocked(new Set(data.unlocked_stream_ids || []))
+        }
+      }
+    }
+
     setLoading(false)
-  }, [eventoId])
+  }, [eventoId, supabase])
 
   useEffect(() => { load() }, [load])
 
@@ -276,12 +296,32 @@ export default function TitanTVPage() {
           <div className={`grid gap-4 ${liveStreams.length === 1 ? 'grid-cols-1' : liveStreams.length <= 4 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
             {liveStreams.map(stream => {
               const area = areas.find(a => a.area_id === stream.area_id)
+              const isPpv = stream.ppv_habilitado
+              const isLocked = isPpv && !ppvUnlocked.has(stream.id)
 
               return (
                 <div key={stream.id} className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 hover:border-red-500/30 transition-all group">
                   {/* Stream + overlay */}
                   <div className="relative aspect-video bg-black">
-                    <StreamPlayer stream={stream} />
+                    {isLocked ? (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center gap-3">
+                        <Lock className="w-10 h-10 text-yellow-500" />
+                        <div className="text-center">
+                          <p className="text-white font-bold text-sm">Pay-per-view</p>
+                          <p className="text-slate-400 text-xs mt-1">
+                            R$ {Number(stream.ppv_valor || 0).toFixed(2)}
+                          </p>
+                        </div>
+                        <a
+                          href={`/eventos/${eventoId}?ppv=${stream.id}`}
+                          className="mt-2 px-4 py-2 bg-yellow-500 text-black font-bold rounded-lg text-xs hover:bg-yellow-400 transition-colors"
+                        >
+                          Comprar acesso
+                        </a>
+                      </div>
+                    ) : (
+                      <StreamPlayer stream={stream} />
+                    )}
                     {area?.active_match && area.score && (
                       <ScoreOverlay area={area} score={area.score as ScoreData} />
                     )}

@@ -121,9 +121,17 @@ ${Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cat, rs])
 
 </body></html>`
 
-  return new NextResponse(html, {
+  // Add auto-print script so browser opens print dialog (save as PDF)
+  const htmlWithPrint = html.replace('</body>', `
+<script>
+  window.onload = function() { setTimeout(function() { window.print(); }, 500); };
+</script>
+</body>`)
+
+  return new NextResponse(htmlWithPrint, {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
+      'Content-Disposition': `inline; filename="resultados_${evento.nome.replace(/\s+/g, '_').toLowerCase()}.pdf"`,
     },
   })
 }
