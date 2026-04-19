@@ -93,13 +93,30 @@ export default function ScoringPage() {
   const recordedChunksRef = useRef<Blob[]>([])
   const streamRef = useRef<MediaStream | null>(null)
 
+  const [varHistory, setVarHistory] = useState<{ id: string; motivo: string; decisao: string; timestamp_luta_seg: number; video_url: string | null }[]>([])
+
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/eventos/${eventoId}/scoring/${matchId}`)
-      const json = await res.json()
-      if (res.ok) {
+      const [matchRes, varRes] = await Promise.all([
+        fetch(`/api/eventos/${eventoId}/scoring/${matchId}`),
+        fetch(`/api/eventos/${eventoId}/scoring/${matchId}/var`),
+      ])
+      const json = await matchRes.json()
+      if (matchRes.ok) {
         setMatch(json.match)
         setScore(json.score)
+      }
+      const varJson = await varRes.json()
+      if (varRes.ok) {
+        setVarHistory(varJson.vars || [])
+        // If there's a pending VAR, auto-open review mode
+        const pending = (varJson.vars || []).find((v: any) => v.decisao === 'pendente')
+        if (pending) {
+          setVarMode('review')
+          setVarId(pending.id)
+          setVarMotivo(pending.motivo || '')
+          setVarClipUrl(pending.video_url || null)
+        }
       }
     } catch { /* silent */ } finally { setLoading(false) }
   }, [eventoId, matchId])

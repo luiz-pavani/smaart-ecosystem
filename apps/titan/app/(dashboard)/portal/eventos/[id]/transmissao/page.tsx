@@ -167,20 +167,31 @@ export default function TransmissaoPage() {
                         <option value="youtube">YouTube Live</option>
                         <option value="rtmp_custom">RTMP Custom</option>
                         <option value="iframe">Iframe / Embed</option>
+                        <option value="webcam">Câmera do dispositivo (local)</option>
                       </select>
                     </div>
-                    <div className="md:col-span-2">
-                      <label className="text-xs text-slate-400 mb-1 block">
-                        {form.tipo === 'youtube' ? 'URL do YouTube (ex: https://youtube.com/watch?v=xxx ou embed URL)' :
-                         form.tipo === 'iframe' ? 'URL do iframe embed' : 'URL RTMP'}
-                      </label>
-                      <input
-                        value={form.stream_url}
-                        onChange={e => updateForm(areaId, 'stream_url', e.target.value)}
-                        placeholder={form.tipo === 'youtube' ? 'https://www.youtube.com/embed/VIDEO_ID' : 'rtmp://...'}
-                        className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600"
-                      />
-                    </div>
+                    {form.tipo !== 'webcam' ? (
+                      <div className="md:col-span-2">
+                        <label className="text-xs text-slate-400 mb-1 block">
+                          {form.tipo === 'youtube' ? 'URL do YouTube (ex: https://youtube.com/watch?v=xxx ou embed URL)' :
+                           form.tipo === 'iframe' ? 'URL do iframe embed' : 'URL RTMP'}
+                        </label>
+                        <input
+                          value={form.stream_url}
+                          onChange={e => updateForm(areaId, 'stream_url', e.target.value)}
+                          placeholder={form.tipo === 'youtube' ? 'https://www.youtube.com/embed/VIDEO_ID' : 'rtmp://...'}
+                          className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600"
+                        />
+                      </div>
+                    ) : (
+                      <div className="md:col-span-2 bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                        <p className="text-xs text-blue-300">
+                          📹 A câmera do dispositivo será usada diretamente neste computador.
+                          Os espectadores verão apenas o placar em tempo real no Titan TV.
+                          Para transmitir vídeo remotamente, use YouTube Live ou OBS + RTMP.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <button

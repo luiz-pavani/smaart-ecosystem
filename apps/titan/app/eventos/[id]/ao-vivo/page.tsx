@@ -156,6 +156,15 @@ function StreamPlayer({ stream }: { stream: Stream }) {
     return <iframe src={stream.stream_url} className="w-full h-full" allowFullScreen />
   }
 
+  if (stream.tipo === 'webcam') {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center gap-2">
+        <Tv className="w-8 h-8 text-cyan-500/40" />
+        <p className="text-slate-400 text-xs text-center px-4">Câmera local ativa no tatame<br/>Acompanhe o placar em tempo real abaixo</p>
+      </div>
+    )
+  }
+
   // Fallback
   return (
     <div className="w-full h-full bg-gray-900 flex items-center justify-center">
@@ -173,6 +182,7 @@ export default function TitanTVPage() {
   const [fullscreen, setFullscreen] = useState<number | null>(null)
   const [ppvUnlocked, setPpvUnlocked] = useState<Set<string>>(new Set())
   const [userId, setUserId] = useState<string | null>(null)
+  const [ppvBuying, setPpvBuying] = useState<string | null>(null)
   const supabase = createClient()
 
   const load = useCallback(async () => {
@@ -312,12 +322,35 @@ export default function TitanTVPage() {
                             R$ {Number(stream.ppv_valor || 0).toFixed(2)}
                           </p>
                         </div>
-                        <a
-                          href={`/eventos/${eventoId}?ppv=${stream.id}`}
-                          className="mt-2 px-4 py-2 bg-yellow-500 text-black font-bold rounded-lg text-xs hover:bg-yellow-400 transition-colors"
+                        <button
+                          disabled={ppvBuying === stream.id}
+                          onClick={async () => {
+                            if (!userId) { window.location.href = `/login?redirect=/eventos/${eventoId}/ao-vivo`; return }
+                            setPpvBuying(stream.id)
+                            try {
+                              const res = await fetch('/api/checkout', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  produto: 'ppv',
+                                  referencia_id: stream.id,
+                                  metodo: 'pix',
+                                  customer: { name: 'Espectador', identity: '', email: '' },
+                                }),
+                              })
+                              const data = await res.json()
+                              if (data.pix_qr_code_url) {
+                                window.open(data.pix_qr_code_url, '_blank')
+                              } else if (data.error) {
+                                alert(data.error)
+                              }
+                            } catch { alert('Erro ao processar pagamento') }
+                            finally { setPpvBuying(null) }
+                          }}
+                          className="mt-2 px-4 py-2 bg-yellow-500 text-black font-bold rounded-lg text-xs hover:bg-yellow-400 transition-colors disabled:opacity-50"
                         >
-                          Comprar acesso
-                        </a>
+                          {ppvBuying === stream.id ? 'Processando...' : 'Comprar acesso'}
+                        </button>
                       </div>
                     ) : (
                       <StreamPlayer stream={stream} />

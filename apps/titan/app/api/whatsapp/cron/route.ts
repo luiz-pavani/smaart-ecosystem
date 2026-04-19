@@ -6,6 +6,7 @@ import {
   notifyAcademiaAnualidadeVencendo,
   notifyAcademiaAnualidadeVencida,
 } from '@/lib/whatsapp/notifications'
+import { sendText as sendWhatsApp } from '@/lib/whatsapp/meta'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -123,6 +124,55 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // --- Lembretes pré-evento (3 dias e 1 dia antes) ---
+  const eventResults = { enviados: [] as any[] }
+
+  const todayStr = hoje.toISOString().split('T')[0]
+  const in1Day = new Date(hoje.getTime() + 1 * 86400000).toISOString().split('T')[0]
+  const in3Days = new Date(hoje.getTime() + 3 * 86400000).toISOString().split('T')[0]
+
+  const { data: upcomingEvents } = await supabaseAdmin
+    .from('eventos')
+    .select('id, nome, data_evento, local, hora_inicio')
+    .eq('publicado', true)
+    .in('data_evento', [in1Day, in3Days])
+
+  for (const evento of upcomingEvents || []) {
+    const diasAte = evento.data_evento === in1Day ? 1 : 3
+
+    // Buscar inscritos com telefone
+    const { data: regs } = await supabaseAdmin
+      .from('event_registrations')
+      .select('atleta_id, dados_atleta')
+      .eq('event_id', evento.id)
+      .in('status', ['confirmado', 'confirmada', 'inscrito', 'pago'])
+
+    for (const reg of regs || []) {
+      const { data: stk } = await supabaseAdmin
+        .from('stakeholders')
+        .select('telefone, nome_completo')
+        .eq('id', reg.atleta_id)
+        .maybeSingle()
+
+      const phone = stk?.telefone?.replace(/\D/g, '')
+      if (!phone || phone.length < 10) continue
+
+      const nome = stk?.nome_completo || (reg.dados_atleta as any)?.nome || 'Atleta'
+      const fullPhone = phone.startsWith('55') ? phone : `55${phone}`
+      const horario = evento.hora_inicio ? ` às ${evento.hora_inicio.substring(0, 5)}` : ''
+      const msg = diasAte === 1
+        ? `⚡ ${nome}, AMANHÃ é o dia! *${evento.nome}*${horario}${evento.local ? ` — ${evento.local}` : ''}. Boa sorte! 🥋`
+        : `📅 ${nome}, faltam *3 dias* para o *${evento.nome}*${horario}${evento.local ? ` — ${evento.local}` : ''}. Prepare-se! 💪`
+
+      if (!dry) {
+        try {
+          await sendWhatsApp(fullPhone, msg)
+        } catch { results.errors++ }
+      }
+      eventResults.enviados.push({ evento: evento.nome, nome, telefone: fullPhone, dias: diasAte })
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     dry,
@@ -132,8 +182,9 @@ export async function GET(req: NextRequest) {
       atletas_vencidos: results.atletas.vencidos.length,
       academias_vencendo: results.academias.vencendo.length,
       academias_vencidas: results.academias.vencidas.length,
+      eventos_lembretes: eventResults.enviados.length,
       errors: results.errors,
     },
-    detail: results,
+    detail: { ...results, eventos: eventResults },
   })
 }

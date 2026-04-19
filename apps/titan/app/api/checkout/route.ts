@@ -14,7 +14,7 @@ import {
  *
  * Body:
  * {
- *   produto: 'filiacao_atleta' | 'anuidade_academia' | 'profep' | 'evento' | 'filiacao_bulk'
+ *   produto: 'filiacao_atleta' | 'anuidade_academia' | 'profep' | 'evento' | 'filiacao_bulk' | 'ppv'
  *   referencia_id: string   // filiacao_pedido id, event_registration id, academia id, etc.
  *   metodo: 'pix' | 'cartao' | 'recorrente'
  *   card_token?: string     // para metodo cartao/recorrente
@@ -257,6 +257,19 @@ async function resolverValor(
         .maybeSingle()
       if (!plano) return { error: 'Plano não encontrado' }
       return { valor: plano.valor, descricao: `Mensalidade — ${plano.nome}` }
+    }
+
+    case 'ppv': {
+      if (!referenciaId) return { error: 'referencia_id (stream_id) obrigatório para ppv' }
+      const { data: stream } = await supabaseAdmin
+        .from('event_streams')
+        .select('ppv_valor, titulo, evento_id, evento:eventos(nome)')
+        .eq('id', referenciaId)
+        .maybeSingle()
+      if (!stream) return { error: 'Stream não encontrado' }
+      if (!stream.ppv_valor) return { error: 'Stream sem valor PPV configurado' }
+      const eventoNome = (stream.evento as any)?.nome || 'Evento'
+      return { valor: stream.ppv_valor, descricao: `PPV — ${eventoNome} (${stream.titulo || 'Transmissão'})` }
     }
 
     default:

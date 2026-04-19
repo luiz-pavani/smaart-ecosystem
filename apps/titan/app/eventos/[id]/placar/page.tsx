@@ -426,6 +426,39 @@ export default function PlacarPublicPage() {
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [singleMatch, areasData, isSingleMode, pollSingleArea, pollAllAreas])
 
+  // Realtime for multi-area mode — subscribe to each active match channel
+  const multiChannelsRef = useRef<ReturnType<ReturnType<typeof createClient>['channel']>[]>([])
+  useEffect(() => {
+    if (isSingleMode) return
+    // Clean up previous channels
+    const supabase = createClient()
+    for (const ch of multiChannelsRef.current) supabase.removeChannel(ch)
+    multiChannelsRef.current = []
+
+    const activeMatchIds = areasData
+      .filter(a => a.active_match)
+      .map(a => ({ matchId: a.active_match!.id, areaId: a.area_id }))
+
+    for (const { matchId, areaId } of activeMatchIds) {
+      const ch = supabase
+        .channel(`scoring-live-multi-${matchId}`)
+        .on('broadcast', { event: 'score_update' }, ({ payload }) => {
+          if (!payload) return
+          setAreasData(prev => prev.map(a => {
+            if (a.area_id !== areaId) return a
+            return { ...a, score: payload as Score }
+          }))
+        })
+        .subscribe()
+      multiChannelsRef.current.push(ch)
+    }
+
+    return () => {
+      for (const ch of multiChannelsRef.current) supabase.removeChannel(ch)
+      multiChannelsRef.current = []
+    }
+  }, [areasData.map(a => a.active_match?.id).join(','), isSingleMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Realtime for single mode
   useEffect(() => {
     if (!isSingleMode || !activeMatchIdRef.current) return
