@@ -30,16 +30,18 @@ def get_env_var(key):
 SUPABASE_URL = get_env_var('NEXT_PUBLIC_SUPABASE_URL')
 SUPABASE_SERVICE_KEY = get_env_var('SUPABASE_SERVICE_ROLE_KEY')
 
-if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-    print("ERROR: Could not find SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
+missing = [k for k, v in [('NEXT_PUBLIC_SUPABASE_URL', SUPABASE_URL), ('SUPABASE_SERVICE_ROLE_KEY', SUPABASE_SERVICE_KEY)] if not v]
+if missing:
+    print(f"ERROR: Missing required environment variable(s): {', '.join(missing)}")
+    print("In GitHub Actions, set these as repository secrets at Settings → Secrets and variables → Actions.")
     exit(1)
 
-REST_URL = f"{SUPABASE_URL}/rest/v1/events"
+REST_URL = f"{SUPABASE_URL}/rest/v1/events?on_conflict=registration_url"
 HEADERS_SUPABASE = {
     'apikey': SUPABASE_SERVICE_KEY,
     'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
     'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
+    'Prefer': 'resolution=merge-duplicates,return=representation'
 }
 
 # --- GLOBAL VARIABLES ---
