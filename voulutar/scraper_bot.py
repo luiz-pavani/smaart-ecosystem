@@ -36,6 +36,52 @@ def clean_soucompetidor_title(raw):
     t = re.sub(r'\s*[-–]\s*(EDICAO|EDIÇÃO|ETAPA|ANO)\s*$', '', t, flags=re.IGNORECASE)
     return t.strip()
 
+# --- GEOCODING (Nominatim / OpenStreetMap) ---
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+NOMINATIM_HEADERS = {
+    'User-Agent': 'VouLutar/1.0 (https://voulutar.vercel.app)',
+    'Accept-Language': 'pt-BR,pt;q=0.9',
+}
+_geo_cache = {}
+_last_nominatim_call = [0.0]
+
+def geocode_location(location):
+    """Return (lat, lon, country_code) for a location string. Uses Nominatim.
+    Rate-limited to 1 req/s per Nominatim policy. Results cached in memory."""
+    if not location or location.strip().lower() in {'local a definir', ''}:
+        return None, None, None
+    q = location.strip()
+    if q in _geo_cache:
+        return _geo_cache[q]
+
+    # Throttle
+    elapsed = time.time() - _last_nominatim_call[0]
+    if elapsed < 1.1:
+        time.sleep(1.1 - elapsed)
+    _last_nominatim_call[0] = time.time()
+
+    try:
+        r = requests.get(
+            NOMINATIM_URL,
+            params={'q': q, 'format': 'json', 'limit': 1, 'addressdetails': 1},
+            headers=NOMINATIM_HEADERS,
+            timeout=15,
+        )
+        data = r.json()
+        if not data:
+            _geo_cache[q] = (None, None, None)
+            return None, None, None
+        row = data[0]
+        lat = float(row['lat'])
+        lon = float(row['lon'])
+        cc = (row.get('address') or {}).get('country_code', '').lower() or None
+        _geo_cache[q] = (lat, lon, cc)
+        return lat, lon, cc
+    except Exception as e:
+        print(f"  geocode error for '{q}': {e}")
+        _geo_cache[q] = (None, None, None)
+        return None, None, None
+
 # --- ENVIRONMENT SETUP ---
 def get_env_var(key):
     # First try OS environment variables (for GitHub Actions)
@@ -165,15 +211,22 @@ def scrape_soucompetidor():
             real_title, city_uf, date_iso = enrich_soucompetidor(full_link)
             time.sleep(0.5)  # be polite
 
+            location = city_uf or "Local a definir"
+            geo_query = f"{city_uf}, Brasil" if city_uf else None
+            lat, lon, cc = geocode_location(geo_query) if geo_query else (None, None, None)
+
             events_dict[full_link] = {
                 "title": real_title or fallback_title,
                 "date": date_iso or (NOW + timedelta(days=15 + len(events_dict))).strftime('%Y-%m-%d'),
                 "category": "BJJ (Gi)",
-                "location": city_uf or "Local a definir",
+                "location": location,
                 "registration_url": full_link,
                 "poster_url": poster_url,
                 "is_featured": False,
-                "status": "published"
+                "status": "published",
+                "latitude": lat,
+                "longitude": lon,
+                "country_code": cc or 'br',
             }
 
         events_to_insert = list(events_dict.values())
@@ -246,15 +299,22 @@ def scrape_ilutas():
             real_title, city_uf, date_iso = enrich_ilutas(full_link)
             time.sleep(0.5)
 
+            location = city_uf or "Local a definir"
+            geo_query = f"{city_uf}, Brasil" if city_uf else None
+            lat, lon, cc = geocode_location(geo_query) if geo_query else (None, None, None)
+
             events_dict[full_link] = {
                 "title": real_title or "Evento iLutas",
                 "date": date_iso or (NOW + timedelta(days=20 + len(events_dict))).strftime('%Y-%m-%d'),
                 "category": "BJJ (Gi)",
-                "location": city_uf or "Local a definir",
+                "location": location,
                 "registration_url": full_link,
                 "poster_url": poster_url,
                 "is_featured": False,
-                "status": "published"
+                "status": "published",
+                "latitude": lat,
+                "longitude": lon,
+                "country_code": cc or 'br',
             }
 
         events_to_insert = list(events_dict.values())
@@ -298,9 +358,23 @@ def scrape_smoothcomp():
             date_str = ev.get('startdate', (NOW + timedelta(days=30)).strftime('%Y-%m-%d'))
             city = ev.get('location_city', '')
             country = ev.get('location_country_human', '')
+            country_iso = (ev.get('location_country') or '').lower() or None
             location = f"{city}, {country}" if city and country else (country or city or "Local a definir")
-            
-            if full_link not in events_dict and len(events_dict) < 10:
+
+            # Try Smoothcomp's own coords first; fall back to geocode
+            lat = ev.get('location_lat') or ev.get('latitude')
+            lon = ev.get('location_lng') or ev.get('location_lon') or ev.get('longitude')
+            try:
+                lat = float(lat) if lat is not None else None
+                lon = float(lon) if lon is not None else None
+            except (TypeError, ValueError):
+                lat, lon = None, None
+            if (lat is None or lon is None) and (city or country):
+                geo_q = ', '.join([p for p in [city, country] if p])
+                lat, lon, cc = geocode_location(geo_q)
+                country_iso = country_iso or cc
+
+            if full_link not in events_dict and len(events_dict) < 15:
                 events_dict[full_link] = {
                     "title": title,
                     "date": date_str,
@@ -309,7 +383,10 @@ def scrape_smoothcomp():
                     "registration_url": full_link,
                     "poster_url": poster_url,
                     "is_featured": False,
-                    "status": "published"
+                    "status": "published",
+                    "latitude": lat,
+                    "longitude": lon,
+                    "country_code": country_iso,
                 }
                 
         events_to_insert = list(events_dict.values())

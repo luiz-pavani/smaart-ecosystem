@@ -25,6 +25,7 @@ type EventRow = {
   status: string;
   latitude: number | null;
   longitude: number | null;
+  country_code: string | null;
 };
 
 const NEARBY_RADIUS_KM = 800;
@@ -126,7 +127,7 @@ export default function Home() {
 
     const q = searchTerm.trim().toLowerCase();
 
-    return events.filter((event) => {
+    const passes = events.filter((event) => {
       const matchesSearch =
         !q ||
         event.title.toLowerCase().includes(q) ||
@@ -151,6 +152,31 @@ export default function Home() {
         if (km > NEARBY_RADIUS_KM) return false;
       }
       return true;
+    });
+
+    // Sort: featured → Brasil → (distance if geo) → date
+    const isBR = (e: EventRow) =>
+      e.country_code === 'br' ||
+      /\s-\s[A-Z]{2}$/i.test(e.location) ||
+      /\/[A-Z]{2}$/i.test(e.location) ||
+      /brasil/i.test(e.location);
+
+    return passes.slice().sort((a, b) => {
+      const af = a.is_featured ? 1 : 0;
+      const bf = b.is_featured ? 1 : 0;
+      if (af !== bf) return bf - af;
+
+      const ab = isBR(a) ? 1 : 0;
+      const bb = isBR(b) ? 1 : 0;
+      if (ab !== bb) return bb - ab;
+
+      if (userCoords && a.latitude && a.longitude && b.latitude && b.longitude) {
+        const da = haversineKm(userCoords.lat, userCoords.lon, a.latitude, a.longitude);
+        const db = haversineKm(userCoords.lat, userCoords.lon, b.latitude, b.longitude);
+        if (da !== db) return da - db;
+      }
+
+      return a.date.localeCompare(b.date);
     });
   }, [events, searchTerm, filterCategory, filterDate, userCoords]);
 
@@ -280,7 +306,7 @@ export default function Home() {
                   <span className="text-red-500 font-semibold">{locationHint}</span>
                 </>
               )}
-              . Eventos sem coordenadas cadastradas são ocultados.
+              .
             </p>
           )}
         </div>
@@ -365,7 +391,21 @@ export default function Home() {
                     </div>
                     <div className="flex items-start gap-2">
                       <MapPin className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                      <span className="line-clamp-2">{event.location}</span>
+                      <span className="line-clamp-2">
+                        {event.location}
+                        {userCoords && event.latitude != null && event.longitude != null && (
+                          <span className="text-zinc-500 ml-1">
+                            · {Math.round(
+                              haversineKm(
+                                userCoords.lat,
+                                userCoords.lon,
+                                event.latitude,
+                                event.longitude
+                              )
+                            )} km
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </div>
 
