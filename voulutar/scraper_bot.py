@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -7,6 +8,33 @@ import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
 import re
+
+MONTHS_PT = {
+    'janeiro': 1, 'fevereiro': 2, 'março': 3, 'marco': 3, 'abril': 4, 'maio': 5,
+    'junho': 6, 'julho': 7, 'agosto': 8, 'setembro': 9, 'outubro': 10,
+    'novembro': 11, 'dezembro': 12,
+}
+
+def parse_pt_date(s):
+    """Parse '12 de Abril de 2026' → '2026-04-12'. Returns None on failure."""
+    if not s:
+        return None
+    m = re.search(r'(\d{1,2})\s+de\s+([A-Za-zçÇ]+)\s+de\s+(\d{4})', s, re.IGNORECASE)
+    if not m:
+        return None
+    day, month_name, year = m.group(1), m.group(2).lower(), m.group(3)
+    month = MONTHS_PT.get(month_name)
+    if not month:
+        return None
+    return f"{year}-{month:02d}-{int(day):02d}"
+
+def clean_soucompetidor_title(raw):
+    """Strip 'P2647-' prefix and ' - EDICAO/ETAPA/ANO' suffix; title case."""
+    if not raw:
+        return raw
+    t = re.sub(r'^P\d+\s*[-–]\s*', '', raw.strip())
+    t = re.sub(r'\s*[-–]\s*(EDICAO|EDIÇÃO|ETAPA|ANO)\s*$', '', t, flags=re.IGNORECASE)
+    return t.strip()
 
 # --- ENVIRONMENT SETUP ---
 def get_env_var(key):
@@ -74,95 +102,161 @@ def insert_to_supabase(events_list, source_name):
 
 # --- SCRAPERS ---
 
+def enrich_soucompetidor(full_link):
+    """Fetch individual SouCompetidor event page for real title + cidade/UF + date."""
+    try:
+        r = requests.get(full_link, headers=HEADERS_REQ, timeout=15)
+        r.encoding = r.apparent_encoding or 'utf-8'
+        s = BeautifulSoup(r.text, 'html.parser')
+
+        og = s.find('meta', attrs={'property': 'og:title'})
+        raw_title = (og.get('content').strip() if og and og.get('content') else '')
+        title = clean_soucompetidor_title(raw_title)
+
+        text = s.get_text('\n', strip=True)
+        # City/UF pattern: "GRAVATAI - RS"
+        city_uf = None
+        for line in text.split('\n'):
+            m = re.match(r'^([A-ZÀ-Ú][A-ZÀ-Ú\s\.\-]{2,})\s*[-–]\s*([A-Z]{2})$', line.strip())
+            if m:
+                city = m.group(1).strip().title().replace("'S", "'s")
+                city_uf = f"{city} - {m.group(2)}"
+                break
+
+        date_iso = parse_pt_date(text)
+        return title, city_uf, date_iso
+    except Exception as e:
+        print(f"  enrich_soucompetidor error for {full_link}: {e}")
+        return None, None, None
+
 def scrape_soucompetidor():
     print("\n--- Fetching soucompetidor.com.br ---")
     url = "https://soucompetidor.com.br/pt-br/"
-    
+
     try:
         response = requests.get(url, headers=HEADERS_REQ)
+        response.encoding = response.apparent_encoding or 'utf-8'
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         event_links_els = soup.select('a[href*="/pt-br/eventos/todos-os-eventos/p"]')
         events_dict = {}
-        
+
         for el in event_links_els:
             href = el.get('href')
-            if not href: continue
-            
+            if not href:
+                continue
             full_link = "https://soucompetidor.com.br" + href
-            
+            if full_link in events_dict:
+                continue
+            if len(events_dict) >= 20:
+                break
+
             img_el = el.find('img') or (el.parent and el.parent.find('img'))
             poster_url = None
             if img_el and img_el.get('src'):
                 poster_url = img_el.get('src')
                 if not poster_url.startswith('http'):
                     poster_url = "https://soucompetidor.com.br" + poster_url
-                    
-            title = (img_el.get('alt') if img_el else "") or el.text.strip()
-            if not title:
-                slug = href.split('/')[-2]
-                title = slug.replace('-', ' ').title()
-                
-            if full_link not in events_dict and len(events_dict) < 10:
-                events_dict[full_link] = {
-                    "title": title or "Evento SouCompetidor",
-                    "date": (NOW + timedelta(days=15 + len(events_dict))).strftime('%Y-%m-%d'),
-                    "category": "BJJ (Gi)",
-                    "location": "Brasil (Ver site)",
-                    "registration_url": full_link,
-                    "poster_url": poster_url,
-                    "is_featured": False,
-                    "status": "published"
-                }
-                
+
+            fallback_title = (img_el.get('alt') if img_el else "") or el.text.strip()
+            fallback_title = clean_soucompetidor_title(fallback_title) or "Evento SouCompetidor"
+
+            # Enrich from individual page
+            real_title, city_uf, date_iso = enrich_soucompetidor(full_link)
+            time.sleep(0.5)  # be polite
+
+            events_dict[full_link] = {
+                "title": real_title or fallback_title,
+                "date": date_iso or (NOW + timedelta(days=15 + len(events_dict))).strftime('%Y-%m-%d'),
+                "category": "BJJ (Gi)",
+                "location": city_uf or "Local a definir",
+                "registration_url": full_link,
+                "poster_url": poster_url,
+                "is_featured": False,
+                "status": "published"
+            }
+
         events_to_insert = list(events_dict.values())
         print(f"Found {len(events_to_insert)} unique events on SouCompetidor.")
         insert_to_supabase(events_to_insert, "SouCompetidor")
     except Exception as e:
         print(f"Error scraping SouCompetidor: {e}")
 
+def enrich_ilutas(full_link):
+    """Fetch individual iLutas event page for real title + cidade/UF + date."""
+    try:
+        r = requests.get(full_link, headers=HEADERS_REQ, timeout=15)
+        r.encoding = r.apparent_encoding or 'utf-8'
+        s = BeautifulSoup(r.text, 'html.parser')
+
+        og = s.find('meta', attrs={'property': 'og:title'})
+        title = (og.get('content').strip() if og and og.get('content') else None)
+
+        text = s.get_text('\n', strip=True)
+        # City/UF appears alone on a line like "São Miguel do Oeste/SC"
+        city_uf = None
+        for line in text.split('\n'):
+            line = line.strip()
+            # Max 60 chars, must be city name + /UF, no digits, no pipes, no path separators beyond the one /UF
+            if len(line) < 3 or len(line) > 60:
+                continue
+            if re.search(r'\d', line):
+                continue
+            m = re.fullmatch(r'([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\.\'\-]+?)/([A-Z]{2})', line)
+            if m:
+                city_uf = f"{m.group(1).strip()}/{m.group(2)}"
+                break
+
+        date_iso = parse_pt_date(text)
+        return title, city_uf, date_iso
+    except Exception as e:
+        print(f"  enrich_ilutas error for {full_link}: {e}")
+        return None, None, None
+
 def scrape_ilutas():
     print("\n--- Fetching ilutas.com.br ---")
     url = "https://www.ilutas.com.br/"
-    
+
     try:
         response = requests.get(url, headers=HEADERS_REQ)
+        response.encoding = response.apparent_encoding or 'utf-8'
         soup = BeautifulSoup(response.text, 'html.parser')
         events_dict = {}
-        
+
         event_links_els = soup.select('a[href*="Evento/Index.php"]')
-        
+
         for el in event_links_els:
             href = el.get('href')
-            if not href: continue
-            
+            if not href:
+                continue
             full_link = "https://www.ilutas.com.br/" + href if not href.startswith("http") else href
-            
+            if full_link in events_dict:
+                continue
+            if len(events_dict) >= 20:
+                break
+
             img_el = el.find('img') or (el.parent and el.parent.find('img'))
             poster_url = None
             if img_el and img_el.get('src'):
                 poster_url = img_el.get('src')
                 if not poster_url.startswith('http'):
                     poster_url = "https://www.ilutas.com.br/" + poster_url
-                    
-            title = (img_el.get('alt') if img_el else "") or el.text.strip()
-            if not title and el.parent:
-                title_el = el.parent.find(['h3', 'h4', 'strong'])
-                if title_el:
-                    title = title_el.text.strip()
-                    
-            if full_link not in events_dict and len(events_dict) < 10:
-                events_dict[full_link] = {
-                    "title": title or "Evento iLutas",
-                    "date": (NOW + timedelta(days=20 + len(events_dict))).strftime('%Y-%m-%d'),
-                    "category": "BJJ (Gi)",
-                    "location": "Brasil (Ver iLutas)",
-                    "registration_url": full_link,
-                    "poster_url": poster_url,
-                    "is_featured": False,
-                    "status": "published"
-                }
-                
+
+            # Enrich from individual page (title + city/UF + date)
+            real_title, city_uf, date_iso = enrich_ilutas(full_link)
+            time.sleep(0.5)
+
+            events_dict[full_link] = {
+                "title": real_title or "Evento iLutas",
+                "date": date_iso or (NOW + timedelta(days=20 + len(events_dict))).strftime('%Y-%m-%d'),
+                "category": "BJJ (Gi)",
+                "location": city_uf or "Local a definir",
+                "registration_url": full_link,
+                "poster_url": poster_url,
+                "is_featured": False,
+                "status": "published"
+            }
+
         events_to_insert = list(events_dict.values())
         print(f"Found {len(events_to_insert)} unique events on iLutas.")
         insert_to_supabase(events_to_insert, "iLutas")
@@ -204,7 +298,7 @@ def scrape_smoothcomp():
             date_str = ev.get('startdate', (NOW + timedelta(days=30)).strftime('%Y-%m-%d'))
             city = ev.get('location_city', '')
             country = ev.get('location_country_human', '')
-            location = f"{city}, {country}" if city and country else "Global (Ver Smoothcomp)"
+            location = f"{city}, {country}" if city and country else (country or city or "Local a definir")
             
             if full_link not in events_dict and len(events_dict) < 10:
                 events_dict[full_link] = {
