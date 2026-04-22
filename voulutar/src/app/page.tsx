@@ -23,7 +23,22 @@ type EventRow = {
   poster_url: string | null;
   is_featured: boolean | null;
   status: string;
+  latitude: number | null;
+  longitude: number | null;
 };
+
+const NEARBY_RADIUS_KM = 800;
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
 
 const CATEGORIES = ['Todas', 'BJJ (Gi)', 'No-Gi', 'Judô', 'MMA'];
 const DATE_FILTERS = [
@@ -43,6 +58,9 @@ export default function Home() {
   const [filterDate, setFilterDate] = useState<DateFilter>('all');
   const [locationHint, setLocationHint] = useState<string>('');
   const [geoLoading, setGeoLoading] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(
+    null
+  );
 
   useEffect(() => {
     async function fetchEvents() {
@@ -64,10 +82,16 @@ export default function Home() {
   }, []);
 
   const detectLocation = () => {
+    if (userCoords) {
+      setUserCoords(null);
+      setLocationHint('');
+      return;
+    }
     if (!('geolocation' in navigator)) return;
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=10&accept-language=pt-BR`
@@ -79,10 +103,7 @@ export default function Home() {
             j.address?.municipality ||
             j.address?.state ||
             '';
-          if (city) {
-            setLocationHint(city);
-            setSearchTerm(city);
-          }
+          if (city) setLocationHint(city);
         } catch {
           // ignore geocode errors
         } finally {
@@ -118,9 +139,20 @@ export default function Home() {
         const d = new Date(event.date + 'T12:00:00');
         if (d < now || d > horizon) return false;
       }
+
+      if (userCoords) {
+        if (event.latitude == null || event.longitude == null) return false;
+        const km = haversineKm(
+          userCoords.lat,
+          userCoords.lon,
+          event.latitude,
+          event.longitude
+        );
+        if (km > NEARBY_RADIUS_KM) return false;
+      }
       return true;
     });
-  }, [events, searchTerm, filterCategory, filterDate]);
+  }, [events, searchTerm, filterCategory, filterDate, userCoords]);
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-red-600/30">
@@ -182,14 +214,28 @@ export default function Home() {
               type="button"
               onClick={detectLocation}
               disabled={geoLoading}
-              className="flex items-center justify-center gap-2 bg-zinc-900 border border-zinc-800 hover:border-red-600 disabled:opacity-50 px-4 py-4 rounded-xl transition-all shadow-xl"
-              title="Usar minha localização"
+              className={`flex items-center justify-center gap-2 px-4 py-4 rounded-xl transition-all shadow-xl border disabled:opacity-50 ${
+                userCoords
+                  ? 'bg-red-600/10 border-red-600 text-red-300 hover:bg-red-600/20'
+                  : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-red-600'
+              }`}
+              title={userCoords ? 'Remover filtro de localização' : 'Buscar eventos em até 800 km'}
             >
               <LocateFixed
-                className={`w-5 h-5 ${geoLoading ? 'animate-pulse text-red-500' : 'text-zinc-400'}`}
+                className={`w-5 h-5 ${
+                  geoLoading
+                    ? 'animate-pulse text-red-500'
+                    : userCoords
+                      ? 'text-red-400'
+                      : 'text-zinc-400'
+                }`}
               />
-              <span className="text-sm font-semibold text-zinc-300 hidden md:inline">
-                {geoLoading ? 'Localizando…' : 'Perto de mim'}
+              <span className="text-sm font-semibold hidden md:inline">
+                {geoLoading
+                  ? 'Localizando…'
+                  : userCoords
+                    ? 'Remover 800 km'
+                    : 'Perto de mim (800 km)'}
               </span>
             </button>
           </div>
@@ -224,10 +270,17 @@ export default function Home() {
             </div>
           </div>
 
-          {locationHint && (
+          {userCoords && (
             <p className="text-xs text-zinc-500 mt-2">
-              Filtrando por{' '}
-              <span className="text-red-500 font-semibold">{locationHint}</span>
+              Mostrando eventos em até{' '}
+              <span className="text-red-500 font-semibold">800 km</span>
+              {locationHint && (
+                <>
+                  {' '}de{' '}
+                  <span className="text-red-500 font-semibold">{locationHint}</span>
+                </>
+              )}
+              . Eventos sem coordenadas cadastradas são ocultados.
             </p>
           )}
         </div>
