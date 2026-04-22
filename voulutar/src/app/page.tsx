@@ -129,7 +129,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Award className="w-8 h-8 text-red-600" />
-            <h1 className="text-2xl font-extrabold uppercase tracking-tighter">
+            <h1 className="font-heading text-2xl font-bold uppercase tracking-tight">
               Vou<span className="text-red-600">Lutar</span>.com
             </h1>
           </div>
@@ -154,7 +154,7 @@ export default function Home() {
       <section className="relative py-24 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-red-600/15 via-black to-black pointer-events-none" />
         <div className="max-w-4xl mx-auto text-center relative z-10 space-y-6">
-          <h2 className="text-5xl md:text-7xl font-black uppercase tracking-tight leading-tight">
+          <h2 className="font-heading text-5xl md:text-7xl font-bold uppercase tracking-tight leading-none">
             O Maior{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">
               Agregador
@@ -236,7 +236,7 @@ export default function Home() {
       {/* Events Grid */}
       <section className="max-w-7xl mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-bold uppercase tracking-wider">
+          <h3 className="font-heading text-2xl font-bold uppercase tracking-wider">
             Próximos Eventos
           </h3>
           <span className="text-zinc-500 text-sm font-semibold">
@@ -296,7 +296,7 @@ export default function Home() {
 
                 {/* Content */}
                 <div className="p-6 space-y-4">
-                  <h4 className="text-xl font-bold leading-tight group-hover:text-red-500 transition-colors line-clamp-2">
+                  <h4 className="font-heading text-xl font-semibold uppercase leading-tight group-hover:text-red-500 transition-colors line-clamp-2">
                     {event.title}
                   </h4>
 
