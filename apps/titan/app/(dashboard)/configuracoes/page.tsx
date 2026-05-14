@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, User, Mail, Lock, Save, Eye, EyeOff, Award } from 'lucide-react'
+import { ArrowLeft, Loader2, User, Mail, Lock, Save, Eye, EyeOff, Award, Clock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface FedProfile {
@@ -85,6 +85,17 @@ export default function ConfiguracoesPage() {
   const [emailMsg, setEmailMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
+  const [pendencias, setPendencias] = useState<Array<{ id: string; campo: string; valor_antigo: string | null; valor_novo: string | null; solicitado_em: string }>>([])
+
+  const loadPendencias = async () => {
+    try {
+      const res = await fetch('/api/atletas/self/mudancas-pendentes')
+      if (!res.ok) return
+      const d = await res.json()
+      setPendencias(d.mudancas || [])
+    } catch { /* silent */ }
+  }
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -123,6 +134,7 @@ export default function ConfiguracoesPage() {
       }
     }
     load()
+    loadPendencias()
   }, [])
 
   const setField = (field: keyof FedProfile, value: string) =>
@@ -180,8 +192,17 @@ export default function ConfiguracoesPage() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Erro ao salvar perfil')
-      setStakeholder(prev => prev ? { ...prev, ...payload } : prev)
-      setMessage({ type: 'success', text: 'Perfil salvo com sucesso.' })
+      // Aplica apenas o que efetivamente foi gravado (json.data) e mantém form local
+      setStakeholder(prev => prev ? { ...prev, ...(json.data || payload) } : prev)
+      if (json.pendencias?.length) {
+        setMessage({
+          type: 'success',
+          text: `Perfil salvo. ${json.pendencias.length} alteração(ões) em campo(s) crítico(s) foram enviadas para aprovação do gestor.`,
+        })
+        loadPendencias()
+      } else {
+        setMessage({ type: 'success', text: 'Perfil salvo com sucesso.' })
+      }
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Erro ao salvar perfil.' })
     } finally { setSaving(false) }
@@ -247,6 +268,45 @@ export default function ConfiguracoesPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
+
+        {/* Banner de mudanças pendentes (aguardando aprovação do gestor) */}
+        {pendencias.length > 0 && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-5 h-5 text-yellow-400" />
+              <h3 className="text-yellow-300 font-bold">Alterações aguardando aprovação do gestor</h3>
+            </div>
+            <p className="text-yellow-200/80 text-sm mb-3">
+              Suas alterações em campos críticos (Nome, Faixa, Federação) precisam ser aprovadas. Você verá o novo valor refletido aqui após a aprovação.
+            </p>
+            <div className="space-y-2">
+              {pendencias.map(p => (
+                <div key={p.id} className="bg-black/30 border border-yellow-500/20 rounded-lg p-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1 text-xs">
+                    <p className="text-yellow-300 font-bold uppercase tracking-widest text-[10px] mb-1">{p.campo}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-slate-400">
+                      <span className="line-through">{p.valor_antigo || '—'}</span>
+                      <span>→</span>
+                      <span className="text-green-300 font-bold">{p.valor_novo || '—'}</span>
+                    </div>
+                    <p className="text-slate-500 text-[10px] mt-1">
+                      Solicitado em {new Date(p.solicitado_em).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      await fetch(`/api/atletas/self/mudancas-pendentes?id=${p.id}`, { method: 'DELETE' })
+                      loadPendencias()
+                    }}
+                    className="shrink-0 text-xs text-slate-400 hover:text-red-400 px-2 py-1"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Dados da federação (somente leitura) */}
         {fedProfile && (

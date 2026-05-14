@@ -21,15 +21,26 @@ export async function GET(req: Request) {
 
   const { data, error } = await supabaseAdmin
     .from('candidato_req_status')
-    .select('req_key, user_completed, admin_confirmed, admin_nota')
+    .select('req_key, user_completed, admin_confirmed, admin_nota, admin_grade, confirmed_at')
     .eq('stakeholder_id', targetId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Return as map: req_key → status
-  const map: Record<string, { user_completed: boolean; admin_confirmed: boolean; admin_nota: string | null }> = {}
+  const map: Record<string, {
+    user_completed: boolean
+    admin_confirmed: boolean
+    admin_nota: string | null
+    admin_grade: number | null
+    confirmed_at: string | null
+  }> = {}
   for (const row of data || []) {
-    map[row.req_key] = { user_completed: row.user_completed, admin_confirmed: row.admin_confirmed, admin_nota: row.admin_nota }
+    map[row.req_key] = {
+      user_completed: row.user_completed,
+      admin_confirmed: row.admin_confirmed,
+      admin_nota: row.admin_nota,
+      admin_grade: row.admin_grade,
+      confirmed_at: row.confirmed_at,
+    }
   }
   return NextResponse.json({ status: map })
 }
@@ -40,7 +51,7 @@ export async function PATCH(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { stakeholder_id, req_key, user_completed, admin_confirmed, admin_nota } = await req.json()
+  const { stakeholder_id, req_key, user_completed, admin_confirmed, admin_nota, admin_grade } = await req.json()
   if (!req_key) return NextResponse.json({ error: 'req_key required' }, { status: 400 })
 
   const targetId = stakeholder_id || user.id
@@ -58,10 +69,19 @@ export async function PATCH(req: Request) {
     update.user_completed = user_completed
   }
 
-  // Only admin can confirm and add nota
+  // Only admin can confirm, add nota e atribuir grade
   if (isAdmin) {
-    if (admin_confirmed !== undefined) update.admin_confirmed = admin_confirmed
+    if (admin_confirmed !== undefined) {
+      update.admin_confirmed = admin_confirmed
+      update.confirmed_at = admin_confirmed ? new Date().toISOString() : null
+    }
     if (admin_nota !== undefined) update.admin_nota = admin_nota
+    if (admin_grade !== undefined) {
+      if (admin_grade !== null && (Number(admin_grade) < 0 || Number(admin_grade) > 10)) {
+        return NextResponse.json({ error: 'admin_grade deve estar entre 0 e 10' }, { status: 400 })
+      }
+      update.admin_grade = admin_grade
+    }
     update.admin_id = user.id
   }
 
