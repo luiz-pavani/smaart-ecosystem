@@ -12,34 +12,52 @@ export async function GET() {
   // a UI possa exibir um badge de status de anuidade.
   const hoje = new Date().toISOString().split('T')[0]
 
-  const { data, error } = await supabaseAdmin
-    .from('user_fed_lrsj')
-    .select(`
-      stakeholder_id,
-      nome_completo,
-      academias,
-      kyu_dan_id,
-      status_plano,
-      data_expiracao,
-      kyu_dan:kyu_dan_id (
-        id,
-        cor_faixa,
-        kyu_dan,
-        ordem
-      )
-    `)
-    .eq('status_membro', 'Aceito')
-    .not('kyu_dan_id', 'is', null)
-    .order('nome_completo', { ascending: true })
-    // PostgREST default page size is 1000; the LRSJ already has >1000
-    // filiados, so we bump the cap to fit everyone in a single request.
-    .range(0, 9999)
+  // PostgREST enforces a max page size (1000 by default in Supabase).
+  // The LRSJ already has >1000 filiados, so paginate explicitly.
+  type Row = {
+    stakeholder_id: string
+    nome_completo: string
+    academias: string | null
+    kyu_dan_id: number | null
+    status_plano: string | null
+    data_expiracao: string | null
+    kyu_dan: { id: number; cor_faixa: string; kyu_dan: string; ordem: number } | { id: number; cor_faixa: string; kyu_dan: string; ordem: number }[] | null
+  }
+  const PAGE = 1000
+  let from = 0
+  const data: Row[] = []
+  while (true) {
+    const { data: page, error } = await supabaseAdmin
+      .from('user_fed_lrsj')
+      .select(`
+        stakeholder_id,
+        nome_completo,
+        academias,
+        kyu_dan_id,
+        status_plano,
+        data_expiracao,
+        kyu_dan:kyu_dan_id (
+          id,
+          cor_faixa,
+          kyu_dan,
+          ordem
+        )
+      `)
+      .eq('status_membro', 'Aceito')
+      .not('kyu_dan_id', 'is', null)
+      .order('nome_completo', { ascending: true })
+      .range(from, from + PAGE - 1)
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    const rows = (page ?? []) as Row[]
+    data.push(...rows)
+    if (rows.length < PAGE) break
+    from += PAGE
   }
 
-  const atletas = (data ?? []).map((a) => {
+  const atletas = data.map((a) => {
     const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
     const em_dia =
       a.status_plano === 'Válido' &&
