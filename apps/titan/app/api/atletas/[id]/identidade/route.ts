@@ -97,17 +97,25 @@ export async function GET(
 
     // 6. Formatar dados para o frontend
     const kyuDanData = Array.isArray(atleta.kyu_dan) ? atleta.kyu_dan[0] : atleta.kyu_dan
-    
+    // Graduação combina cor_faixa e kyu_dan (ex.: "Preta | 1º dan"), igual ao
+    // card "Graduação e Arbitragem" do portal do atleta.
+    const graduacaoLabel = (() => {
+      const cor = kyuDanData?.cor_faixa?.trim()
+      const grau = kyuDanData?.kyu_dan?.trim()
+      if (cor && grau) return `${cor} | ${grau}`
+      return cor || grau || '—'
+    })()
+
     const documentData = {
       atleta: {
         id: atleta.stakeholder_id,
         nome: atleta.nome_completo,
         academia: atleta.academias || '—',
-        dataNascimento: atleta.data_nascimento ? 
+        dataNascimento: atleta.data_nascimento ?
           new Date(atleta.data_nascimento).toLocaleDateString('pt-BR') : '—',
-        graduacao: kyuDanData?.cor_faixa || '—',
+        graduacao: graduacaoLabel,
         nivelArbitragem: atleta.nivel_arbitragem || '—',
-        validade: atleta.data_expiracao ? 
+        validade: atleta.data_expiracao ?
           new Date(atleta.data_expiracao).toLocaleDateString('pt-BR') : '—',
       },
       academiaLogo: academiaLogo?.logo_url || null,
