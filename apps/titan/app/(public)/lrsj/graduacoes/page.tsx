@@ -258,7 +258,13 @@ export default function GraduacoesPublicasPage() {
                   </div>
                 )}
                 <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/5">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-fixed">
+                    <colgroup>
+                      <col className="w-[40%]" />
+                      {groupBy === 'nome' && <col className="w-[20%]" />}
+                      <col className={groupBy === 'nome' ? 'w-[25%]' : 'w-[40%]'} />
+                      <col className={groupBy === 'nome' ? 'w-[15%]' : 'w-[20%]'} />
+                    </colgroup>
                     <thead className="bg-white/5 text-slate-400 text-xs uppercase">
                       <tr>
                         <th className="text-left px-4 py-2 font-semibold">Nome</th>
@@ -272,23 +278,28 @@ export default function GraduacoesPublicasPage() {
                     <tbody className="divide-y divide-white/5">
                       {group.rows.map((a) => (
                         <tr key={a.id} className="hover:bg-white/5 transition">
-                          <td className="px-4 py-2 text-slate-100">{a.nome}</td>
+                          <td className="px-4 py-2 text-slate-100 truncate" title={a.nome}>
+                            {a.nome}
+                          </td>
                           {groupBy === 'nome' && (
                             <td className="px-4 py-2">
                               <span
-                                className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold border ${beltClass(a.cor_faixa)}`}
+                                className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${beltClass(a.cor_faixa)}`}
                               >
                                 {a.cor_faixa}
                                 {a.kyu_dan ? ` · ${a.kyu_dan}` : ''}
                               </span>
                             </td>
                           )}
-                          <td className="px-4 py-2 text-slate-400">
+                          <td
+                            className="px-4 py-2 text-slate-400 truncate"
+                            title={a.academia || ''}
+                          >
                             {a.academia || '—'}
                           </td>
                           <td className="px-4 py-2">
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border whitespace-nowrap ${
                                 a.em_dia
                                   ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
                                   : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
