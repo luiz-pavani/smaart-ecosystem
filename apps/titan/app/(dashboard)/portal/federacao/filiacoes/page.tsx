@@ -7,8 +7,9 @@ import {
   ArrowLeft, Loader2, CheckCircle2, XCircle, Clock, RefreshCw,
   CheckSquare, Square, ChevronRight, CalendarDays, AlertTriangle, UserPlus,
   FileText, X, ExternalLink, Search, CreditCard, QrCode, DollarSign,
-  Ban, Filter, Download, CheckCircle, Users,
+  Ban, Filter, Download, CheckCircle, Users, Upload,
 } from 'lucide-react'
+import ImportLrsjModal from '@/app/federation/[slug]/admin/atletas/ImportLrsjModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -568,6 +569,9 @@ function FiliadosTab() {
   const [downloadingPDF, setDownloadingPDF] = useState(false)
   const [sortBy, setSortBy] = useState<'nome_completo' | 'academia' | 'graduacao' | 'status' | 'validade'>('nome_completo')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [canImport, setCanImport] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const pageSize = 100
 
   // Summary data
@@ -590,6 +594,22 @@ function FiliadosTab() {
     fetch('/api/federacao/filiacoes').then(r => r.json()).then(d => {
       if (!d.error) setSummary({ pendentes: d.pendentes?.length ?? 0, vencendo: d.vencendo?.length ?? 0, vencidas: d.vencidas?.length ?? 0, novas_mes: d.novas_mes ?? 0 })
     })
+    // Detect import permission (mirrors backend check in /api/federacao/import-lrsj)
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: st } = await supabase
+        .from('stakeholders')
+        .select('role, federacao_id')
+        .eq('id', user.id)
+        .maybeSingle()
+      const LRSJ_FED_UUID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d'
+      const role = st?.role ?? ''
+      setCanImport(
+        ['master_access', 'admin', 'master'].includes(role) ||
+        (role === 'federacao_admin' && st?.federacao_id === LRSJ_FED_UUID)
+      )
+    })()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -613,7 +633,7 @@ function FiliadosTab() {
       }
     }
     load()
-  }, [page, search, filterGraduacao, filterAcademia, filterSituacao, filterStatusMembro])
+  }, [page, search, filterGraduacao, filterAcademia, filterSituacao, filterStatusMembro, reloadKey])
 
   async function atualizarStatus(atletaId: string, novoStatus: 'Aceito' | 'Rejeitado') {
     setAprovando(atletaId + novoStatus)
@@ -757,6 +777,13 @@ function FiliadosTab() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white text-sm transition-colors">
             <X className="w-3.5 h-3.5" />Limpar filtros
           </button>
+          {canImport && (
+            <button onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 hover:text-blue-300 text-sm transition-colors">
+              <Upload className="w-3.5 h-3.5" />
+              Importar Smoothcomp
+            </button>
+          )}
           <button onClick={downloadCSV} disabled={totalCount === 0 || downloadingCSV}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 hover:text-green-300 text-sm transition-colors disabled:opacity-50">
             {downloadingCSV ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
@@ -866,6 +893,17 @@ function FiliadosTab() {
             </div>
           </div>
         </>
+      )}
+
+      {showImportModal && (
+        <ImportLrsjModal
+          slug=""
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            setShowImportModal(false)
+            setReloadKey(k => k + 1)
+          }}
+        />
       )}
     </div>
   )
