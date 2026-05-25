@@ -15,10 +15,23 @@ interface PreviewRow {
   warnings: string[]
 }
 
+interface SkippedCounts {
+  no_name: number
+  no_email: number
+  without_stakeholder: number
+}
+
 interface DryRunResult {
   dry_run: true
-  total: number
-  skipped: number
+  csv_total: number
+  only_approved: boolean
+  filtered_out_by_status: number
+  skipped: SkippedCounts
+  duplicates_collapsed: number
+  to_insert: number
+  new_stakeholders: number
+  member_status_counts: Record<string, number>
+  plan_status_counts: Record<string, number>
   total_warnings: number
   academias_nao_encontradas: string[]
   preview: PreviewRow[]
@@ -26,9 +39,17 @@ interface DryRunResult {
 
 interface ImportResult {
   dry_run: false
-  total: number
+  csv_total: number
+  only_approved: boolean
+  filtered_out_by_status: number
+  skipped: SkippedCounts
+  duplicates_collapsed: number
+  to_insert: number
   inserted: number
-  skipped: number
+  new_stakeholders_inserted: number
+  member_status_counts: Record<string, number>
+  plan_status_counts: Record<string, number>
+  academias_nao_encontradas: string[]
   errors: string[]
 }
 
@@ -48,6 +69,7 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
   const [dryResult, setDryResult] = useState<DryRunResult | null>(null)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [onlyApproved, setOnlyApproved] = useState(true)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFile = (f: File) => {
@@ -75,6 +97,7 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
       const form = new FormData()
       form.append('csv_file', file)
       form.append('dry_run', 'true')
+      form.append('only_approved', String(onlyApproved))
 
       const res = await fetch('/api/federacao/import-lrsj', {
         method: 'POST',
@@ -105,6 +128,7 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
       const form = new FormData()
       form.append('csv_file', file)
       form.append('dry_run', 'false')
+      form.append('only_approved', String(onlyApproved))
 
       const res = await fetch('/api/federacao/import-lrsj', {
         method: 'POST',
@@ -198,6 +222,23 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
                 />
               </div>
 
+              {/* Opções de import */}
+              <label className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={onlyApproved}
+                  onChange={(e) => setOnlyApproved(e.target.checked)}
+                  className="mt-1"
+                />
+                <div className="text-sm">
+                  <p className="font-medium text-gray-800">Importar somente atletas aprovados</p>
+                  <p className="text-xs text-gray-600">
+                    Pula linhas com <code>Member status ≠ approved</code> (rejected/pending).
+                    Desmarque para importar todos os status.
+                  </p>
+                </div>
+              </label>
+
               {error && (
                 <div className="flex items-center gap-2 text-red-600 text-sm">
                   <AlertCircle className="h-4 w-4 flex-shrink-0" />
@@ -210,11 +251,19 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
           {/* STEP: preview */}
           {step === 'preview' && dryResult && (
             <>
-              {/* Resumo */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Resumo principal */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-gray-700">{dryResult.csv_total}</p>
+                  <p className="text-xs text-gray-600">Linhas no CSV</p>
+                </div>
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
-                  <p className="text-2xl font-bold text-blue-600">{dryResult.total}</p>
-                  <p className="text-xs text-gray-600">Atletas encontrados</p>
+                  <p className="text-2xl font-bold text-blue-600">{dryResult.to_insert}</p>
+                  <p className="text-xs text-gray-600">A importar</p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <p className="text-2xl font-bold text-purple-600">{dryResult.new_stakeholders}</p>
+                  <p className="text-xs text-gray-600">Stakeholders novos</p>
                 </div>
                 <div className={`rounded-lg p-4 text-center ${dryResult.total_warnings > 0 ? 'bg-yellow-50' : 'bg-green-50'}`}>
                   <p className={`text-2xl font-bold ${dryResult.total_warnings > 0 ? 'text-yellow-600' : 'text-green-600'}`}>
@@ -222,10 +271,49 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
                   </p>
                   <p className="text-xs text-gray-600">Avisos</p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 text-center">
-                  <p className="text-2xl font-bold text-gray-600">{dryResult.skipped}</p>
-                  <p className="text-xs text-gray-600">Linhas ignoradas</p>
+              </div>
+
+              {/* Detalhamento de filtros */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="font-semibold text-gray-700 mb-1.5">Member status</p>
+                  <div className="space-y-0.5">
+                    {Object.entries(dryResult.member_status_counts).map(([k, v]) => (
+                      <div key={k} className="flex justify-between">
+                        <span className="text-gray-600">{k}</span>
+                        <span className="font-mono text-gray-800">{v}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="font-semibold text-gray-700 mb-1.5">Plan status</p>
+                  <div className="space-y-0.5">
+                    {Object.entries(dryResult.plan_status_counts).map(([k, v]) => (
+                      <div key={k} className="flex justify-between">
+                        <span className="text-gray-600">{k}</span>
+                        <span className="font-mono text-gray-800">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Linhas excluídas */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-700 space-y-1">
+                <p>
+                  Filtradas por status ({dryResult.only_approved ? 'somente approved' : 'todos'}):{' '}
+                  <span className="font-mono">{dryResult.filtered_out_by_status}</span>
+                </p>
+                <p>
+                  Linhas sem nome: <span className="font-mono">{dryResult.skipped.no_name}</span> ·
+                  sem email: <span className="font-mono">{dryResult.skipped.no_email}</span> ·
+                  sem stakeholder: <span className="font-mono">{dryResult.skipped.without_stakeholder}</span>
+                </p>
+                <p>
+                  Emails duplicados consolidados (kept latest expiry):{' '}
+                  <span className="font-mono">{dryResult.duplicates_collapsed}</span>
+                </p>
               </div>
 
               {/* Academias não encontradas */}
@@ -315,14 +403,20 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
             <div className="text-center py-8 space-y-4">
               <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
               <h3 className="text-xl font-bold text-gray-800">Importação concluída!</h3>
-              <div className="grid grid-cols-2 gap-4 max-w-xs mx-auto">
+              <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto">
                 <div className="bg-green-50 rounded-lg p-4">
                   <p className="text-2xl font-bold text-green-600">{importResult.inserted}</p>
                   <p className="text-xs text-gray-600">Inseridos/atualizados</p>
                 </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-2xl font-bold text-purple-600">{importResult.new_stakeholders_inserted}</p>
+                  <p className="text-xs text-gray-600">Stakeholders novos</p>
+                </div>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-2xl font-bold text-gray-600">{importResult.skipped}</p>
-                  <p className="text-xs text-gray-600">Ignorados</p>
+                  <p className="text-2xl font-bold text-gray-600">
+                    {importResult.csv_total - importResult.inserted}
+                  </p>
+                  <p className="text-xs text-gray-600">Ignorados/filtrados</p>
                 </div>
               </div>
               {importResult.errors.length > 0 && (
@@ -372,7 +466,7 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
                 className="flex items-center gap-2 px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                Confirmar importação ({dryResult?.total ?? 0} atletas)
+                Confirmar importação ({dryResult?.to_insert ?? 0} atletas)
               </button>
             </>
           )}

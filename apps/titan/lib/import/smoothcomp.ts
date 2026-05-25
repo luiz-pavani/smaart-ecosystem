@@ -231,7 +231,23 @@ export function extractFirstAcademia(academiesField: string): string | null {
 }
 
 /**
- * Resolve academia_id por nome (case-insensitive) a partir do cache local.
+ * Normaliza nome de academia para casamento tolerante a diacríticos, bullets
+ * e variações de espaço/caixa. Ex: "• GARRA TEAM" ≈ "Garra Team",
+ * "Judô Kenkō" ≈ "Judô Kenkô".
+ */
+export function normalizeAcademiaName(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[•·*]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Resolve academia_id por nome normalizado a partir do cache local.
+ * O caller deve construir o Map com chaves já passadas por normalizeAcademiaName.
  */
 export function resolveAcademiaId(
   academiesField: string,
@@ -240,7 +256,7 @@ export function resolveAcademiaId(
   const nome = extractFirstAcademia(academiesField)
   if (!nome) return { academia_id: null, academia_nome: null }
 
-  const found = academia_map.get(nome.toLowerCase())
+  const found = academia_map.get(normalizeAcademiaName(nome))
   return {
     academia_id: found?.id ?? null,
     academia_nome: nome,
