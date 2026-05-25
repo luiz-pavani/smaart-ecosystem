@@ -31,6 +31,9 @@ export async function GET() {
     .eq('status_membro', 'Aceito')
     .not('kyu_dan_id', 'is', null)
     .order('nome_completo', { ascending: true })
+    // PostgREST default page size is 1000; the LRSJ already has >1000
+    // filiados, so we bump the cap to fit everyone in a single request.
+    .range(0, 9999)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
