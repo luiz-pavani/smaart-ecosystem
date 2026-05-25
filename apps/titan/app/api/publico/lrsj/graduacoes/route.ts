@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
-export const revalidate = 300 // 5 min
+// Dynamic: sempre lê o banco no momento da requisição.
+// Mudanças em user_fed_lrsj / kyu_dan se refletem na próxima visita.
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function GET() {
   // Lista todos os filiados aceitos com graduação registrada.
@@ -52,9 +55,17 @@ export async function GET() {
     }
   })
 
-  return NextResponse.json({
-    atletas,
-    total: atletas.length,
-    generated_at: new Date().toISOString(),
-  })
+  return NextResponse.json(
+    {
+      atletas,
+      total: atletas.length,
+      generated_at: new Date().toISOString(),
+    },
+    {
+      headers: {
+        // Garantia adicional contra cache intermediário (CDN/browser).
+        'Cache-Control': 'no-store, max-age=0, must-revalidate',
+      },
+    },
+  )
 }

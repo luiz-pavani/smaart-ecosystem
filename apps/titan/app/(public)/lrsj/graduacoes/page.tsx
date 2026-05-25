@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { Search, ShieldCheck, ArrowDownAZ, Layers } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Search, ShieldCheck, ArrowDownAZ, Layers, RefreshCw } from 'lucide-react'
 
 interface Atleta {
   id: string
@@ -47,19 +47,40 @@ function normalize(s: string) {
 export default function GraduacoesPublicasPage() {
   const [atletas, setAtletas] = useState<Atleta[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
   const [groupBy, setGroupBy] = useState<GroupBy>('graduacao')
   const [generatedAt, setGeneratedAt] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetch('/api/publico/lrsj/graduacoes')
-      .then((r) => r.json())
-      .then((d) => {
-        setAtletas(d.atletas || [])
-        setGeneratedAt(d.generated_at || null)
-      })
-      .finally(() => setLoading(false))
+  const reload = useCallback(async (showSpinner = false) => {
+    if (showSpinner) setRefreshing(true)
+    try {
+      const r = await fetch('/api/publico/lrsj/graduacoes', { cache: 'no-store' })
+      const d = await r.json()
+      setAtletas(d.atletas || [])
+      setGeneratedAt(d.generated_at || null)
+    } catch {
+      // silent retry on next tick
+    } finally {
+      setLoading(false)
+      if (showSpinner) setRefreshing(false)
+    }
   }, [])
+
+  useEffect(() => {
+    reload()
+    // Refetch quando a aba volta a ficar visível (terceiro reabre, dados frescos)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reload()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    // Polling de fundo a cada 60s (barato; endpoint usa supabaseAdmin, sem cache)
+    const interval = setInterval(() => reload(), 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(interval)
+    }
+  }, [reload])
 
   const filtered = useMemo(() => {
     const q = normalize(search.trim())
@@ -188,10 +209,22 @@ export default function GraduacoesPublicasPage() {
         </div>
 
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>
-            {filtered.length} atletas filiados
-            {search && ` para "${search}"`}
-          </span>
+          <div className="flex items-center gap-3">
+            <span>
+              {filtered.length} atletas filiados
+              {search && ` para "${search}"`}
+            </span>
+            <button
+              type="button"
+              onClick={() => reload(true)}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-white/10 text-slate-300 hover:bg-white/5 disabled:opacity-50"
+              title="Forçar atualização"
+            >
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+              Atualizar
+            </button>
+          </div>
           <span className="text-[11px]">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1 align-middle" />
             Em dia ·
