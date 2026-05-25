@@ -70,6 +70,8 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [onlyApproved, setOnlyApproved] = useState(true)
+  const [creatingAcademia, setCreatingAcademia] = useState<string | null>(null)
+  const [createdAcademias, setCreatedAcademias] = useState<Set<string>>(new Set())
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFile = (f: File) => {
@@ -116,6 +118,30 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
       setError('Erro de rede ao enviar arquivo.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCreateAcademia = async (nome: string) => {
+    setCreatingAcademia(nome)
+    setError(null)
+    try {
+      const res = await fetch('/api/federacao/academias/criar-placeholder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? `Erro ao criar "${nome}"`)
+        return
+      }
+      setCreatedAcademias((prev) => new Set(prev).add(nome))
+      // Re-analyse with the same file to refresh academia lookups
+      await handleAnalyse()
+    } catch (e) {
+      setError('Erro de rede ao criar academia.')
+    } finally {
+      setCreatingAcademia(null)
     }
   }
 
@@ -322,11 +348,40 @@ export default function ImportLrsjModal({ slug, onClose, onSuccess }: Props) {
                   <p className="text-sm font-medium text-yellow-800 mb-2">
                     Academias não encontradas ({dryResult.academias_nao_encontradas.length}) — esses atletas ficarão sem academia_id:
                   </p>
-                  <ul className="text-sm text-yellow-700 space-y-0.5">
-                    {dryResult.academias_nao_encontradas.map((a) => (
-                      <li key={a}>· {a}</li>
-                    ))}
+                  <ul className="text-sm text-yellow-700 space-y-1.5">
+                    {dryResult.academias_nao_encontradas.map((a) => {
+                      const isCreated = createdAcademias.has(a)
+                      const isLoading = creatingAcademia === a
+                      return (
+                        <li key={a} className="flex items-center justify-between gap-3">
+                          <span>· {a}</span>
+                          {isCreated ? (
+                            <span className="text-green-700 text-xs font-medium inline-flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Criada
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleCreateAcademia(a)}
+                              disabled={isLoading || loading}
+                              className="text-xs px-2.5 py-1 rounded border border-yellow-300 bg-white text-yellow-800 hover:bg-yellow-100 disabled:opacity-50 inline-flex items-center gap-1"
+                              title="Cria a academia com dados de responsável 'A definir'. Preencha depois manualmente."
+                            >
+                              {isLoading ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>+ Criar como placeholder</>
+                              )}
+                            </button>
+                          )}
+                        </li>
+                      )
+                    })}
                   </ul>
+                  <p className="text-[11px] text-yellow-600 mt-2">
+                    Placeholder = academia criada apenas com nome; responsável e
+                    contatos ficam &quot;A definir&quot; até preencher manualmente.
+                  </p>
                 </div>
               )}
 
