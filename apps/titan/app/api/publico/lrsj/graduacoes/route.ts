@@ -4,8 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 export const revalidate = 300 // 5 min
 
 export async function GET() {
-  // Atletas em dia = filiados aceitos + plano válido + data de expiração futura
-  // (status_plano costuma ser atualizado por cron, mas reforçamos com a data)
+  // Lista todos os filiados aceitos com graduação registrada.
+  // Cada linha traz `em_dia` calculado a partir de data_expiracao para que
+  // a UI possa exibir um badge de status de anuidade.
   const hoje = new Date().toISOString().split('T')[0]
 
   const { data, error } = await supabaseAdmin
@@ -15,6 +16,7 @@ export async function GET() {
       nome_completo,
       academias,
       kyu_dan_id,
+      status_plano,
       data_expiracao,
       kyu_dan:kyu_dan_id (
         id,
@@ -24,8 +26,6 @@ export async function GET() {
       )
     `)
     .eq('status_membro', 'Aceito')
-    .eq('status_plano', 'Válido')
-    .gte('data_expiracao', hoje)
     .not('kyu_dan_id', 'is', null)
     .order('nome_completo', { ascending: true })
 
@@ -35,6 +35,10 @@ export async function GET() {
 
   const atletas = (data ?? []).map((a) => {
     const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
+    const em_dia =
+      a.status_plano === 'Válido' &&
+      typeof a.data_expiracao === 'string' &&
+      a.data_expiracao >= hoje
     return {
       id: a.stakeholder_id,
       nome: a.nome_completo,
@@ -44,6 +48,7 @@ export async function GET() {
       kyu_dan: kd?.kyu_dan ?? null,
       ordem: kd?.ordem ?? 999,
       validade: a.data_expiracao,
+      em_dia,
     }
   })
 

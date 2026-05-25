@@ -11,7 +11,8 @@ interface Atleta {
   cor_faixa: string | null
   kyu_dan: string | null
   ordem: number
-  validade: string
+  validade: string | null
+  em_dia: boolean
 }
 
 type GroupBy = 'graduacao' | 'nome'
@@ -188,11 +189,14 @@ export default function GraduacoesPublicasPage() {
 
         <div className="flex items-center justify-between text-xs text-slate-400">
           <span>
-            {filtered.length} atletas com graduação válida
+            {filtered.length} atletas filiados
             {search && ` para "${search}"`}
           </span>
           <span className="text-[11px]">
-            Somente atletas com anuidade em dia são exibidos.
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1 align-middle" />
+            Em dia ·
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 mx-1 align-middle" />
+            Anuidade vencida
           </span>
         </div>
 
@@ -229,6 +233,7 @@ export default function GraduacoesPublicasPage() {
                           <th className="text-left px-4 py-2 font-semibold">Graduação</th>
                         )}
                         <th className="text-left px-4 py-2 font-semibold">Academia</th>
+                        <th className="text-left px-4 py-2 font-semibold">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
@@ -247,6 +252,22 @@ export default function GraduacoesPublicasPage() {
                           )}
                           <td className="px-4 py-2 text-slate-400">
                             {a.academia || '—'}
+                          </td>
+                          <td className="px-4 py-2">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                                a.em_dia
+                                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                                  : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block w-1.5 h-1.5 rounded-full ${
+                                  a.em_dia ? 'bg-emerald-400' : 'bg-amber-400'
+                                }`}
+                              />
+                              {a.em_dia ? 'Em dia' : 'Anuidade vencida'}
+                            </span>
                           </td>
                         </tr>
                       ))}
