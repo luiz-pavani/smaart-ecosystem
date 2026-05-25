@@ -128,13 +128,12 @@ export default function GraduacoesPublicasPage() {
               </h1>
               <p className="text-sm text-slate-300 mt-3 leading-relaxed">
                 A LRSJ é a entidade estadual de administração do Judô filiada à
-                Confederação Brasileira de Judô (CBJ). Conforme a{' '}
+                Liga Nacional de Judô (LNJ). Conforme a{' '}
                 <strong className="text-white">Lei Geral do Esporte</strong>{' '}
                 (Lei nº 14.597/2023), as graduações emitidas pela entidade aqui
                 listadas têm <strong className="text-white">validade oficial em todo o
                 Sistema Nacional do Desporto</strong>. Este é um registro público
-                para verificação por terceiros (organizadores, academias,
-                arbitragem, instituições de ensino).
+                para verificação por terceiros.
               </p>
               {generatedAt && (
                 <p className="text-[11px] text-slate-500 mt-3">
