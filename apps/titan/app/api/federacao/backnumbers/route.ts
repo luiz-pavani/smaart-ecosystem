@@ -25,42 +25,53 @@ export async function GET(req: NextRequest) {
   const search = p.get('search') || ''
   const academiaId = p.get('academia_id') || ''
 
-  let query = supabaseAdmin
-    .from('user_fed_lrsj')
-    .select(`
-      stakeholder_id,
-      nome_completo,
-      nome_patch,
-      academias,
-      academia_id,
-      siglas,
-      tamanho_patch,
-      cor_patch,
-      status_plano,
-      status_membro,
-      data_expiracao,
-      lote_id
-    `)
-    .eq('federacao_id', 1)
-    .order('nome_completo', { ascending: true })
+  const buildQuery = () => {
+    let q = supabaseAdmin
+      .from('user_fed_lrsj')
+      .select(`
+        stakeholder_id,
+        nome_completo,
+        nome_patch,
+        academias,
+        academia_id,
+        siglas,
+        tamanho_patch,
+        cor_patch,
+        status_plano,
+        status_membro,
+        data_expiracao,
+        lote_id
+      `)
+      .eq('federacao_id', 1)
+      .order('nome_completo', { ascending: true })
 
-  if (statusFilter) {
-    const statuses = statusFilter.split(',').map(s => s.trim())
-    if (statuses.length === 1) {
-      query = query.eq('status_plano', statuses[0])
-    } else {
-      query = query.in('status_plano', statuses)
+    if (statusFilter) {
+      const statuses = statusFilter.split(',').map(s => s.trim())
+      if (statuses.length === 1) q = q.eq('status_plano', statuses[0])
+      else q = q.in('status_plano', statuses)
     }
+    if (search) q = q.ilike('nome_completo', `%${search}%`)
+    if (academiaId) q = q.eq('academia_id', academiaId)
+    return q
   }
-  if (search) query = query.ilike('nome_completo', `%${search}%`)
-  if (academiaId) query = query.eq('academia_id', academiaId)
 
-  const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // PostgREST caps pages at 1000 rows; paginate to support full LRSJ list.
+  const PAGE = 1000
+  type Row = Awaited<ReturnType<ReturnType<typeof buildQuery>['range']>>['data'] extends (infer T)[] | null ? T : never
+  const data: Row[] = []
+  let from = 0
+  while (true) {
+    const { data: page, error } = await buildQuery().range(from, from + PAGE - 1)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const rows = (page ?? []) as Row[]
+    data.push(...rows)
+    if (rows.length < PAGE) break
+    from += PAGE
+  }
 
   // Batch lookup academias for nome + sigla fallback
   const acadIds = [...new Set(
-    (data ?? [])
+    data
       .filter((a: any) => a.academia_id)
       .map((a: any) => a.academia_id as string)
   )]
@@ -78,7 +89,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const atletas = (data ?? []).map((a: any, idx: number) => ({
+  const atletas = data.map((a: any, idx: number) => ({
     id: idx + 1,
     stakeholder_id: a.stakeholder_id as string,
     nome_completo: a.nome_completo as string,
