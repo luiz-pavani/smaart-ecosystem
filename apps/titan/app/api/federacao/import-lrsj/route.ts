@@ -161,19 +161,27 @@ export async function POST(request: NextRequest) {
       id: string
       email: string
       nome_completo: string
+      nome_usuario: string
       role: string
+      funcao: string
     }> = []
     for (const r of deduped_rows) {
       const data = r.data as CsvRowData
       const email = data['Email'].trim().toLowerCase()
       if (stakeholder_map.has(email)) continue
       const id = crypto.randomUUID()
+      // stakeholders.nome_usuario is NOT NULL with a unique index; derive from
+      // email local-part + a short suffix from the UUID to avoid collisions.
+      const localPart = email.split('@')[0].replace(/[^a-zA-Z0-9_.]/g, '_').slice(0, 40)
+      const nome_usuario = `${localPart}_${id.replace(/-/g, '').slice(0, 6)}`
       stakeholder_map.set(email, id)
       new_stakeholder_inserts.push({
         id,
         email,
         nome_completo: (data['Name'] || '').trim(),
+        nome_usuario,
         role: 'atleta',
+        funcao: 'ATLETA',
       })
     }
 
@@ -236,14 +244,52 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Create missing stakeholders first (batched, ignore duplicates from races)
+    // Create missing stakeholders via Supabase Auth admin API — this triggers
+    // the upsert_stakeholder_from_auth_user trigger which populates stakeholders
+    // with the right defaults (funcao, nome_usuario) and satisfies the FK on
+    // stakeholders.id → auth.users(id).
     let new_stakeholders_inserted = 0
-    for (let i = 0; i < new_stakeholder_inserts.length; i += 50) {
-      const batch = new_stakeholder_inserts.slice(i, i + 50)
-      const { error } = await supabaseAdmin
-        .from('stakeholders')
-        .upsert(batch, { onConflict: 'id', ignoreDuplicates: true })
-      if (!error) new_stakeholders_inserted += batch.length
+    const new_stakeholder_errors: string[] = []
+    for (const s of new_stakeholder_inserts) {
+      try {
+        const { error } = await supabaseAdmin.auth.admin.createUser({
+          email: s.email,
+          email_confirm: true,
+          user_metadata: {
+            full_name: s.nome_completo,
+            username: s.nome_usuario,
+            stakeholder_role: s.role,
+          },
+        })
+        if (error) {
+          new_stakeholder_errors.push(`${s.email}: ${error.message}`)
+          continue
+        }
+        new_stakeholders_inserted++
+      } catch (e) {
+        new_stakeholder_errors.push(`${s.email}: ${e instanceof Error ? e.message : 'erro'}`)
+      }
+    }
+    // Refresh stakeholder_map with the real IDs assigned by Supabase Auth
+    if (new_stakeholders_inserted > 0) {
+      const emails = new_stakeholder_inserts.map((s) => s.email)
+      for (let i = 0; i < emails.length; i += 100) {
+        const slice = emails.slice(i, i + 100)
+        const { data: sh } = await supabaseAdmin
+          .from('stakeholders')
+          .select('id, email')
+          .in('email', slice)
+        for (const row of sh ?? []) {
+          if (row.email) stakeholder_map.set(row.email.toLowerCase(), row.id)
+        }
+      }
+      // Re-set stakeholder_id on results that referenced the temporary IDs
+      for (const r of results) {
+        if (r.row.email) {
+          const newId = stakeholder_map.get(r.row.email.toLowerCase())
+          if (newId) r.row.stakeholder_id = newId
+        }
+      }
     }
 
     // Upsert user_fed_lrsj via stakeholder_id (PK) — safe with or without unique on email

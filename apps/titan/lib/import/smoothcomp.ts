@@ -181,6 +181,27 @@ export function normalizeStatus(
   }
 }
 
+/** Smoothcomp envia 'GRANDE (40cm x 37cm)', 'MÉDIO (...)', 'PEQUENO ROSA (...)'.
+ *  A coluna user_fed_lrsj.tamanho_patch só aceita P|M|G (check constraint). */
+export function normalizeTamanhoPatch(raw: string | null | undefined): 'P' | 'M' | 'G' | null {
+  if (!raw) return null
+  const s = raw.toUpperCase()
+  if (s.startsWith('GRANDE')) return 'G'
+  if (s.startsWith('MÉDIO') || s.startsWith('MEDIO') || s.startsWith('MÉDIO')) return 'M'
+  if (s.startsWith('PEQUENO')) return 'P'
+  if (s === 'P' || s === 'M' || s === 'G') return s as 'P' | 'M' | 'G'
+  return null
+}
+
+/** Smoothcomp pode embutir cor no campo de tamanho ('PEQUENO ROSA ...'). */
+export function normalizeCorPatch(raw: string | null | undefined): 'AZUL' | 'ROSA' | null {
+  if (!raw) return null
+  const s = raw.toUpperCase()
+  if (s.includes('ROSA')) return 'ROSA'
+  if (s.includes('AZUL')) return 'AZUL'
+  return null
+}
+
 export function normalizeLote(lote: string): string | null {
   const v = lote.trim()
   if (!v) return null
@@ -332,7 +353,7 @@ export function transformSmooothcompRow(
       url_documento_id:
         (row['Imagem da Carteira de Identidade ou Certidão de Nascimento '] || '').trim() || null,
       url_certificado_dan: (row['Certificado de dan'] || '').trim() || null,
-      tamanho_patch: (row['TAMANHO DO PATCH (BACKNUMBER)'] || '').trim() || null,
+      tamanho_patch: normalizeTamanhoPatch(row['TAMANHO DO PATCH (BACKNUMBER)']),
       lote_id,
       observacoes: (row.OBSERVAÇÕES || '').trim() || null,
       federacao_id,
