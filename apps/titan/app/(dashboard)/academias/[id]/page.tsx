@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -20,7 +21,9 @@ export default async function AcademiaDetalhesPage(props: PageProps) {
     redirect('/login')
   }
 
-  const { data: academia, error } = await supabase
+  // RLS on public.academias has no policies for authenticated users; read
+  // via supabaseAdmin (consistent with the listing endpoint).
+  const { data: academia, error } = await supabaseAdmin
     .from('academias')
     .select(`
       *,

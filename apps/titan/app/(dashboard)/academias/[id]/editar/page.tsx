@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import EditarAcademiaForm from '@/components/forms/EditarAcademiaForm'
 
@@ -18,8 +19,9 @@ export default async function EditarAcademiaPage(props: PageProps) {
     redirect('/login')
   }
 
-  // Get academy data
-  const { data: academia, error } = await supabase
+  // RLS on public.academias is enabled with no policies for authenticated
+  // users, so read via supabaseAdmin (the listing endpoint does the same).
+  const { data: academia, error } = await supabaseAdmin
     .from('academias')
     .select('*')
     .eq('id', params.id)
