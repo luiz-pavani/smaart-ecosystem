@@ -42,52 +42,114 @@ export async function POST(req: NextRequest) {
   const status = payload.TransactionStatus?.Id ?? payload.Status
   const safe2payId = String(payload.IdTransaction || payload.IdSubscription || '')
 
-  // Log mínimo: tipo de evento e status. Não logamos payload nem reference
-  // (contém IDs de transação e referência interna que podem vazar via logs).
   if (process.env.DEBUG_WEBHOOKS === 'true') {
     console.log('[WEBHOOK S2P]', { eventType, status })
   }
 
+  // 1) Registra o webhook (idempotente — unique index em
+  //    provider+external_id+event_type retorna conflito para duplicatas).
+  let eventRowId: number | null = null
   try {
-    // ── 1. Cobrança única paga (Pix ou Cartão) ──────────────────────────────
+    const { data: existing } = await supabaseAdmin
+      .from('webhook_events')
+      .select('id, processed')
+      .eq('provider', 'safe2pay')
+      .eq('external_id', safe2payId || '')
+      .eq('event_type', eventType || '')
+      .maybeSingle()
+
+    if (existing) {
+      eventRowId = existing.id
+      if (existing.processed) {
+        // Safe2Pay reenvia múltiplas vezes; já processamos. Retorna 200 pra ele parar.
+        return NextResponse.json({ ok: true, idempotent: true })
+      }
+    } else {
+      const { data: inserted } = await supabaseAdmin
+        .from('webhook_events')
+        .insert({
+          provider: 'safe2pay',
+          external_id: safe2payId || null,
+          event_type: eventType || null,
+          reference: payload.Reference || null,
+          status_code: status != null ? String(status) : null,
+          payload: payload as unknown as object,
+        })
+        .select('id')
+        .single()
+      eventRowId = inserted?.id ?? null
+    }
+  } catch {
+    // Falha em registrar o evento não pode bloquear o processamento.
+    eventRowId = null
+  }
+
+  // 2) Processa o evento. Erros viram registro em webhook_events e 500 pro Safe2Pay
+  //    (eles fazem retry automaticamente).
+  try {
     if (!eventType || eventType === 'payment') {
       if (status === 3 || status === 4) {
         await confirmarPagamento(safe2payId, payload)
       } else if (status === 6) {
         await atualizarStatusPagamento(safe2payId, 'cancelado')
       }
-      return NextResponse.json({ ok: true })
+    } else {
+      switch (eventType) {
+        case 'SubscriptionCreated':
+        case 'SubscriptionRenewed':
+          if (status === 3 || status === 4) await confirmarPagamento(safe2payId, payload)
+          break
+        case 'SubscriptionFailed':
+          await atualizarStatusPagamento(safe2payId, 'falhou')
+          break
+        case 'SubscriptionCanceled':
+        case 'SubscriptionExpired':
+          await atualizarStatusPagamento(safe2payId, 'cancelado')
+          break
+        default:
+          if (process.env.DEBUG_WEBHOOKS === 'true') {
+            console.warn('[WEBHOOK S2P] Evento não tratado:', eventType)
+          }
+      }
     }
 
-    // ── 2. Eventos de assinatura ────────────────────────────────────────────
-    switch (eventType) {
-      case 'SubscriptionCreated':
-      case 'SubscriptionRenewed':
-        if (status === 3 || status === 4) {
-          await confirmarPagamento(safe2payId, payload)
-        }
-        break
-
-      case 'SubscriptionFailed':
-        await atualizarStatusPagamento(safe2payId, 'falhou')
-        break
-
-      case 'SubscriptionCanceled':
-      case 'SubscriptionExpired':
-        await atualizarStatusPagamento(safe2payId, 'cancelado')
-        break
-
-      default:
-        if (process.env.DEBUG_WEBHOOKS === 'true') {
-          console.warn('[WEBHOOK S2P] Evento não tratado:', eventType)
-        }
+    if (eventRowId) {
+      await supabaseAdmin
+        .from('webhook_events')
+        .update({
+          processed: true,
+          processed_at: new Date().toISOString(),
+          attempts: 1,
+          last_attempt_at: new Date().toISOString(),
+          processing_error: null,
+        })
+        .eq('id', eventRowId)
     }
 
     return NextResponse.json({ ok: true })
-  } catch (err: any) {
-    // Mantém error visível em logs (sem stack trace que pode conter dados).
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
     console.error('[WEBHOOK S2P] Erro de processamento')
-    return NextResponse.json({ error: err?.message }, { status: 500 })
+    if (eventRowId) {
+      try {
+        const { error: rpcErr } = await supabaseAdmin.rpc(
+          'increment_webhook_attempts',
+          { p_id: eventRowId, p_error: errMsg }
+        )
+        if (rpcErr) throw rpcErr
+      } catch {
+        // Fallback caso a RPC não exista: update direto.
+        await supabaseAdmin
+          .from('webhook_events')
+          .update({
+            processing_error: errMsg,
+            last_attempt_at: new Date().toISOString(),
+          })
+          .eq('id', eventRowId)
+      }
+    }
+    // 500 sinaliza para o Safe2Pay reentregar o webhook.
+    return NextResponse.json({ error: 'processing_failed' }, { status: 500 })
   }
 }
 
