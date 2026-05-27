@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,6 +29,22 @@ export async function POST(req: NextRequest) {
   const phone = normalizePhone(telefone || '')
   if (!phone) {
     return NextResponse.json({ error: 'Telefone inválido' }, { status: 400 })
+  }
+
+  // Rate limit por IP: 10 envios / 10 min impede ataque distribuído (1000
+  // números diferentes a partir do mesmo IP → 1000 WhatsApps reais cobrados).
+  const ip = getClientIp(req)
+  const ipLimit = await rateLimit({
+    bucket: 'send-otp:ip',
+    key: ip,
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  })
+  if (!ipLimit.ok) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde alguns minutos.' },
+      { status: 429, headers: { 'Retry-After': String(ipLimit.retryAfterSec) } }
+    )
   }
 
   // Rate limit: máximo 3 OTPs por telefone nos últimos 10 minutos

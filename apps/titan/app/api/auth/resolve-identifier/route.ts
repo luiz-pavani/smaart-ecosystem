@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimit, getClientIp } from '@/lib/rate-limit'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,6 +18,35 @@ export async function POST(req: NextRequest) {
   }
 
   const normalized = identifier.trim()
+
+  // Rate-limit:
+  //   - por IP: 30 tentativas / 10 min (fluxo de login normal cabe; ataque distribuído trava)
+  //   - por identifier: 6 tentativas / 10 min (impede enumeração no mesmo email/telefone)
+  const ip = getClientIp(req)
+  const ipLimit = await rateLimit({
+    bucket: 'resolve-identifier:ip',
+    key: ip,
+    limit: 30,
+    windowMs: 10 * 60 * 1000,
+  })
+  if (!ipLimit.ok) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Aguarde alguns minutos.' },
+      { status: 429, headers: { 'Retry-After': String(ipLimit.retryAfterSec) } }
+    )
+  }
+  const idLimit = await rateLimit({
+    bucket: 'resolve-identifier:id',
+    key: normalized.toLowerCase(),
+    limit: 6,
+    windowMs: 10 * 60 * 1000,
+  })
+  if (!idLimit.ok) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas para este identificador.' },
+      { status: 429, headers: { 'Retry-After': String(idLimit.retryAfterSec) } }
+    )
+  }
   const digits = normalized.replace(/\D/g, '')
 
   let data: { id: string; email: string | null; telefone: string | null } | null = null
