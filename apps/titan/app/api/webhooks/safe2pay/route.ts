@@ -97,7 +97,7 @@ async function confirmarPagamento(safe2payId: string, payload: S2PPayload) {
   // Busca o registro de pagamento pelo safe2pay_id
   const { data: pag } = await supabaseAdmin
     .from('pagamentos')
-    .select('id, referencia_tipo, referencia_id, status, metadata')
+    .select('id, referencia_tipo, referencia_id, status, metadata, stakeholder_id, valor')
     .eq('safe2pay_id', safe2payId)
     .maybeSingle()
 
@@ -127,6 +127,41 @@ async function confirmarPagamento(safe2payId: string, payload: S2PPayload) {
     for (const rid of bulkIds) await processarReferencia(pag.referencia_tipo, rid)
   } else {
     await processarReferencia(pag.referencia_tipo, pag.referencia_id)
+  }
+
+  // Email de confirmação (best effort, não bloqueia)
+  if (pag.stakeholder_id) {
+    try {
+      const { emailConfirmacaoPagamento } = await import('@/lib/email')
+      const { data: stake } = await supabaseAdmin
+        .from('stakeholders')
+        .select('email, nome_completo')
+        .eq('id', pag.stakeholder_id)
+        .maybeSingle()
+      if (stake?.email && stake?.nome_completo) {
+        const descricao = descricaoPorReferencia(pag.referencia_tipo)
+        await emailConfirmacaoPagamento({
+          nome: stake.nome_completo,
+          email: stake.email,
+          valor: Number(pag.valor) || 0,
+          descricao,
+        })
+      }
+    } catch (err) {
+      // Email opcional — falha não compromete a confirmação do pagamento.
+      console.warn('[email confirmacao] falhou:', err instanceof Error ? err.message : err)
+    }
+  }
+}
+
+function descricaoPorReferencia(tipo: string): string {
+  switch (tipo) {
+    case 'filiacao_pedido': return 'Filiação à federação'
+    case 'evento_inscricao': return 'Inscrição em evento'
+    case 'academia_anuidade': return 'Anuidade da academia'
+    case 'profep_inscricao': return 'Inscrição no Profep'
+    case 'ppv': return 'Acesso à transmissão (PPV)'
+    default: return 'Pagamento'
   }
 }
 

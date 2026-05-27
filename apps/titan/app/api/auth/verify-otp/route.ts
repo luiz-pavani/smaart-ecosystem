@@ -19,14 +19,21 @@ function generateInternalPassword(): string {
 }
 
 // POST — verifica OTP e cria/autentica o usuário
-// Body: { telefone, code, nomeCompleto, nomeUsuario, funcao, senha }
+// Body: { telefone, code, nomeCompleto, nomeUsuario, funcao, senha, acceptedTerms }
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { telefone, code, nomeCompleto, nomeUsuario, funcao, senha } = body
+  const { telefone, code, nomeCompleto, nomeUsuario, funcao, senha, acceptedTerms } = body
 
   const phone = normalizePhone(telefone || '')
   if (!phone || !code) {
     return NextResponse.json({ error: 'Telefone e código são obrigatórios' }, { status: 400 })
+  }
+  // Cadastro novo (nome/funcao presentes) exige aceite de termos.
+  if (nomeCompleto && funcao && !acceptedTerms) {
+    return NextResponse.json(
+      { error: 'É necessário aceitar os Termos de Uso e a Política de Privacidade.' },
+      { status: 400 }
+    )
   }
 
   // Buscar OTP válido (não usado, não expirado)
@@ -157,6 +164,8 @@ export async function POST(req: NextRequest) {
       nome_usuario: sanitizedUsername,
       telefone: phone,
       email: null,
+      terms_accepted_at: new Date().toISOString(),
+      terms_version: '2026-05-27',
     }, { onConflict: 'id' })
 
   if (stakeholderError) {

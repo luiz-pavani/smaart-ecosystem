@@ -1,4 +1,4 @@
-import { Resend } from 'resend'
+import { sendEmail } from '@/lib/email'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
 interface MudancaResumo {
@@ -14,11 +14,6 @@ const CAMPO_LABEL: Record<string, string> = {
 }
 
 export async function notificarAdminsMudancaPendente(stakeholderId: string, mudancas: MudancaResumo[]) {
-  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
-    console.warn('[notificarAdmins] RESEND_API_KEY ou EMAIL_FROM ausente — pulando envio')
-    return
-  }
-
   const { data: candidato } = await supabaseAdmin
     .from('stakeholders')
     .select('nome_completo, email, federacao_id')
@@ -114,17 +109,6 @@ export async function notificarAdminsMudancaPendente(stakeholderId: string, muda
     </p>
   </body></html>`
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
   const destinatarios = admins.map(a => a.email!).filter(Boolean)
-
-  try {
-    await resend.emails.send({
-      from: process.env.EMAIL_FROM!,
-      to: destinatarios,
-      subject,
-      html,
-    })
-  } catch (err) {
-    console.error('[notificarAdmins] erro no envio Resend:', err)
-  }
+  await sendEmail({ to: destinatarios, subject, html })
 }

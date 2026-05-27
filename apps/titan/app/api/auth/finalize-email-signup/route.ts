@@ -8,13 +8,19 @@ const supabaseAdmin = createClient(
 )
 
 // POST — cria o registro stakeholder após email signup
-// Body: { userId, funcao, nomeCompleto, nomeUsuario, email }
+// Body: { userId, funcao, nomeCompleto, nomeUsuario, email, acceptedTerms }
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { userId, funcao, nomeCompleto, nomeUsuario, email } = body
+  const { userId, funcao, nomeCompleto, nomeUsuario, email, acceptedTerms } = body
 
   if (!userId || !funcao || !nomeCompleto?.trim() || !nomeUsuario?.trim()) {
     return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
+  }
+  if (!acceptedTerms) {
+    return NextResponse.json(
+      { error: 'É necessário aceitar os Termos de Uso e a Política de Privacidade.' },
+      { status: 400 }
+    )
   }
 
   // Verificar que o userId realmente existe no Auth (evitar criação arbitrária)
@@ -45,6 +51,8 @@ export async function POST(req: NextRequest) {
       nome_completo: nomeCompleto.trim(),
       nome_usuario: sanitizedUsername,
       email: email?.trim() || authUser.user.email || null,
+      terms_accepted_at: new Date().toISOString(),
+      terms_version: '2026-05-27',
     }, { onConflict: 'id' })
 
   if (upsertError) {

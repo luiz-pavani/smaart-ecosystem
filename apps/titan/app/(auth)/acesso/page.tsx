@@ -38,6 +38,7 @@ function AcessoUniversalContent() {
   const [nomeCompleto, setNomeCompleto] = useState('')
   const [nomeUsuario, setNomeUsuario] = useState('')
   const [cadastroSenha, setCadastroSenha] = useState('')
+  const [aceitouTermos, setAceitouTermos] = useState(false)
 
   // Cadastro confirmation
   const [confirmMethod, setConfirmMethod] = useState<CadastroConfirmMethod>(null)
@@ -145,6 +146,9 @@ function AcessoUniversalContent() {
       throw new Error('Preencha todos os campos: função, nome completo, nome de usuário e senha.')
     }
     if (cadastroSenha.length < 6) throw new Error('A senha deve ter pelo menos 6 caracteres.')
+    if (!aceitouTermos) {
+      throw new Error('Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.')
+    }
   }
 
   const handleCadastroComEmail = async (e: FormEvent) => {
@@ -171,6 +175,7 @@ function AcessoUniversalContent() {
             nomeCompleto: nomeCompleto.trim(),
             nomeUsuario: username,
             email: cadastroEmail.trim(),
+            acceptedTerms: true,
           }),
         })
       }
@@ -212,6 +217,7 @@ function AcessoUniversalContent() {
           telefone: otpPhone, code: otpCode,
           nomeCompleto: nomeCompleto.trim(), nomeUsuario: sanitizeUsername(nomeUsuario),
           funcao, senha: cadastroSenha,
+          acceptedTerms: true,
         }),
       })
       const data = await res.json()
@@ -285,6 +291,11 @@ function AcessoUniversalContent() {
               <label htmlFor="loginPassword" className={labelClass}>Senha</label>
               <input id="loginPassword" type="password" value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)} required className={inputClass} placeholder="••••••••" />
+              <div className="mt-1 text-right">
+                <a href="/recuperar-senha" className="text-xs text-muted-foreground hover:text-primary underline">
+                  Esqueci minha senha
+                </a>
+              </div>
             </div>
             <button type="submit" disabled={loading} className={btnPrimary}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Entrar'}
@@ -333,6 +344,29 @@ function AcessoUniversalContent() {
                 onChange={(e) => setCadastroSenha(e.target.value)} required className={inputClass} placeholder="Mínimo 6 caracteres" />
             </div>
           </div>
+
+          {/* Termos + LGPD */}
+          <label className="mt-4 flex items-start gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={aceitouTermos}
+              onChange={(e) => setAceitouTermos(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+              required
+            />
+            <span>
+              Li e aceito os{' '}
+              <a href="/termos" target="_blank" rel="noreferrer" className="text-primary underline">
+                Termos de Uso
+              </a>{' '}
+              e a{' '}
+              <a href="/privacidade" target="_blank" rel="noreferrer" className="text-primary underline">
+                Política de Privacidade
+              </a>
+              . Autorizo o tratamento dos meus dados pessoais (LGPD — Lei nº
+              13.709/2018) para gestão da filiação, eventos e comunicações.
+            </span>
+          </label>
 
           {/* Divider */}
           <div className="my-6 flex items-center gap-3">
