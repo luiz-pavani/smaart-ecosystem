@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -12,11 +12,20 @@ export async function GET() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { data: candidatos } = await supabaseAdmin
+  // Paginação: `?page=0&pageSize=200`. Default 200 cabe o uso atual e
+  // protege contra crescimento ilimitado da lista de candidatos.
+  const url = new URL(req.url)
+  const page = Math.max(0, parseInt(url.searchParams.get('page') || '0', 10))
+  const pageSize = Math.min(500, Math.max(10, parseInt(url.searchParams.get('pageSize') || '200', 10)))
+  const start = page * pageSize
+  const end = start + pageSize - 1
+
+  const { data: candidatos, count } = await supabaseAdmin
     .from('stakeholders')
-    .select('id, nome_completo, email, telefone, data_nascimento, kyu_dan_id')
+    .select('id, nome_completo, email, telefone, data_nascimento, kyu_dan_id', { count: 'exact' })
     .eq('candidato', true)
     .order('nome_completo', { ascending: true })
+    .range(start, end)
 
   if (!candidatos?.length) return NextResponse.json({ candidatos: [] })
 
@@ -75,5 +84,5 @@ export async function GET() {
     }
   })
 
-  return NextResponse.json({ candidatos: result })
+  return NextResponse.json({ candidatos: result, total: count ?? result.length, page, pageSize })
 }

@@ -31,21 +31,34 @@ export async function GET(req: NextRequest) {
   today.setHours(0, 0, 0, 0)
   const MIN_DATE = new Date('2000-01-01')
 
+  type LrsjRow = {
+    stakeholder_id: string
+    nome_completo: string | null
+    telefone: string | null
+    celular: string | null
+    status_plano: string | null
+    data_expiracao: string | null
+    kyu_dan:
+      | { kyu_dan: string | null; cor_faixa: string | null }
+      | { kyu_dan: string | null; cor_faixa: string | null }[]
+      | null
+  }
+
   const vencendo: object[] = []
   const vencidas: object[] = []
   const sem_data: object[] = []
   const todos: object[] = []
 
-  for (const a of lrsjRows || []) {
+  for (const a of (lrsjRows ?? []) as LrsjRow[]) {
     const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
     const base = {
       id: a.stakeholder_id,
-      nome_completo: (a as any).nome_completo,
-      telefone: (a as any).telefone || (a as any).celular || null,
-      status_plano: (a as any).status_plano || null,
-      data_expiracao: (a as any).data_expiracao || null,
-      graduacao: (kd as any)?.kyu_dan || null,
-      cor_faixa: (kd as any)?.cor_faixa || null,
+      nome_completo: a.nome_completo,
+      telefone: a.telefone || a.celular || null,
+      status_plano: a.status_plano,
+      data_expiracao: a.data_expiracao,
+      graduacao: kd?.kyu_dan ?? null,
+      cor_faixa: kd?.cor_faixa ?? null,
     }
 
     if (!base.nome_completo) continue

@@ -215,6 +215,9 @@ export async function GET(req: NextRequest) {
     // Sort by featured and sort_order
     query = query.order('is_featured', { ascending: false }).order('sort_order', { ascending: true });
 
+    // Hard cap defensivo: planos costuma ser dezenas; nunca milhares.
+    query = query.limit(200);
+
     const { data: plans, error } = await query;
 
     if (error) {

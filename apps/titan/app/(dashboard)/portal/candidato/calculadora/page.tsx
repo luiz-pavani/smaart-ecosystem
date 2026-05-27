@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { Calculator, Save, Loader2, CheckCircle, Trophy, Medal, GraduationCap, BookOpen, Gavel } from 'lucide-react'
-import { jsPDF } from 'jspdf'
 
 // ——— DADOS EXATOS DO ORIGINAL ———
 
@@ -216,7 +215,9 @@ export default function CalculadoraPage() {
     }
   }
 
-  const generatePdf = () => {
+  const generatePdf = async () => {
+    // Dynamic import: jspdf entra no bundle apenas quando o usuário gerar o PDF.
+    const { jsPDF } = await import('jspdf')
     const doc = new jsPDF()
     const now = new Date()
     const safeName = (candidateName || 'candidato').toLowerCase().replace(/[^a-z0-9]+/g, '-')
