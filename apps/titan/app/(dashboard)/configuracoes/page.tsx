@@ -33,9 +33,11 @@ interface StakeholderProfile {
   genero: string | null
   data_nascimento: string | null
   kyu_dan_id: number | null
+  federacao_id: string | null
 }
 
 interface KyuDan { id: number; cor_faixa: string; kyu_dan: string }
+interface Federacao { id: string; nome: string; sigla: string }
 
 const GENEROS = ['Masculino', 'Feminino']
 const TAMANHOS_PATCH = ['Grande Azul 41cm2', 'Médio Azul 34cm2', 'Pequeno Azul 28cm2', 'Pequeno Rosa 28cm2']
@@ -72,6 +74,7 @@ export default function ConfiguracoesPage() {
   const [form, setForm] = useState<Partial<FedProfile>>({})
   const [stakeholderForm, setStakeholderForm] = useState<Partial<StakeholderProfile>>({})
   const [kyuDans, setKyuDans] = useState<KyuDan[]>([])
+  const [federacoes, setFederacoes] = useState<Federacao[]>([])
   const [displayEmail, setDisplayEmail] = useState('')
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -102,13 +105,15 @@ export default function ConfiguracoesPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) { router.push('/acesso'); return }
 
-        const [{ data: kdData }, { data: fedData }, { data: stData }] = await Promise.all([
+        const [{ data: kdData }, { data: fedData }, { data: stData }, { data: fedListData }] = await Promise.all([
           supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan').order('id'),
           supabase.from('user_fed_lrsj').select('*').eq('stakeholder_id', user.id).maybeSingle(),
-          supabase.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, genero, data_nascimento, kyu_dan_id').eq('id', user.id).maybeSingle(),
+          supabase.from('stakeholders').select('id, nome_completo, nome_usuario, email, telefone, genero, data_nascimento, kyu_dan_id, federacao_id').eq('id', user.id).maybeSingle(),
+          supabase.from('federacoes').select('id, nome, sigla').eq('ativo', true).order('nome'),
         ])
 
         setKyuDans((kdData || []) as KyuDan[])
+        setFederacoes((fedListData || []) as Federacao[])
 
         if (stData) {
           setStakeholder(stData as StakeholderProfile)
@@ -184,6 +189,7 @@ export default function ConfiguracoesPage() {
         genero: stakeholderForm.genero || null,
         data_nascimento: stakeholderForm.data_nascimento || null,
         kyu_dan_id: stakeholderForm.kyu_dan_id || null,
+        federacao_id: stakeholderForm.federacao_id || null,
       }
       const res = await fetch('/api/atletas/self/update-stakeholder', {
         method: 'PATCH',
@@ -424,6 +430,18 @@ export default function ConfiguracoesPage() {
                   <select className={selectCls} value={stakeholderForm.kyu_dan_id || ''} onChange={e => setStField('kyu_dan_id', e.target.value ? Number(e.target.value) : null)}>
                     <option value="">Selecione sua faixa</option>
                     {kyuDans.map(k => <option key={k.id} value={k.id}>{k.cor_faixa} — {k.kyu_dan}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Federação">
+                  <select
+                    className={selectCls}
+                    value={stakeholderForm.federacao_id || ''}
+                    onChange={e => setStField('federacao_id', e.target.value || null)}
+                  >
+                    <option value="">Sem federação</option>
+                    {federacoes.map(f => <option key={f.id} value={f.id}>{f.nome} ({f.sigla})</option>)}
                   </select>
                 </Field>
               </div>
