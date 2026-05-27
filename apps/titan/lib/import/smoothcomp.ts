@@ -203,10 +203,13 @@ export function normalizeCorPatch(raw: string | null | undefined): 'AZUL' | 'ROS
 }
 
 export function normalizeLote(lote: string): string | null {
-  const v = lote.trim()
+  const v = lote.trim().toUpperCase()
   if (!v) return null
-  if (v.startsWith('2026') || v.match(/^2026\s+\d+$/)) return v
-  if (v.startsWith('2026')) return v
+  if (v === 'ANT') return 'ANT'
+  // Aceita apenas formatos curtos: "2026 1", "2026 3B", etc. — 1-2 dígitos + letra opcional.
+  // O bug anterior aceitava qualquer "2026 NNNN" e vazava backnumbers do Smoothcomp.
+  const match = v.match(/^2026\s+(\d{1,2})([A-Z]?)$/)
+  if (match) return `2026 ${match[1]}${match[2]}`
   return null
 }
 
