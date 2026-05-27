@@ -50,17 +50,19 @@ export async function POST(req: NextRequest) {
   //    provider+external_id+event_type+status_code retorna conflito para duplicatas).
   // status_code precisa entrar na key porque Safe2Pay manda múltiplos eventos pela
   // mesma transação (1 Pendente, 3 Pago, 4 Disponível, 6 Estornado) sem EventType.
+  // Importante: eq() não casa NULL com string vazia no PostgREST — usa is(null) quando
+  // event_type/status_code não vieram no payload.
   const statusStr = status != null ? String(status) : ''
   let eventRowId: number | null = null
   try {
-    const { data: existing } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('webhook_events')
       .select('id, processed')
       .eq('provider', 'safe2pay')
       .eq('external_id', safe2payId || '')
-      .eq('event_type', eventType || '')
-      .eq('status_code', statusStr)
-      .maybeSingle()
+    query = eventType ? query.eq('event_type', eventType) : query.is('event_type', null)
+    query = statusStr ? query.eq('status_code', statusStr) : query.is('status_code', null)
+    const { data: existing } = await query.maybeSingle()
 
     if (existing) {
       eventRowId = existing.id
