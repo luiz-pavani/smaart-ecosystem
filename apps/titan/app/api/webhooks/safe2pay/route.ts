@@ -47,7 +47,10 @@ export async function POST(req: NextRequest) {
   }
 
   // 1) Registra o webhook (idempotente — unique index em
-  //    provider+external_id+event_type retorna conflito para duplicatas).
+  //    provider+external_id+event_type+status_code retorna conflito para duplicatas).
+  // status_code precisa entrar na key porque Safe2Pay manda múltiplos eventos pela
+  // mesma transação (1 Pendente, 3 Pago, 4 Disponível, 6 Estornado) sem EventType.
+  const statusStr = status != null ? String(status) : ''
   let eventRowId: number | null = null
   try {
     const { data: existing } = await supabaseAdmin
@@ -56,6 +59,7 @@ export async function POST(req: NextRequest) {
       .eq('provider', 'safe2pay')
       .eq('external_id', safe2payId || '')
       .eq('event_type', eventType || '')
+      .eq('status_code', statusStr)
       .maybeSingle()
 
     if (existing) {
@@ -72,7 +76,7 @@ export async function POST(req: NextRequest) {
           external_id: safe2payId || null,
           event_type: eventType || null,
           reference: payload.Reference || null,
-          status_code: status != null ? String(status) : null,
+          status_code: statusStr || null,
           payload: payload as unknown as object,
         })
         .select('id')
@@ -241,8 +245,9 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
   switch (tipo) {
     case 'filiacao_pedido':
     case 'filiacao_atleta': {
-      // Aprova o pedido de filiação automaticamente ao pagamento confirmado
-      const { data: pedido } = await supabaseAdmin
+      // Aprova o pedido (idempotente — re-update em pedido já APROVADO é no-op semântico,
+      // mas precisa retornar o stakeholder_id no segundo webhook pra atualizar user_fed_lrsj).
+      await supabaseAdmin
         .from('filiacao_pedidos')
         .update({
           status: 'APROVADO',
@@ -251,26 +256,47 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
           updated_at: new Date().toISOString(),
         })
         .eq('id', referenciaId)
-        .neq('status', 'APROVADO')
-        .select('stakeholder_id, dados_formulario, created_at')
+
+      const { data: pedido } = await supabaseAdmin
+        .from('filiacao_pedidos')
+        .select('stakeholder_id, federacao_id, academia_id, created_at')
+        .eq('id', referenciaId)
         .maybeSingle()
 
-      // Renovar data_expiracao em user_fed_lrsj
-      const stakeholderId = pedido?.stakeholder_id
-      if (stakeholderId) {
+      // Cria/atualiza linha em user_fed_lrsj (UPSERT — atleta de 1ª filiação ainda não tem linha).
+      // nome_completo é NOT NULL — buscar do stakeholder.
+      if (pedido?.stakeholder_id) {
         const base = new Date(pedido.created_at ?? Date.now())
         base.setFullYear(base.getFullYear() + 1)
         const novaExpiracao = base.toISOString().split('T')[0]
+
+        const { data: stake } = await supabaseAdmin
+          .from('stakeholders')
+          .select('nome_completo, kyu_dan_id, email, telefone, genero, data_nascimento')
+          .eq('id', pedido.stakeholder_id)
+          .maybeSingle()
+
         await supabaseAdmin
           .from('user_fed_lrsj')
-          .update({
-            status_plano: 'Válido',
-            status_membro: 'Aceito',
-            data_adesao: new Date().toISOString().split('T')[0],
-            data_expiracao: novaExpiracao,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('stakeholder_id', stakeholderId)
+          .upsert(
+            {
+              stakeholder_id: pedido.stakeholder_id,
+              nome_completo: stake?.nome_completo ?? 'Sem nome',
+              federacao_id: pedido.federacao_id,
+              academia_id: pedido.academia_id ?? null,
+              kyu_dan_id: stake?.kyu_dan_id ?? null,
+              email: stake?.email ?? null,
+              telefone: stake?.telefone ?? null,
+              genero: stake?.genero ?? null,
+              data_nascimento: stake?.data_nascimento ?? null,
+              status_plano: 'Válido',
+              status_membro: 'Aceito',
+              data_adesao: new Date().toISOString().split('T')[0],
+              data_expiracao: novaExpiracao,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'stakeholder_id' }
+          )
       }
       break
     }
