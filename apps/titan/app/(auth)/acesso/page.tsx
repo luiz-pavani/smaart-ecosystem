@@ -160,7 +160,10 @@ function AcessoUniversalContent() {
       const username = sanitizeUsername(nomeUsuario)
       const { data, error } = await supabase.auth.signUp({
         email: cadastroEmail.trim(), password: cadastroSenha,
-        options: { data: { full_name: nomeCompleto.trim(), username, stakeholder_role: funcao } },
+        options: {
+          data: { full_name: nomeCompleto.trim(), username, stakeholder_role: funcao },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
       if (error) throw error
 
