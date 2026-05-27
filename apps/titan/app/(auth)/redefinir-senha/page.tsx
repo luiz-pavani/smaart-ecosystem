@@ -21,14 +21,31 @@ export default function RedefinirSenhaPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    (async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setError('Link inválido ou expirado. Solicite um novo link.')
-      } else {
+    // O Supabase processa o hash fragment (#access_token=...) em background quando
+    // detectSessionInUrl=true. Esperamos o evento PASSWORD_RECOVERY (token de recovery)
+    // ou SIGNED_IN. Sem isso, o getSession imediato pode retornar null antes do parser
+    // do client-side terminar.
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        if (timeoutId) clearTimeout(timeoutId)
         setReady(true)
       }
-    })()
+    })
+
+    // Fallback: se em 3s não veio nenhum evento, tenta getSession (caso o usuário
+    // tenha sessão ativa de antes, sem ter clicado no link).
+    timeoutId = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) setReady(true)
+      else setError('Link inválido ou expirado. Solicite um novo link.')
+    }, 3000)
+
+    return () => {
+      sub.subscription.unsubscribe()
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [supabase])
 
   const handleSubmit = async (e: FormEvent) => {
