@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { BarChart3, Users, Building2, TrendingUp, AlertCircle, CheckCircle2, Trophy } from 'lucide-react';
 import Link from 'next/link';
@@ -15,7 +16,11 @@ interface DashboardStats {
   plansAtivos: number;
 }
 
+const ADMIN_ROLES = new Set(['master_access', 'admin', 'master']);
+const FEDERATION_ROLES = new Set(['federacao_admin', 'federacao_staff']);
+
 export default function FederationAdminDashboard({ params }: { params: { slug: string } }) {
+  const router = useRouter();
   const supabase = createClient();
   const [federation, setFederation] = useState<any>(null);
   const [stats, setStats] = useState<DashboardStats>({
@@ -28,20 +33,48 @@ export default function FederationAdminDashboard({ params }: { params: { slug: s
     plansAtivos: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
     async function loadData() {
       try {
-        // Get federation
+        // 1. Verifica autenticação e role do usuário antes de qualquer query.
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push('/acesso');
+          return;
+        }
+
+        // 2. Carrega federação para descobrir o federacao_id correspondente ao slug.
         const { data: fed } = await supabase
           .from('federacoes')
           .select('*')
           .eq('slug', params.slug)
           .single();
 
+        if (!fed) {
+          setLoading(false);
+          return;
+        }
         setFederation(fed);
 
-        if (fed) {
+        // 3. Verifica se o usuário tem direito a este painel:
+        //    master_access global OU federacao_admin/staff desta federação.
+        const { data: stake } = await supabase
+          .from('stakeholders')
+          .select('role, federacao_id')
+          .eq('id', user.id)
+          .maybeSingle();
+        const role = stake?.role ?? '';
+        const isMaster = ADMIN_ROLES.has(role);
+        const isFedAdmin = FEDERATION_ROLES.has(role) && stake?.federacao_id === fed.id;
+        if (!isMaster && !isFedAdmin) {
+          router.push('/portal');
+          return;
+        }
+        setAuthorized(true);
+
+        {
           // Load all stats in parallel
           const [
             { data: atletasData },
@@ -75,7 +108,7 @@ export default function FederationAdminDashboard({ params }: { params: { slug: s
     }
 
     loadData();
-  }, [params.slug, supabase]);
+  }, [params.slug, supabase, router]);
 
   const StatCard = ({
     icon: Icon,
@@ -112,6 +145,11 @@ export default function FederationAdminDashboard({ params }: { params: { slug: s
 
   if (!federation) {
     return <div className="p-6">Federação não encontrada</div>;
+  }
+
+  if (!authorized) {
+    // O useEffect já disparou router.push('/portal'); evita flash de conteúdo.
+    return null;
   }
 
   return (

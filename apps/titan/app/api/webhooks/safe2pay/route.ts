@@ -42,7 +42,11 @@ export async function POST(req: NextRequest) {
   const status = payload.TransactionStatus?.Id ?? payload.Status
   const safe2payId = String(payload.IdTransaction || payload.IdSubscription || '')
 
-  console.log('[WEBHOOK S2P]', { eventType, safe2payId, status, ref: payload.Reference })
+  // Log mínimo: tipo de evento e status. Não logamos payload nem reference
+  // (contém IDs de transação e referência interna que podem vazar via logs).
+  if (process.env.DEBUG_WEBHOOKS === 'true') {
+    console.log('[WEBHOOK S2P]', { eventType, status })
+  }
 
   try {
     // ── 1. Cobrança única paga (Pix ou Cartão) ──────────────────────────────
@@ -74,12 +78,15 @@ export async function POST(req: NextRequest) {
         break
 
       default:
-        console.warn('[WEBHOOK S2P] Evento não tratado:', eventType)
+        if (process.env.DEBUG_WEBHOOKS === 'true') {
+          console.warn('[WEBHOOK S2P] Evento não tratado:', eventType)
+        }
     }
 
     return NextResponse.json({ ok: true })
   } catch (err: any) {
-    console.error('[WEBHOOK S2P] Erro:', err?.message)
+    // Mantém error visível em logs (sem stack trace que pode conter dados).
+    console.error('[WEBHOOK S2P] Erro de processamento')
     return NextResponse.json({ error: err?.message }, { status: 500 })
   }
 }
@@ -188,6 +195,8 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
       break
 
     default:
-      console.log('[WEBHOOK S2P] Referência processada (sem ação extra):', tipo, referenciaId)
+      if (process.env.DEBUG_WEBHOOKS === 'true') {
+        console.log('[WEBHOOK S2P] Referência processada:', tipo)
+      }
   }
 }
