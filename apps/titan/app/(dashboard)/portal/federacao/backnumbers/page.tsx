@@ -813,7 +813,14 @@ export default function BacknumbersPage() {
                         {String(atleta.id).padStart(4, '0')}
                       </span>
                       <div className="col-span-2 min-w-0">
-                        <p className="text-white text-sm font-medium truncate">{atleta.nome_completo}</p>
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/portal/federacao/atletas/${atleta.stakeholder_id}`)}
+                          className="text-left text-white text-sm font-medium truncate hover:text-purple-300 hover:underline transition-colors w-full"
+                          title="Abrir cadastro do atleta"
+                        >
+                          {atleta.nome_completo}
+                        </button>
                         {atleta.nome_patch !== atleta.nome_completo && (
                           <p className="text-purple-400 text-xs truncate">{atleta.nome_patch}</p>
                         )}
