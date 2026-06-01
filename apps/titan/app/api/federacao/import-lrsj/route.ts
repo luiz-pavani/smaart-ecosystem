@@ -9,6 +9,11 @@ import {
   type AcademiaRow,
 } from '@/lib/import/smoothcomp'
 
+// Import processa 1300+ atletas com createUser + upsert — precisa de timeout maior.
+// Vercel Pro permite até 300s; Hobby fica limitado a 60s.
+export const maxDuration = 300
+export const runtime = 'nodejs'
+
 const LRSJ_FED_ID_INT = 1
 const LRSJ_FED_UUID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d'
 
@@ -337,25 +342,36 @@ export async function POST(request: NextRequest) {
     // stakeholders.id → auth.users(id).
     let new_stakeholders_inserted = 0
     const new_stakeholder_errors: string[] = []
-    for (const s of new_stakeholder_inserts) {
-      try {
-        const { error } = await supabaseAdmin.auth.admin.createUser({
-          email: s.email,
-          email_confirm: true,
-          user_metadata: {
-            full_name: s.nome_completo,
-            username: s.nome_usuario,
-            stakeholder_role: s.role,
-          },
-        })
+    // Paraleliza createUser em batches de 10 — sequencial leva ~22s, paralelo ~3s.
+    const CREATE_CONCURRENCY = 10
+    for (let i = 0; i < new_stakeholder_inserts.length; i += CREATE_CONCURRENCY) {
+      const chunk = new_stakeholder_inserts.slice(i, i + CREATE_CONCURRENCY)
+      const settled = await Promise.allSettled(
+        chunk.map((s) =>
+          supabaseAdmin.auth.admin.createUser({
+            email: s.email,
+            email_confirm: true,
+            user_metadata: {
+              full_name: s.nome_completo,
+              username: s.nome_usuario,
+              stakeholder_role: s.role,
+            },
+          })
+        )
+      )
+      settled.forEach((p, idx) => {
+        const s = chunk[idx]
+        if (p.status === 'rejected') {
+          new_stakeholder_errors.push(`${s.email}: ${p.reason instanceof Error ? p.reason.message : 'erro'}`)
+          return
+        }
+        const { error } = p.value
         if (error) {
           new_stakeholder_errors.push(`${s.email}: ${error.message}`)
-          continue
+          return
         }
         new_stakeholders_inserted++
-      } catch (e) {
-        new_stakeholder_errors.push(`${s.email}: ${e instanceof Error ? e.message : 'erro'}`)
-      }
+      })
     }
     // Refresh resolutions com IDs reais retornados pelo Supabase Auth (que
     // sobrescreve nosso UUID temporário). Lookup por email final (real ou sintético).
@@ -387,20 +403,8 @@ export async function POST(request: NextRequest) {
         if (res) res.id = real_id
       }
 
-      // Atualiza smoothcomp_member_no em batch
-      for (const u of updates_member_no) {
-        await supabaseAdmin
-          .from('stakeholders')
-          .update({ smoothcomp_member_no: u.member_no })
-          .eq('id', u.id)
-      }
-
-      // Re-resolve stakeholder_id em todos os results (os IDs temporários ficaram inválidos)
-      for (const r of results) {
-        // Re-procura pelo Member No correspondente — o trecho transformSmooothcompRow
-        // não retorna Member No, então casamos pela ordem com deduped_rows.
-        // Mais simples: re-percorre deduped_rows + atualiza pela posição.
-      }
+      // Re-resolve stakeholder_id em todos os results — os IDs temporários
+      // viraram inválidos quando o trigger do Supabase Auth sobrescreveu com IDs reais.
       results.forEach((r, idx) => {
         const data = deduped_rows[idx].data as CsvRowData
         const member_no = data['Member No'].trim()
@@ -409,48 +413,34 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Backfill smoothcomp_member_no em stakeholders já existentes que matchamos
-    // por email — não tinham Member No registrado antes, agora ganham.
-    let backfill_member_no = 0
-    for (const r of deduped_rows) {
-      const data = r.data as CsvRowData
-      const member_no = data['Member No'].trim()
-      const res = resolutions.get(member_no)
-      if (res?.source !== 'existing_by_email') continue
-      await supabaseAdmin
-        .from('stakeholders')
-        .update({ smoothcomp_member_no: member_no })
-        .eq('id', res.id)
-      backfill_member_no++
-    }
+    // Bulk update: smoothcomp_member_no (backfill) + nome_completo (correção) em 1 RPC.
+    // Inclui TODOS os atletas do CSV — a função no banco ignora updates redundantes.
+    const bulk_payload = deduped_rows
+      .map((r) => {
+        const data = r.data as CsvRowData
+        const member_no = data['Member No'].trim()
+        const nome_csv = (data['Name'] || '').trim()
+        const res = resolutions.get(member_no)
+        if (!res) return null
+        return { id: res.id, member_no, nome_completo: nome_csv }
+      })
+      .filter(Boolean)
 
-    // Backfill nome_completo no stakeholder se o nome do CSV diferir do gravado.
-    // Resolve o problema histórico onde stakeholders ficaram com nome de outro atleta
-    // por colisão de email — agora cada Member No tem seu stakeholder e nome certo.
+    let backfill_member_no = 0
     let names_updated = 0
-    for (const r of deduped_rows) {
-      const data = r.data as CsvRowData
-      const member_no = data['Member No'].trim()
-      const nome_csv = (data['Name'] || '').trim()
-      const res = resolutions.get(member_no)
-      if (!res || !nome_csv) continue
-      const { data: cur } = await supabaseAdmin
-        .from('stakeholders')
-        .select('nome_completo')
-        .eq('id', res.id)
-        .maybeSingle()
-      if (!cur) continue
-      if ((cur.nome_completo || '').trim() !== nome_csv) {
-        await supabaseAdmin
-          .from('stakeholders')
-          .update({ nome_completo: nome_csv })
-          .eq('id', res.id)
-        names_updated++
+    if (bulk_payload.length > 0) {
+      const { data: bulkResult, error: bulkErr } = await supabaseAdmin.rpc(
+        'bulk_update_stakeholders_from_smoothcomp',
+        { p_updates: bulk_payload }
+      )
+      if (!bulkErr && bulkResult && bulkResult[0]) {
+        backfill_member_no = Number(bulkResult[0].updated_count) - Number(bulkResult[0].names_changed)
+        names_updated = Number(bulkResult[0].names_changed)
       }
     }
 
     // Upsert user_fed_lrsj via stakeholder_id (PK) — safe with or without unique on email
-    const BATCH_SIZE = 50
+    const BATCH_SIZE = 250
     let inserted = 0
     const upsert_errors: string[] = []
     for (let i = 0; i < importable.length; i += BATCH_SIZE) {
