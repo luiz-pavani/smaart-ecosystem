@@ -17,58 +17,83 @@ export interface ParseResult {
 }
 
 /**
- * Parse CSV file and validate structure
+ * Parse CSV file and validate structure.
+ *
+ * Parser char-a-char respeitando RFC 4180: campos entre aspas duplas podem
+ * conter vírgulas E quebras de linha. O parser anterior dava split('\n')
+ * primeiro e quebrava linhas válidas com \n interno (Smoothcomp gera CSVs com
+ * \n dentro de campos como GRADUAÇÃO).
  */
 export function parseCSV(csv: string): ParseResult {
-  const lines = csv.trim().split('\n')
-  if (lines.length < 2) {
+  const normalized = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+  const records: string[][] = []
+  let current = ''
+  let row: string[] = []
+  let insideQuotes = false
+
+  for (let i = 0; i < normalized.length; i++) {
+    const char = normalized[i]
+    const nextChar = normalized[i + 1]
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        current += '"'
+        i++
+      } else {
+        insideQuotes = !insideQuotes
+      }
+    } else if (char === ',' && !insideQuotes) {
+      row.push(current)
+      current = ''
+    } else if (char === '\n' && !insideQuotes) {
+      row.push(current)
+      records.push(row)
+      row = []
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  if (current.length > 0 || row.length > 0) {
+    row.push(current)
+    records.push(row)
+  }
+
+  const cleaned = records.filter((r) => r.some((cell) => cell.trim().length > 0))
+
+  if (cleaned.length < 2) {
     throw new Error('CSV must contain at least a header and one data row')
   }
 
-  // Parse headers (first line)
-  const headers = parseCSVLine(lines[0])
-  
-  // Parse data rows
+  const headers = cleaned[0].map((h) => h.trim())
+
   const rows: ParsedRow[] = []
   let validRows = 0
   let invalidRows = 0
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim()
-    if (!line) continue // Skip empty lines
+  for (let i = 1; i < cleaned.length; i++) {
+    const values = cleaned[i].map((v) => v.trim())
+    const data: Record<string, string> = {}
+    const errors: string[] = []
 
-    try {
-      const values = parseCSVLine(line)
-      const data: Record<string, string> = {}
-      const errors: string[] = []
+    headers.forEach((header, idx) => {
+      data[header] = values[idx] || ''
+    })
 
-      // Map values to headers
-      headers.forEach((header, idx) => {
-        data[header] = values[idx] || ''
-      })
+    if (values.length !== headers.length) {
+      errors.push(`Expected ${headers.length} columns, got ${values.length}`)
+    }
 
-      // Validate that we have the right number of columns
-      if (values.length !== headers.length) {
-        errors.push(`Expected ${headers.length} columns, got ${values.length}`)
-      }
+    rows.push({
+      row: i + 1,
+      data,
+      errors,
+    })
 
-      rows.push({
-        row: i + 1,
-        data,
-        errors,
-      })
-
-      if (errors.length === 0) {
-        validRows++
-      } else {
-        invalidRows++
-      }
-    } catch (error) {
-      rows.push({
-        row: i + 1,
-        data: {},
-        errors: [error instanceof Error ? error.message : 'Parse error'],
-      })
+    if (errors.length === 0) {
+      validRows++
+    } else {
       invalidRows++
     }
   }
@@ -80,42 +105,6 @@ export function parseCSV(csv: string): ParseResult {
     validRows,
     invalidRows,
   }
-}
-
-/**
- * Parse a single CSV line (handles quoted values)
- */
-function parseCSVLine(line: string): string[] {
-  const result: string[] = []
-  let current = ''
-  let insideQuotes = false
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i]
-    const nextChar = line[i + 1]
-
-    if (char === '"') {
-      if (insideQuotes && nextChar === '"') {
-        // Escaped quote
-        current += '"'
-        i++ // Skip next quote
-      } else {
-        // Toggle quote state
-        insideQuotes = !insideQuotes
-      }
-    } else if (char === ',' && !insideQuotes) {
-      // Field separator
-      result.push(current.trim())
-      current = ''
-    } else {
-      current += char
-    }
-  }
-
-  // Add last field
-  result.push(current.trim())
-
-  return result
 }
 
 /**
