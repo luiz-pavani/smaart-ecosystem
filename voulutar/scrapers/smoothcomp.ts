@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 export async function scrapeSmoothcomp() {
@@ -6,7 +5,8 @@ export async function scrapeSmoothcomp() {
   const events: any[] = [];
   
   try {
-    const { data } = await axios.get('https://smoothcomp.com/pt/events/upcoming');
+    const response = await fetch('https://smoothcomp.com/pt/events/upcoming');
+    const data = await response.text();
     const $ = cheerio.load(data);
 
     $('.event-panel').each((index, element) => {

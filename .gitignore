@@ -39,3 +39,11 @@ coverage/
 .cache/
 .eslintcache
 .env*.local
+
+# YouTube API credentials and artifacts
+.youtube/
+*token*.json
+client_secret*.json
+scripts/youtube/backups/
+scripts/youtube/logs/
+scripts/youtube/output/

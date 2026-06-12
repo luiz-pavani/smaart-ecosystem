@@ -1,4 +1,3 @@
-import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 export async function scrapeIlutas() {
@@ -6,7 +5,8 @@ export async function scrapeIlutas() {
   const events: any[] = [];
   
   try {
-    const { data } = await axios.get('https://www.ilutas.com.br/Eventos');
+    const response = await fetch('https://www.ilutas.com.br/Eventos');
+    const data = await response.text();
     const $ = cheerio.load(data);
 
     $('table tbody tr, .evento-item').each((index, element) => {

@@ -1,7 +1,7 @@
-import { supabaseAdmin } from './utils/supabase';
-import { scrapeSouCompetidor } from './sources/soucompetidor';
-import { scrapeIlutas } from './sources/ilutas';
-import { scrapeSmoothcomp } from './sources/smoothcomp';
+import { supabaseAdmin } from './supabase.js';
+import { scrapeSouCompetidor } from './soucompetidor.js';
+import { scrapeIlutas } from './ilutas.js';
+import { scrapeSmoothcomp } from './smoothcomp.js';
 
 async function runAllScrapers() {
   console.log('🚀 Iniciando rotina global de captura de eventos...');
