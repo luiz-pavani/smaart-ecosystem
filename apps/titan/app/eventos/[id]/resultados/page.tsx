@@ -15,7 +15,10 @@ interface Result {
 }
 
 interface MedalRow {
-  academia: string
+  academia_id: string | null
+  academia_nome: string
+  logo_url: string | null
+  colocacao: number
   gold: number
   silver: number
   bronze: number
@@ -42,10 +45,12 @@ export default function ResultadosPublicoPage() {
     if (!id) return
     Promise.all([
       fetch(`/api/eventos/${id}/resultados`).then(r => r.json()),
+      fetch(`/api/eventos/${id}/resultados/medalhao`).then(r => r.json()),
       fetch(`/api/eventos/${id}`).then(r => r.json()).catch(() => null),
-    ]).then(([resData, evtData]) => {
+    ]).then(([resData, medData, evtData]) => {
       setResults(resData.results || [])
-      setMedalBoard(resData.medal_board || [])
+      // Novo medalhão (com logos + academia_id agrupado corretamente).
+      setMedalBoard(medData.medalhao || [])
       if (evtData?.evento) setEvento(evtData.evento)
       setLoading(false)
     })
@@ -159,16 +164,41 @@ export default function ResultadosPublicoPage() {
                 </tr>
               </thead>
               <tbody>
-                {medalBoard.map((row, i) => (
-                  <tr key={row.academia} className={`border-b border-gray-800/50 ${i < 3 ? 'bg-gray-800/30' : ''}`}>
-                    <td className="px-4 py-3 text-gray-500 text-sm">{i + 1}</td>
-                    <td className="px-4 py-3 font-medium">{row.academia}</td>
-                    <td className="px-4 py-3 text-center text-yellow-400 font-bold">{row.gold || '-'}</td>
-                    <td className="px-4 py-3 text-center text-gray-300 font-bold">{row.silver || '-'}</td>
-                    <td className="px-4 py-3 text-center text-amber-600 font-bold">{row.bronze || '-'}</td>
-                    <td className="px-4 py-3 text-center text-white font-bold">{row.total}</td>
-                  </tr>
-                ))}
+                {medalBoard.map((row, i) => {
+                  const isTop3 = (row.colocacao ?? i + 1) <= 3
+                  const medalEmoji = row.colocacao === 1 ? '🥇' : row.colocacao === 2 ? '🥈' : row.colocacao === 3 ? '🥉' : null
+                  return (
+                    <tr
+                      key={row.academia_id || row.academia_nome}
+                      className={`border-b border-gray-800/50 ${isTop3 ? 'bg-yellow-500/5' : ''}`}
+                    >
+                      <td className="px-4 py-3 text-gray-500 text-sm">
+                        {medalEmoji ? (
+                          <span className="text-base">{medalEmoji}</span>
+                        ) : (
+                          <span>{row.colocacao ?? i + 1}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {row.logo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={row.logo_url} alt="" className="w-8 h-8 rounded-full object-cover bg-gray-800 shrink-0" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center shrink-0 text-xs text-gray-500">
+                              {row.academia_nome.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="font-medium">{row.academia_nome}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center text-yellow-400 font-bold">{row.gold || '-'}</td>
+                      <td className="px-4 py-3 text-center text-gray-300 font-bold">{row.silver || '-'}</td>
+                      <td className="px-4 py-3 text-center text-amber-600 font-bold">{row.bronze || '-'}</td>
+                      <td className="px-4 py-3 text-center text-white font-bold">{row.total}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
