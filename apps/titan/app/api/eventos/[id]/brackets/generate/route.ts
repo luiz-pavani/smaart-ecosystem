@@ -88,7 +88,7 @@ export async function POST(
         .select('id, atleta_id, academia_id, dados_atleta')
         .eq('event_id', eventoId)
         .eq('category_id', categoryId)
-        .in('status', ['confirmada', 'pendente', 'confirmed'])
+        .eq('status', 'confirmed')
         .order('created_at', { ascending: true })
 
       if (!regs || regs.length === 0) {

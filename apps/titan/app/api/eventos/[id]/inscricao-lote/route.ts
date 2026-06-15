@@ -69,7 +69,7 @@ export async function POST(
     .eq('obrigatorio', true)
 
   const hasMandatoryWaivers = (mandatoryWaivers || []).length > 0
-  const statusInicial = hasMandatoryWaivers ? 'pending_waivers' : 'confirmada'
+  const statusInicial = hasMandatoryWaivers ? 'pending_waivers' : 'confirmed'
 
   const results: { atleta_id: string; status: 'ok' | 'error'; message?: string; registration_id?: string }[] = []
 

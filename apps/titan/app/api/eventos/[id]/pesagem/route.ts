@@ -53,7 +53,7 @@ export async function GET(
       )
     `)
     .eq('event_id', eventoId)
-    .in('status', ['confirmado', 'inscrito', 'pago'])
+    .eq('status', 'confirmed')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

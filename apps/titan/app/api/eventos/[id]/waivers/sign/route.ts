@@ -66,7 +66,7 @@ export async function POST(
     // Upgrade status if currently pending_waivers
     await supabaseAdmin
       .from('event_registrations')
-      .update({ status: 'confirmado' })
+      .update({ status: 'confirmed' })
       .eq('id', registration_id)
       .eq('status', 'pending_waivers')
   }
