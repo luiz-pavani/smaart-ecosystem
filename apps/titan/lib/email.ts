@@ -84,6 +84,18 @@ interface ConfirmacaoPagamentoParams {
   dataPagamento?: string
 }
 
+interface ConfirmacaoInscricaoParams {
+  nome: string
+  email: string
+  evento_nome: string
+  evento_data: string // formato livre ex: "30 ago 2026"
+  evento_local: string | null
+  categoria: string | null
+  precisa_pagar: boolean
+  precisa_assinar_termos: boolean
+  link_acompanhar: string
+}
+
 /** Email de confirmação de pagamento (filiação, evento, anuidade). */
 export async function emailConfirmacaoPagamento(p: ConfirmacaoPagamentoParams) {
   const valorFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.valor)
@@ -107,6 +119,55 @@ export async function emailConfirmacaoPagamento(p: ConfirmacaoPagamentoParams) {
     to: p.email,
     subject: `Pagamento confirmado — ${p.descricao}`,
     html: baseLayout('Pagamento confirmado', body),
+  })
+}
+
+/** Email de confirmação de inscrição em evento. */
+export async function emailConfirmacaoInscricao(p: ConfirmacaoInscricaoParams) {
+  const proximosPassos: string[] = []
+  if (p.precisa_pagar) proximosPassos.push('Realizar o pagamento da taxa de inscrição.')
+  if (p.precisa_assinar_termos) proximosPassos.push('Assinar os termos de responsabilidade.')
+  if (!p.precisa_pagar && !p.precisa_assinar_termos) proximosPassos.push('Aguardar a confirmação da pesagem oficial no dia.')
+
+  const proximosPassosHtml = proximosPassos
+    .map(passo => `<li style="margin:6px 0;">${escapeHtml(passo)}</li>`)
+    .join('')
+
+  const detalhesRows: Array<[string, string]> = [
+    ['Evento', p.evento_nome],
+    ['Data', p.evento_data],
+  ]
+  if (p.evento_local) detalhesRows.push(['Local', p.evento_local])
+  if (p.categoria) detalhesRows.push(['Categoria', p.categoria])
+
+  const detalhesHtml = detalhesRows
+    .map(([k, v]) => `
+      <tr>
+        <td style="padding:6px 0;color:#475569;font-size:13px;">${escapeHtml(k)}</td>
+        <td style="padding:6px 0;text-align:right;font-weight:600;color:#0f172a;">${escapeHtml(v)}</td>
+      </tr>`)
+    .join('')
+
+  const body = `
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">
+      Olá <strong>${escapeHtml(p.nome)}</strong>, sua inscrição foi recebida com sucesso. ✅
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-left:4px solid #15803d;border-radius:8px;padding:16px 18px;margin:16px 0;">
+      ${detalhesHtml}
+    </table>
+    <p style="margin:16px 0 8px;font-size:14px;color:#374151;font-weight:600;">Próximos passos:</p>
+    <ul style="margin:0 0 16px;padding-left:20px;font-size:14px;color:#374151;line-height:1.5;">
+      ${proximosPassosHtml}
+    </ul>
+    <p style="margin:16px 0 0;font-size:14px;color:#374151;">
+      Acompanhe sua inscrição em
+      <a href="${escapeAttr(p.link_acompanhar)}" style="color:#15803d;font-weight:600;">${escapeHtml(p.link_acompanhar)}</a>.
+    </p>
+  `
+  return sendEmail({
+    to: p.email,
+    subject: `Inscrição confirmada — ${p.evento_nome}`,
+    html: baseLayout('Inscrição recebida', body),
   })
 }
 

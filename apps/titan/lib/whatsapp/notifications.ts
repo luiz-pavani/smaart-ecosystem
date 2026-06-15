@@ -25,6 +25,37 @@ export async function notifyAtletaBoasVindas(atleta: {
   return sendTemplate(phone, 'lrsj_atleta_boas_vindas_v2', [atleta.nome_completo])
 }
 
+/**
+ * Confirmação de inscrição em evento.
+ *
+ * ⚠️ Requer template registrado e aprovado no Meta Business Manager:
+ *   nome:   lrsj_inscricao_evento_confirmada
+ *   params: {{1}} nome, {{2}} evento_nome, {{3}} data, {{4}} proximos_passos
+ *
+ * Enquanto o template não estiver aprovado, retorna null silenciosamente.
+ */
+export async function notifyAtletaInscricaoConfirmada(atleta: {
+  nome_completo: string
+  telefone: string | null
+  evento_nome: string
+  evento_data: string
+  proximos_passos: string
+}) {
+  const phone = normalizePhone(atleta.telefone)
+  if (!phone) return null
+  try {
+    return await sendTemplate(phone, 'lrsj_inscricao_evento_confirmada', [
+      atleta.nome_completo,
+      atleta.evento_nome,
+      atleta.evento_data,
+      atleta.proximos_passos,
+    ])
+  } catch (err) {
+    console.warn('[whatsapp inscricao confirmada] template não disponível:', err)
+    return null
+  }
+}
+
 export async function notifyAtletaPlanoVencendo(atleta: {
   nome_completo: string
   telefone: string | null

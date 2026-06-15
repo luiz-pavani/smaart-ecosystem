@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { emailConfirmacaoInscricao } from '@/lib/email'
+import { notifyAtletaInscricaoConfirmada } from '@/lib/whatsapp/notifications'
 
 // POST /api/eventos/self/inscricao — inscrever atleta autenticado num evento
 export async function POST(req: NextRequest) {
@@ -14,7 +16,7 @@ export async function POST(req: NextRequest) {
   // Verificar se evento existe
   const { data: evento } = await supabaseAdmin
     .from('eventos')
-    .select('id, nome, data_evento, status, limite_inscritos, valor_inscricao, inscricao_inicio, inscricao_fim, publicado')
+    .select('id, nome, data_evento, local, cidade, status, limite_inscritos, valor_inscricao, inscricao_inicio, inscricao_fim, publicado')
     .eq('id', event_id)
     .maybeSingle()
 
@@ -97,7 +99,7 @@ export async function POST(req: NextRequest) {
   // Buscar dados do atleta para snapshot
   const { data: stakeholder } = await supabaseAdmin
     .from('stakeholders')
-    .select('nome_completo, academia_id, kyu_dan_id, genero, data_nascimento, peso_atual')
+    .select('nome_completo, academia_id, kyu_dan_id, genero, data_nascimento, peso_atual, telefone')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -135,6 +137,44 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Email de confirmação — fire-and-forget, não bloqueia resposta.
+  const userEmail = user.email
+  const nomeAtleta = stakeholder?.nome_completo || 'Atleta'
+  if (userEmail) {
+    const localCompleto = [evento.local, evento.cidade].filter(Boolean).join(' — ') || null
+    const dataFmt = new Date(evento.data_evento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://titan.smaartpro.com'
+    emailConfirmacaoInscricao({
+      nome: nomeAtleta,
+      email: userEmail,
+      evento_nome: evento.nome,
+      evento_data: dataFmt,
+      evento_local: localCompleto,
+      categoria: categoryData?.nome_display || null,
+      precisa_pagar: valorInscricao > 0,
+      precisa_assinar_termos: hasMandatoryWaivers,
+      link_acompanhar: `${baseUrl}/portal/atleta/eventos/${event_id}`,
+    }).catch(err => console.warn('[email confirmacao inscricao] falhou:', err))
+  }
+
+  // WhatsApp de confirmação — também fire-and-forget.
+  if (stakeholder?.telefone) {
+    const proximosPassos = valorInscricao > 0
+      ? 'Realize o pagamento da taxa para confirmar.'
+      : hasMandatoryWaivers
+        ? 'Acesse o portal para assinar os termos de responsabilidade.'
+        : 'Sua inscrição já está confirmada — nos vemos no evento!'
+    const dataFmtWa = new Date(evento.data_evento).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    notifyAtletaInscricaoConfirmada({
+      nome_completo: nomeAtleta,
+      telefone: stakeholder.telefone,
+      evento_nome: evento.nome,
+      evento_data: dataFmtWa,
+      proximos_passos: proximosPassos,
+    }).catch(err => console.warn('[whatsapp confirmacao inscricao] falhou:', err))
+  }
+
   return NextResponse.json({
     data,
     needs_payment: valorInscricao > 0,
