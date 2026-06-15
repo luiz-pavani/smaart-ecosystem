@@ -213,6 +213,12 @@ export async function PATCH(
         updates.clock_running = false
         updates.osaekomi_athlete = null
         break
+      case 'heartbeat':
+        // Heartbeat do cliente — apenas salva o clock_seconds atual no servidor
+        // para resistir a crash do tablet do árbitro. Não muda status nem flags.
+        // clock_seconds e osaekomi_seconds já foram aplicados em updates acima
+        // (linha 121-122) se vieram no payload.
+        break
       case 'swap_athletes': {
         // Swap scores between athletes
         updates.pontos_athlete1 = score.pontos_athlete2 || { wazaari: 0, yuko: 0, shido: 0 }

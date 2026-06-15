@@ -206,6 +206,29 @@ export default function ScoringPage() {
     return () => { if (clockRef.current) clearInterval(clockRef.current) }
   }, [score?.clock_running, score?.status])
 
+  // Server-side clock heartbeat: a cada 10s salva o clock_seconds atual no
+  // event_match_scores. Resistência a crash do tablet do árbitro — se a sessão
+  // morrer, próximo carregamento traz o relógio próximo ao real (até -10s).
+  // Roda apenas quando o relógio está rodando e a luta não terminou.
+  useEffect(() => {
+    if (!score?.clock_running || score.status === 'finished') return
+    const heartbeatInterval = setInterval(() => {
+      const s = scoreRef.current
+      if (!s || !s.clock_running) return
+      // Best-effort: erros são silenciados, próximo heartbeat tenta de novo.
+      fetch(`/api/eventos/${eventoId}/scoring/${matchId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'heartbeat',
+          clock_seconds: s.clock_seconds,
+          osaekomi_seconds: s.osaekomi_seconds ?? 0,
+        }),
+      }).catch(() => {})
+    }, 10000)
+    return () => clearInterval(heartbeatInterval)
+  }, [score?.clock_running, score?.status, eventoId, matchId])
+
   // Osaekomi counter
   useEffect(() => {
     if (osaekomiRef.current) clearInterval(osaekomiRef.current)
