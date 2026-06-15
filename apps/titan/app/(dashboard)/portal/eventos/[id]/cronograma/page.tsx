@@ -91,7 +91,7 @@ export default function CronogramaPage() {
   const [savedOrder, setSavedOrder] = useState<string[]>([])
 
   // Settings
-  const [strategy, setStrategy] = useState<'round_robin' | 'sequential'>('round_robin')
+  const [strategy, setStrategy] = useState<'round_robin' | 'sequential' | 'optimal'>('round_robin')
   const [horaInicio, setHoraInicio] = useState('09:00')
   const [intervalo, setIntervalo] = useState(2)
   const [showSettings, setShowSettings] = useState(false)
@@ -141,7 +141,7 @@ export default function CronogramaPage() {
         const config = eJson.evento?.config as Record<string, unknown> | null
         if (config?.schedule_settings) {
           const ss = config.schedule_settings as Record<string, unknown>
-          if (ss.strategy) setStrategy(ss.strategy as 'round_robin' | 'sequential')
+          if (ss.strategy) setStrategy(ss.strategy as 'round_robin' | 'sequential' | 'optimal')
           if (ss.hora_inicio) setHoraInicio(ss.hora_inicio as string)
           if (ss.intervalo_entre_categorias_min) setIntervalo(ss.intervalo_entre_categorias_min as number)
         }
@@ -707,7 +707,8 @@ export default function CronogramaPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Distribuicao</label>
-                <select value={strategy} onChange={e => setStrategy(e.target.value as 'round_robin' | 'sequential')} className={ic}>
+                <select value={strategy} onChange={e => setStrategy(e.target.value as 'round_robin' | 'sequential' | 'optimal')} className={ic}>
+                  <option value="optimal">Ótima (minimiza conflitos de atletas)</option>
                   <option value="round_robin">Balanceada (round-robin)</option>
                   <option value="sequential">Sequencial</option>
                 </select>

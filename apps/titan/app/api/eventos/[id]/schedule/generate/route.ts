@@ -18,7 +18,7 @@ async function getRole(userId: string) {
  *
  * Body:
  *   category_order: string[]  — ordered list of category IDs (organizer preference)
- *   strategy: 'round_robin' | 'sequential'
+ *   strategy: 'round_robin' | 'sequential' | 'optimal'
  *   hora_inicio: string — "HH:MM" start time (default "09:00")
  *   intervalo_entre_categorias_min: number — gap between categories in minutes (default 2)
  *
@@ -26,6 +26,19 @@ async function getRole(userId: string) {
  *   - event_categories.tempo_luta_seg (fight time in seconds)
  *   - event_categories.intervalo_entre_lutas_seg (interval between fights in seconds)
  *   Falls back to event_age_groups defaults if not set on category.
+ *
+ * Strategies:
+ *   - sequential: cada area recebe um bloco contíguo de categorias.
+ *     Bom pra eventos onde cada tatame tem um árbitro especialista por
+ *     idade. Ruim pra evitar conflitos de atleta.
+ *
+ *   - round_robin: balanceia carga de tempo por area (escolhe área com
+ *     menor total_minutes). Atual default. Não considera conflitos.
+ *
+ *   - optimal: minimiza conflitos de atletas (mesmo atleta em 2 categorias
+ *     em tatames diferentes ao mesmo tempo). Atribui cada bracket pra
+ *     a área que tem menor sobreposição esperada considerando atletas
+ *     compartilhados, depois usa carga como tiebreaker. Multi-passada.
  */
 export async function POST(
   req: NextRequest,
@@ -76,8 +89,11 @@ export async function POST(
     return NextResponse.json({ error: 'Nenhuma chave encontrada' }, { status: 400 })
   }
 
-  // Count matches per bracket
+  // Count matches per bracket + collect athlete set per bracket (only when 'optimal').
+  // Para optimal, precisamos saber quem está em cada bracket pra calcular
+  // sobreposições de atletas entre brackets candidatos a tatames diferentes.
   const bracketMatchCounts = new Map<string, number>()
+  const bracketAthletes = new Map<string, Set<string>>()
   for (const b of brackets) {
     const { count } = await supabaseAdmin
       .from('event_matches')
@@ -85,6 +101,16 @@ export async function POST(
       .eq('bracket_id', b.id)
       .neq('status', 'walkover')
     bracketMatchCounts.set(b.id, count || 0)
+    if (strategy === 'optimal') {
+      const { data: regs } = await supabaseAdmin
+        .from('event_bracket_slots')
+        .select('registration_id')
+        .eq('bracket_id', b.id)
+        .not('registration_id', 'is', null)
+      const set = new Set<string>()
+      for (const r of regs || []) if (r.registration_id) set.add(r.registration_id)
+      bracketAthletes.set(b.id, set)
+    }
   }
 
   // Helper: get effective fight duration in minutes for a bracket
@@ -146,6 +172,71 @@ export async function POST(
         total_minutes: bracketTimeMap.get(b.id) || 0,
       })
     })
+  } else if (strategy === 'optimal') {
+    // Optimal: para cada bracket, escolhe a área que minimiza:
+    //   (1) sobreposição esperada com atletas dos brackets já alocados que vão
+    //       rodar simultaneamente nessa área (conflicts = ruim);
+    //   (2) carga acumulada da área (load = tiebreak);
+    //
+    // Funcionamento simplificado:
+    // - areaLoad[a] = minutos totais já alocados naquela área.
+    // - Para cada bracket b:
+    //   - calcula intervalo [start, end] que ele ocuparia se fosse pra cada área.
+    //   - calcula quantos atletas dele aparecem em brackets já alocados em
+    //     OUTRAS áreas cujo intervalo sobrepõe com [start, end].
+    //   - score = conflitos × 100 + load. Menor score vence.
+    const areaLoad = new Array(numAreas).fill(0)
+    const areaOrdem = new Array(numAreas).fill(0)
+    // Histórico do que já foi alocado em cada área: [{start, end, athletes}]
+    type Allocated = { start: number; end: number; athletes: Set<string> }
+    const areaTimeline: Allocated[][] = Array.from({ length: numAreas }, () => [])
+    const interCategoriaMin = Number(intervalo_entre_categorias_min) || 0
+
+    for (const b of orderedBrackets) {
+      const totalMin = bracketTimeMap.get(b.id) || 0
+      const athletes = bracketAthletes.get(b.id) || new Set<string>()
+      let bestArea = 0
+      let bestScore = Infinity
+
+      for (let a = 0; a < numAreas; a++) {
+        const startMin = areaLoad[a]
+        const endMin = startMin + totalMin
+
+        // Conta atletas compartilhados que estariam ocupados em outra área no mesmo tempo
+        let conflicts = 0
+        for (let other = 0; other < numAreas; other++) {
+          if (other === a) continue
+          for (const alloc of areaTimeline[other]) {
+            const overlap = startMin < alloc.end && alloc.start < endMin
+            if (!overlap) continue
+            for (const aid of athletes) {
+              if (alloc.athletes.has(aid)) conflicts++
+            }
+          }
+        }
+
+        const score = conflicts * 1000 + areaLoad[a]
+        if (score < bestScore) {
+          bestScore = score
+          bestArea = a
+        }
+      }
+
+      const areaId = bestArea + 1
+      areaOrdem[bestArea]++
+      const startMin = areaLoad[bestArea]
+      const endMin = startMin + totalMin
+      areaTimeline[bestArea].push({ start: startMin, end: endMin, athletes })
+      areaLoad[bestArea] = endMin + interCategoriaMin
+
+      areaAssignments.push({
+        bracket_id: b.id,
+        area_id: areaId,
+        ordem: areaOrdem[bestArea],
+        num_matches: bracketMatchCounts.get(b.id) || 0,
+        total_minutes: totalMin,
+      })
+    }
   } else {
     // Round-robin: distribute evenly by total time (not just match count)
     const areaLoad = new Array(numAreas).fill(0) // minutes
