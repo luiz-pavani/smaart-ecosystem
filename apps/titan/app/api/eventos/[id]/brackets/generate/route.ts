@@ -57,6 +57,10 @@ export async function POST(
   const results: { category_id: string; bracket_id: string; bracket_tipo: string; athletes: number; matches: number; error?: string }[] = []
 
   for (const categoryId of category_ids) {
+    // Rastreia o bracket criado nesta iteração para cleanup defensivo em throw inesperado
+    // (cobre o caso em que bracket é criado mas o código falha antes de inserir slots/matches
+    // por algum erro não-Supabase como out-of-memory na geração do bracket).
+    let bracketCreatedId: string | null = null
     try {
       // Check if bracket already exists for this category
       const { data: existing } = await supabaseAdmin
@@ -98,7 +102,7 @@ export async function POST(
 
       // Handle gold_medal (1 athlete — auto-win, no bracket needed)
       if (resolvedTipo === 'gold_medal') {
-        const { data: bracketRow } = await supabaseAdmin
+        const { data: bracketRow, error: bracketErr } = await supabaseAdmin
           .from('event_brackets')
           .insert({
             evento_id: eventoId,
@@ -111,17 +115,25 @@ export async function POST(
           })
           .select('id')
           .single()
-        if (bracketRow) {
-          // Auto-create result: 1st place
-          await supabaseAdmin.from('event_results').insert({
-            evento_id: eventoId,
-            bracket_id: bracketRow.id,
-            registration_id: regs[0].id,
-            medal: 'gold',
-            colocacao: 1,
-          })
+        if (bracketErr || !bracketRow) {
+          results.push({ category_id: categoryId, bracket_id: '', bracket_tipo: '', athletes: regs.length, matches: 0, error: bracketErr?.message || 'Erro ao criar bracket gold_medal' })
+          continue
         }
-        results.push({ category_id: categoryId, bracket_id: bracketRow?.id || '', bracket_tipo: 'gold_medal', athletes: 1, matches: 0 })
+        bracketCreatedId = bracketRow.id
+        // Auto-create result: 1st place. Em caso de falha, limpa o bracket pra não deixar órfão.
+        const { error: resErr } = await supabaseAdmin.from('event_results').insert({
+          evento_id: eventoId,
+          bracket_id: bracketRow.id,
+          registration_id: regs[0].id,
+          medal: 'gold',
+          colocacao: 1,
+        })
+        if (resErr) {
+          await supabaseAdmin.from('event_brackets').delete().eq('id', bracketRow.id)
+          results.push({ category_id: categoryId, bracket_id: '', bracket_tipo: '', athletes: regs.length, matches: 0, error: `Erro ao gravar medalha: ${resErr.message}` })
+          continue
+        }
+        results.push({ category_id: categoryId, bracket_id: bracketRow.id, bracket_tipo: 'gold_medal', athletes: 1, matches: 0 })
         continue
       }
 
@@ -158,6 +170,7 @@ export async function POST(
       }
 
       const bracketId = bracketRow.id
+      bracketCreatedId = bracketId
 
       // Insert slots
       const slotsToInsert = bracket.slots.map(s => ({
@@ -215,8 +228,22 @@ export async function POST(
         athletes: regs.length,
         matches: matchesToInsert.length,
       })
+      // Sucesso: zera o rastreador pra catch não tentar deletar bracket válido.
+      bracketCreatedId = null
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Erro desconhecido'
+      // Cleanup defensivo: se um bracket foi criado antes do throw, remove ele + dependências
+      // pra não deixar dados órfãos.
+      if (bracketCreatedId) {
+        try {
+          await supabaseAdmin.from('event_matches').delete().eq('bracket_id', bracketCreatedId)
+          await supabaseAdmin.from('event_bracket_slots').delete().eq('bracket_id', bracketCreatedId)
+          await supabaseAdmin.from('event_results').delete().eq('bracket_id', bracketCreatedId)
+          await supabaseAdmin.from('event_brackets').delete().eq('id', bracketCreatedId)
+        } catch {
+          // cleanup é best-effort; se falhar, ao menos registramos o erro original
+        }
+      }
       results.push({ category_id: categoryId, bracket_id: '', bracket_tipo: '', athletes: 0, matches: 0, error: msg })
     }
   }

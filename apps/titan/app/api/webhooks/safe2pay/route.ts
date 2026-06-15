@@ -224,9 +224,14 @@ async function confirmarPagamento(safe2payId: string, payload: S2PPayload) {
 
 function descricaoPorReferencia(tipo: string): string {
   switch (tipo) {
-    case 'filiacao_pedido': return 'Filiação à federação'
-    case 'evento_inscricao': return 'Inscrição em evento'
+    case 'filiacao_pedido':
+    case 'filiacao_atleta': return 'Filiação à federação'
+    case 'evento':
+    case 'evento_inscricao':
+    case 'event_registration': return 'Inscrição em evento'
     case 'academia_anuidade': return 'Anuidade da academia'
+    case 'academia_mensalidade': return 'Mensalidade da academia'
+    case 'profep':
     case 'profep_inscricao': return 'Inscrição no Profep'
     case 'ppv': return 'Acesso à transmissão (PPV)'
     default: return 'Pagamento'
@@ -303,13 +308,17 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
       break
     }
 
-    case 'event_registration':
+    case 'evento':
+    case 'event_registration': {
+      // event_registrations.status flow: pending_payment → confirmed.
+      // Idempotente: re-update em confirmed é no-op.
       await supabaseAdmin
         .from('event_registrations')
-        .update({ status: 'confirmed' })
+        .update({ status: 'confirmed', updated_at: new Date().toISOString() })
         .eq('id', referenciaId)
-        .eq('status', 'pending_payment')
+        .in('status', ['pending_payment', 'pending_waivers'])
       break
+    }
 
     case 'academia_anuidade':
       // Registra pagamento da anuidade na academia

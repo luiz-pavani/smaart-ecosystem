@@ -238,13 +238,20 @@ async function resolverValor(
 
     case 'evento': {
       if (!referenciaId) return { error: 'referencia_id obrigatório para evento' }
+      // event_registrations grava o valor na coluna valor_pago (não 'valor') no momento
+      // da inscrição (lê de event_categories.taxa_inscricao ou eventos.valor_inscricao).
       const { data: reg } = await supabaseAdmin
         .from('event_registrations')
-        .select('valor, evento:event_id(nome)')
+        .select('valor_pago, evento:event_id(nome, valor_inscricao)')
         .eq('id', referenciaId)
         .maybeSingle()
-      const valor = (reg as any)?.valor ?? 98
-      const nome = (reg as any)?.evento?.nome || 'Evento LRSJ'
+      if (!reg) return { error: 'Inscrição não encontrada' }
+      // Fallback: se por algum motivo valor_pago não foi gravado, lê do evento.
+      const valor = Number((reg as any).valor_pago)
+        || Number((reg as any).evento?.valor_inscricao)
+        || 0
+      if (!valor) return { error: 'Valor de inscrição não configurado' }
+      const nome = (reg as any).evento?.nome || 'Evento LRSJ'
       return { valor, descricao: `Inscrição — ${nome}` }
     }
 
