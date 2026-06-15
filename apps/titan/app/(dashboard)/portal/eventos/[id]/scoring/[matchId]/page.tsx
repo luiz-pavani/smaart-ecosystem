@@ -7,6 +7,8 @@ import {
   ArrowLeft, Loader2, Play, Pause, RotateCcw, Trophy,
   Camera, X, Check, Settings, ArrowUpDown
 } from 'lucide-react'
+import { patchWithFallback } from '@/lib/scoring/offline-queue'
+import OfflineIndicator from '@/components/eventos/scoring/OfflineIndicator'
 
 interface Score {
   pontos_athlete1: { wazaari: number; yuko: number; shido: number }
@@ -302,11 +304,19 @@ export default function ScoringPage() {
       const s = scoreRef.current
       const localClock = s?.clock_seconds ?? 0
       const localOsaekomi = s?.osaekomi_seconds ?? 0
-      const res = await fetch(`/api/eventos/${eventoId}/scoring/${matchId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, clock_seconds: localClock, osaekomi_seconds: localOsaekomi, ...extra }),
-      })
+      // patchWithFallback: se offline ou 5xx, enfileira em localStorage e
+      // OfflineIndicator faz retry quando volta a rede. 4xx (ex: golden score
+      // estourado) cai como erro normal e não é enfileirado.
+      const { ok, response: res } = await patchWithFallback(
+        `/api/eventos/${eventoId}/scoring/${matchId}`,
+        { action, clock_seconds: localClock, osaekomi_seconds: localOsaekomi, ...extra },
+      )
+      if (!ok || !res) {
+        // Foi enfileirado (offline) ou erro de rede — sai cedo.
+        // O estado local do scoring permanece como está; quando a fila
+        // sincronizar, próximo GET trará a verdade.
+        return
+      }
       const json = await res.json()
       if (res.ok && json.score) {
         // Actions that control clock/osaekomi — trust server response fully
@@ -594,6 +604,7 @@ export default function ScoringPage() {
 
   return (
     <div className="h-screen bg-black text-white select-none flex flex-col overflow-hidden">
+      <OfflineIndicator />
       {/* Top bar — thin */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-black border-b border-white/10 flex-shrink-0">
         <button onClick={() => router.push(`/portal/eventos/${eventoId}/chaves`)} className="text-slate-400 hover:text-white">
