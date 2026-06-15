@@ -164,25 +164,20 @@ async function advanceWinner(
       // Semifinal losers go to bronze matches
       // Loser of semifinal at posicao 0 → bronze match at posicao 201 (fights repechage B winner)
       // Loser of semifinal at posicao 1 → bronze match at posicao 101 (fights repechage A winner)
+      // Convenção do slot: semifinal loser sempre entra como athlete2 (winner do
+      // repechage que vem da convergence vira athlete1). Determinístico, sem race.
       const bronzePos = posicao === 0 ? 201 : 101
       const { data: bronzeMatch } = await supabaseAdmin
         .from('event_matches')
-        .select('id, athlete1_registration_id, athlete2_registration_id')
+        .select('id, athlete1_registration_id, athlete2_registration_id, status')
         .eq('bracket_id', bracketId)
         .eq('tipo', 'bronze')
         .eq('posicao', bronzePos)
         .maybeSingle()
 
-      if (bronzeMatch) {
-        const bSlot = bronzeMatch.athlete1_registration_id
-          ? 'athlete2_registration_id'
-          : 'athlete1_registration_id'
-
-        const bUpdates: Record<string, unknown> = { [bSlot]: loserId }
-        const otherBSlot = bSlot === 'athlete1_registration_id'
-          ? bronzeMatch.athlete2_registration_id
-          : bronzeMatch.athlete1_registration_id
-        if (otherBSlot) bUpdates.status = 'ready'
+      if (bronzeMatch && bronzeMatch.status !== 'finished') {
+        const bUpdates: Record<string, unknown> = { athlete2_registration_id: loserId }
+        if (bronzeMatch.athlete1_registration_id) bUpdates.status = 'ready'
 
         await supabaseAdmin
           .from('event_matches')
@@ -195,15 +190,17 @@ async function advanceWinner(
     if (bracket.tipo === 'single_elimination_bronze' && loserId && tipo === 'semifinal') {
       const { data: bronzeMatch } = await supabaseAdmin
         .from('event_matches')
-        .select('id, athlete1_registration_id, athlete2_registration_id')
+        .select('id, athlete1_registration_id, athlete2_registration_id, status')
         .eq('bracket_id', bracketId)
         .eq('tipo', 'bronze')
         .maybeSingle()
 
-      if (bronzeMatch) {
-        const bSlot = bronzeMatch.athlete1_registration_id
-          ? 'athlete2_registration_id'
-          : 'athlete1_registration_id'
+      if (bronzeMatch && bronzeMatch.status !== 'finished') {
+        // Slot determinístico: semifinal de posicao 0 vai sempre em athlete1,
+        // posicao 1 em athlete2. Evita race condition se 2 semifinais terminam
+        // simultaneamente (sem isso, ambas escolheriam 'athlete2_registration_id'
+        // como slot vazio e a segunda sobrescreveria a primeira).
+        const bSlot = posicao === 0 ? 'athlete1_registration_id' : 'athlete2_registration_id'
 
         const bUpdates: Record<string, unknown> = { [bSlot]: loserId }
         const otherBSlot = bSlot === 'athlete1_registration_id'
@@ -244,26 +241,21 @@ async function advanceWinner(
         .update({ [nSlot]: winnerId, status: 'ready' })
         .eq('id', nextRep.id)
     } else {
-      // No more repechage rounds — winner goes to bronze match
+      // No more repechage rounds — winner goes to bronze match.
+      // Convenção: winner do repechage entra como athlete1 (slot fixo).
+      // Loser do semifinal entrou como athlete2 (acima).
       const bronzePos = side === 100 ? 101 : 201
       const { data: bronzeMatch } = await supabaseAdmin
         .from('event_matches')
-        .select('id, athlete1_registration_id, athlete2_registration_id')
+        .select('id, athlete1_registration_id, athlete2_registration_id, status')
         .eq('bracket_id', bracketId)
         .eq('tipo', 'bronze')
         .eq('posicao', bronzePos)
         .maybeSingle()
 
-      if (bronzeMatch) {
-        const bSlot = bronzeMatch.athlete1_registration_id
-          ? 'athlete2_registration_id'
-          : 'athlete1_registration_id'
-
-        const bUpdates: Record<string, unknown> = { [bSlot]: winnerId }
-        const otherBSlot = bSlot === 'athlete1_registration_id'
-          ? bronzeMatch.athlete2_registration_id
-          : bronzeMatch.athlete1_registration_id
-        if (otherBSlot) bUpdates.status = 'ready'
+      if (bronzeMatch && bronzeMatch.status !== 'finished') {
+        const bUpdates: Record<string, unknown> = { athlete1_registration_id: winnerId }
+        if (bronzeMatch.athlete2_registration_id) bUpdates.status = 'ready'
 
         await supabaseAdmin
           .from('event_matches')
