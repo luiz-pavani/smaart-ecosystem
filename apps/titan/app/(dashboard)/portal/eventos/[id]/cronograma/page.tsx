@@ -61,6 +61,19 @@ interface ScheduleTemplate {
   created_at: string
 }
 
+interface ScheduleConflict {
+  registration_id: string
+  atleta_nome: string | null
+  matches: Array<{
+    match_id: string
+    bracket_id: string
+    category_nome: string | null
+    area_id: number | null
+    estimated_start_min: number
+    estimated_end_min: number
+  }>
+}
+
 export default function CronogramaPage() {
   const router = useRouter()
   const params = useParams()
@@ -86,6 +99,7 @@ export default function CronogramaPage() {
   // Generate state
   const [generating, setGenerating] = useState(false)
   const [generated, setGenerated] = useState(false)
+  const [conflicts, setConflicts] = useState<ScheduleConflict[]>([])
 
   // Templates
   const [templates, setTemplates] = useState<ScheduleTemplate[]>([])
@@ -183,6 +197,7 @@ export default function CronogramaPage() {
   const handleGenerate = async () => {
     setGenerating(true)
     setGenerated(false)
+    setConflicts([])
     try {
       const res = await fetch(`/api/eventos/${eventoId}/schedule/generate`, {
         method: 'POST',
@@ -195,6 +210,8 @@ export default function CronogramaPage() {
         }),
       })
       if (res.ok) {
+        const genJson = await res.json()
+        setConflicts(Array.isArray(genJson.conflicts) ? genJson.conflicts : [])
         setGenerated(true)
         setSavedOrder([...categoryOrder])
         const sRes = await fetch(`/api/eventos/${eventoId}/schedule`)
@@ -466,6 +483,53 @@ export default function CronogramaPage() {
             <div className="text-2xl font-bold text-indigo-300">{horaInicio}</div>
           </div>
         </div>
+
+        {/* Conflicts banner — atletas com 2+ lutas simultâneas em tatames diferentes */}
+        {conflicts.length > 0 && (
+          <div className="bg-red-500/5 border border-red-500/30 rounded-xl p-5 mb-6">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                <span className="text-red-400 text-xl">⚠</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-red-300 font-semibold text-lg">
+                  {conflicts.length} {conflicts.length === 1 ? 'atleta com conflito' : 'atletas com conflitos'} de horário
+                </h3>
+                <p className="text-red-200/70 text-sm mt-1">
+                  Estes atletas têm lutas que vão acontecer simultaneamente em tatames diferentes.
+                  Reordene as categorias ou aumente o intervalo entre categorias para resolver.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3 mt-4">
+              {conflicts.map((c) => (
+                <div key={c.registration_id} className="bg-red-950/30 border border-red-500/20 rounded-lg p-3">
+                  <div className="text-white font-medium mb-2">{c.atleta_nome || 'Atleta sem nome'}</div>
+                  <div className="space-y-1.5">
+                    {c.matches.map((m) => {
+                      const hh = Math.floor(m.estimated_start_min / 60)
+                      const mm = m.estimated_start_min % 60
+                      const hhE = Math.floor(m.estimated_end_min / 60)
+                      const mmE = m.estimated_end_min % 60
+                      const fmt = (h: number, mn: number) => `${String(h).padStart(2,'0')}:${String(Math.round(mn)).padStart(2,'0')}`
+                      return (
+                        <div key={m.match_id} className="flex items-center justify-between text-sm">
+                          <div className="text-red-100/80">
+                            <span className="font-mono text-red-300">{fmt(hh, mm)}–{fmt(hhE, mmE)}</span>
+                            <span className="mx-2 text-red-400/40">•</span>
+                            <span>Tatame {m.area_id ?? '?'}</span>
+                            <span className="mx-2 text-red-400/40">•</span>
+                            <span className="text-red-200/70">{m.category_nome ?? 'Categoria ?'}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Templates Panel */}
         {showTemplates && (
