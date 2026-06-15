@@ -7,6 +7,7 @@ import {
   Users, Swords, Check, X, Search, Filter, Trophy, Medal, Play, Settings2
 } from 'lucide-react'
 import BracketView from '@/components/eventos/BracketView'
+import SlotEditor from '@/components/eventos/SlotEditor'
 
 interface Bracket {
   id: string
@@ -473,7 +474,20 @@ export default function ChavesPage() {
             {loadingDetail ? (
               <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-cyan-400" /></div>
             ) : (
-              <BracketView
+              <>
+                {/* Editor de seeding: só pra brackets em draft */}
+                {(bracketDetail.bracket as Bracket).status === 'draft' && (
+                  <div className="mb-4">
+                    <SlotEditor
+                      eventoId={eventoId}
+                      bracketId={(bracketDetail.bracket as Bracket).id}
+                      slots={bracketDetail.slots as never[]}
+                      bracketStatus={(bracketDetail.bracket as Bracket).status}
+                      onAfterSwap={() => loadBracketDetail((bracketDetail.bracket as Bracket).id)}
+                    />
+                  </div>
+                )}
+                <BracketView
                 matches={bracketDetail.matches as never[]}
                 slots={bracketDetail.slots as never[]}
                 bracketType={(bracketDetail.bracket as Bracket).tipo}
@@ -491,6 +505,7 @@ export default function ChavesPage() {
                   }
                 }}
               />
+              </>
             )}
           </div>
         ) : filtered.length === 0 ? (
