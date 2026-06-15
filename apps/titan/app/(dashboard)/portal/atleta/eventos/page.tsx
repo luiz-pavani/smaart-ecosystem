@@ -72,6 +72,11 @@ export default function EventosAtletaPage() {
   const [signingWaivers, setSigningWaivers] = useState(false)
   const [waiverChecked, setWaiverChecked] = useState<Set<string>>(new Set())
   const [expandedWaiver, setExpandedWaiver] = useState<string | null>(null)
+  // Signer flow: por quem o termo está sendo assinado
+  const [signerType, setSignerType] = useState<'atleta' | 'responsavel' | 'professor'>('atleta')
+  const [signerName, setSignerName] = useState('')
+  const [signerCpf, setSignerCpf] = useState('')
+  const [signerRelationship, setSignerRelationship] = useState('')
 
   useEffect(() => { load() }, [])
 
@@ -206,6 +211,13 @@ export default function EventosAtletaPage() {
               pendentes: waiverData.pendentes,
             })
             setWaiverChecked(new Set())
+            // Reset signer: se menor de idade, default 'responsavel' (atleta não pode assinar);
+            // se adulto, default 'atleta' (mais comum).
+            const isMenor = (atletaInfo?.idade ?? 99) < 18
+            setSignerType(isMenor ? 'responsavel' : 'atleta')
+            setSignerName('')
+            setSignerCpf('')
+            setSignerRelationship('')
             await load()
             setActiveTab('upcoming')
             return
@@ -240,24 +252,42 @@ export default function EventosAtletaPage() {
       showToast('Aceite todos os termos obrigatórios', false)
       return
     }
+    // Validação local dos campos do signatário (responsável ou professor)
+    if (signerType !== 'atleta') {
+      if (!signerName.trim() || !signerCpf.trim() || !signerRelationship.trim()) {
+        showToast(`Informe os dados completos do ${signerType === 'responsavel' ? 'responsável' : 'professor'}`, false)
+        return
+      }
+    }
     setSigningWaivers(true)
     try {
       const ids = [...waiverChecked]
       if (ids.length === 0) { setWaiverModal(null); return }
+      const payload: Record<string, unknown> = {
+        registration_id: waiverModal.registrationId,
+        waiver_ids: ids,
+        signer_type: signerType,
+      }
+      if (signerType !== 'atleta') {
+        payload.signer_name = signerName.trim()
+        payload.signer_cpf = signerCpf.trim()
+        payload.signer_relationship = signerRelationship.trim()
+      }
       const res = await fetch(`/api/eventos/${waiverModal.eventoId}/waivers/sign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ registration_id: waiverModal.registrationId, waiver_ids: ids }),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
         showToast('Termos aceitos! Inscricao confirmada.')
       } else {
         const json = await res.json()
         showToast(json.error || 'Erro ao assinar termos', false)
+        return // não fecha o modal, dá chance de corrigir
       }
     } finally {
       setSigningWaivers(false)
-      setWaiverModal(null)
+      if (waiverChecked.size > 0) setWaiverModal(null)
     }
   }
 
@@ -372,6 +402,99 @@ export default function EventosAtletaPage() {
               </button>
             </div>
             <div className="p-6 space-y-3">
+              {/* Signer selection — quem está assinando? */}
+              {(() => {
+                const isMenor = (atletaInfo?.idade ?? 99) < 18
+                return (
+                  <div className="border border-white/10 rounded-xl p-4 bg-white/5 mb-2">
+                    <div className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-3">
+                      Quem está assinando os termos?
+                      {isMenor && <span className="ml-2 text-orange-300 normal-case">Atleta menor de 18 — precisa de responsável ou professor</span>}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSignerType('atleta')}
+                        disabled={isMenor}
+                        className={`text-left px-3 py-2 rounded-lg border text-sm transition-all ${
+                          signerType === 'atleta'
+                            ? 'bg-green-500/15 border-green-500/40 text-green-200'
+                            : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
+                        } ${isMenor ? 'opacity-40 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="font-medium">O próprio atleta</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">Eu sou o atleta</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSignerType('responsavel')}
+                        className={`text-left px-3 py-2 rounded-lg border text-sm transition-all ${
+                          signerType === 'responsavel'
+                            ? 'bg-green-500/15 border-green-500/40 text-green-200'
+                            : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="font-medium">Responsável legal</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">Pai, mãe ou tutor</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSignerType('professor')}
+                        className={`text-left px-3 py-2 rounded-lg border text-sm transition-all ${
+                          signerType === 'professor'
+                            ? 'bg-green-500/15 border-green-500/40 text-green-200'
+                            : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="font-medium">Professor / técnico</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">Da academia</div>
+                      </button>
+                    </div>
+
+                    {signerType !== 'atleta' && (
+                      <div className="mt-3 space-y-2">
+                        <input
+                          type="text"
+                          placeholder={`Nome completo do ${signerType === 'responsavel' ? 'responsável' : 'professor'}`}
+                          value={signerName}
+                          onChange={e => setSignerName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-green-500/40"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="CPF (apenas números)"
+                            value={signerCpf}
+                            onChange={e => setSignerCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                            className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm placeholder-slate-500 focus:outline-none focus:border-green-500/40"
+                          />
+                          <select
+                            value={signerRelationship}
+                            onChange={e => setSignerRelationship(e.target.value)}
+                            className="px-3 py-2 rounded-lg bg-black/30 border border-white/10 text-white text-sm focus:outline-none focus:border-green-500/40"
+                          >
+                            <option value="">Vínculo</option>
+                            {signerType === 'responsavel' ? (
+                              <>
+                                <option value="pai">Pai</option>
+                                <option value="mae">Mãe</option>
+                                <option value="tutor">Tutor legal</option>
+                                <option value="responsavel_legal">Responsável legal</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="professor">Professor</option>
+                                <option value="tecnico">Técnico</option>
+                                <option value="instrutor">Instrutor</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
               {waiverModal.waivers.map(w => {
                 const checked = w.assinado || waiverChecked.has(w.waiver_id)
                 return (

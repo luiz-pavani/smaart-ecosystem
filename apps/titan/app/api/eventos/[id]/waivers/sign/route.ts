@@ -33,15 +33,23 @@ export async function POST(
   const {
     registration_id,
     waiver_ids,
-    // Campos opcionais para atleta menor de idade. Frontend deve coletar
-    // se idade do atleta < 18 (lei brasileira: CC art. 5, ECA).
-    signed_by_guardian = false,
-    guardian_name,
-    guardian_cpf,
-    guardian_relationship,
+    // signer_type: 'atleta' | 'responsavel' | 'professor'
+    // Default: 'atleta'. Frontend deve enviar 'responsavel' ou 'professor'
+    // quando alguém assina pelo atleta (obrigatório se idade < 18, opcional
+    // pra adultos que delegam — ex: atleta no estrangeiro, técnico assina).
+    signer_type = 'atleta',
+    signer_name,
+    signer_cpf,
+    signer_relationship,
   } = await req.json()
   if (!registration_id || !waiver_ids?.length) {
     return NextResponse.json({ error: 'registration_id e waiver_ids obrigatórios' }, { status: 400 })
+  }
+
+  if (!['atleta', 'responsavel', 'professor'].includes(signer_type)) {
+    return NextResponse.json({
+      error: 'signer_type inválido (use: atleta, responsavel ou professor).',
+    }, { status: 400 })
   }
 
   // Verify registration belongs to user (carrega data_nascimento pra validar maioridade)
@@ -59,15 +67,19 @@ export async function POST(
   const dataNasc: string | null = (reg.dados_atleta as any)?.data_nascimento ?? null
   const isMenor = dataNasc ? isUnderAge(dataNasc, 18) : false
 
-  if (isMenor) {
-    if (!signed_by_guardian) {
+  // Atleta menor: signer_type não pode ser 'atleta' — alguém precisa assinar
+  if (isMenor && signer_type === 'atleta') {
+    return NextResponse.json({
+      error: 'Atleta menor de idade — termos precisam ser assinados por responsável legal ou professor.',
+    }, { status: 400 })
+  }
+
+  // Se signer não é o atleta, dados completos do signatário são obrigatórios
+  if (signer_type !== 'atleta') {
+    if (!signer_name?.trim() || !signer_cpf?.trim() || !signer_relationship?.trim()) {
+      const tipoLabel = signer_type === 'responsavel' ? 'responsável legal' : 'professor'
       return NextResponse.json({
-        error: 'Atleta menor de idade — termos precisam ser assinados pelo responsável legal.',
-      }, { status: 400 })
-    }
-    if (!guardian_name?.trim() || !guardian_cpf?.trim() || !guardian_relationship?.trim()) {
-      return NextResponse.json({
-        error: 'Dados do responsável legal incompletos (nome, CPF e parentesco obrigatórios).',
+        error: `Dados do ${tipoLabel} incompletos (nome, CPF e vínculo obrigatórios).`,
       }, { status: 400 })
     }
   }
@@ -81,10 +93,10 @@ export async function POST(
     atleta_id: user.id,
     ip_address: ip,
     user_agent: ua,
-    signed_by_guardian: isMenor ? true : !!signed_by_guardian,
-    guardian_name: isMenor ? guardian_name?.trim() : null,
-    guardian_cpf: isMenor ? guardian_cpf?.trim() : null,
-    guardian_relationship: isMenor ? guardian_relationship?.trim() : null,
+    signer_type,
+    signer_name: signer_type !== 'atleta' ? signer_name?.trim() : null,
+    signer_cpf: signer_type !== 'atleta' ? signer_cpf?.trim() : null,
+    signer_relationship: signer_type !== 'atleta' ? signer_relationship?.trim() : null,
   }))
 
   const { error } = await supabaseAdmin
