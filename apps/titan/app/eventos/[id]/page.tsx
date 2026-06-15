@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import {
   Calendar, MapPin, Clock, Users, Trophy, ArrowLeft, ExternalLink,
   Loader2, MapPinned, Mail, Phone, FileText, Tv, BarChart3,
-  ChevronRight, Tag, Shield, Swords
+  ChevronRight, Tag, Shield, Swords, Building2, Weight, X
 } from 'lucide-react'
+import AtletaSearch from '@/components/eventos/AtletaSearch'
 
 interface Evento {
   id: string
@@ -51,6 +52,13 @@ export default function EventoPublicPage() {
   const [totalCategorias, setTotalCategorias] = useState(0)
   const [minhaInscricao, setMinhaInscricao] = useState<{ id: string; status: string } | null>(null)
   const [showRegulamento, setShowRegulamento] = useState(false)
+  const [selectedAtleta, setSelectedAtleta] = useState<{
+    registration_id: string
+    nome: string
+    peso_inscricao: number | null
+    academia: { id: string; nome: string; logo_url: string | null } | null
+    categoria: { id: string; nome_display: string; genero: string } | null
+  } | null>(null)
 
   useEffect(() => {
     fetch(`/api/eventos/${id}`)
@@ -150,6 +158,20 @@ export default function EventoPublicPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Atleta search — só faz sentido quando há inscritos */}
+            {totalInscritos > 0 && (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4 text-cyan-400" />
+                  <h2 className="text-sm font-semibold text-white">Buscar atleta inscrito</h2>
+                </div>
+                <AtletaSearch
+                  eventoId={evento.id}
+                  onSelectAtleta={(r) => setSelectedAtleta(r)}
+                />
+              </div>
+            )}
+
             {/* Quick info cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
@@ -382,6 +404,79 @@ export default function EventoPublicPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de detalhes do atleta */}
+      {selectedAtleta && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => setSelectedAtleta(null)}
+        >
+          <div
+            className="bg-slate-900 border border-white/10 rounded-2xl max-w-md w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-white/10 flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {selectedAtleta.academia?.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selectedAtleta.academia.logo_url}
+                    alt=""
+                    className="w-12 h-12 rounded-full object-cover bg-white/5 shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0">
+                    <Building2 className="w-5 h-5 text-cyan-400" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold text-white truncate">{selectedAtleta.nome}</h2>
+                  {selectedAtleta.academia?.nome && (
+                    <p className="text-sm text-slate-400 truncate">{selectedAtleta.academia.nome}</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedAtleta(null)}
+                className="text-slate-400 hover:text-white shrink-0"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              {selectedAtleta.categoria && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Tag className="w-4 h-4 text-orange-400 shrink-0" />
+                  <span className="text-slate-400">Categoria:</span>
+                  <span className="text-white font-medium">{selectedAtleta.categoria.nome_display}</span>
+                </div>
+              )}
+              {selectedAtleta.peso_inscricao && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Weight className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span className="text-slate-400">Peso de inscrição:</span>
+                  <span className="text-white font-medium">{Number(selectedAtleta.peso_inscricao).toFixed(1)} kg</span>
+                </div>
+              )}
+              <div className="pt-3 border-t border-white/5 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => router.push(`/eventos/${evento.id}/ao-vivo`)}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-cyan-500/10 border border-cyan-500/20 rounded-lg text-cyan-300 text-sm hover:bg-cyan-500/20"
+                >
+                  <Tv className="w-4 h-4" /> Ao vivo
+                </button>
+                <button
+                  onClick={() => router.push(`/eventos/${evento.id}/resultados`)}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-300 text-sm hover:bg-purple-500/20"
+                >
+                  <Trophy className="w-4 h-4" /> Resultados
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
