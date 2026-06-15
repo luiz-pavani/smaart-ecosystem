@@ -109,6 +109,29 @@ export async function PATCH(
 
   if (!score) return NextResponse.json({ error: 'Score não encontrado' }, { status: 404 })
 
+  // Golden score backend validation: rejeita PATCHes que mantêm o relógio rodando
+  // depois do max de golden_score_seg. Sem isso, um cliente bugado podia manter
+  // a luta correndo indefinidamente em golden score.
+  // Pulamos a validação para 'finish' (que encerra a luta) e 'matte' (que pausa).
+  if (action !== 'finish' && action !== 'matte' && (score.golden_score || golden_score)) {
+    // Busca o limite de golden_score_seg da categoria via JOIN
+    const { data: matchData } = await supabaseAdmin
+      .from('event_matches')
+      .select('bracket:event_brackets(category:event_categories(golden_score_seg))')
+      .eq('id', matchId)
+      .maybeSingle()
+    const gsMax = (matchData as any)?.bracket?.category?.golden_score_seg
+    // gsMax null/undefined/0 = sem limite definido — não valida
+    if (gsMax && gsMax > 0) {
+      const effectiveClock = clock_seconds !== undefined ? Number(clock_seconds) : Number(score.clock_seconds || 0)
+      if (effectiveClock >= gsMax) {
+        return NextResponse.json({
+          error: 'Golden score excedeu o tempo máximo. Encerre a luta com finish (yusei-gachi ou hantei).',
+        }, { status: 400 })
+      }
+    }
+  }
+
   // Build update object
   const updates: Record<string, unknown> = {}
 
