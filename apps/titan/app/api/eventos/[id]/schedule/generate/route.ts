@@ -301,6 +301,12 @@ export async function POST(
     })
     .eq('id', eventoId)
 
+  // Conflict detection — depois do schedule pronto, verifica se algum atleta
+  // tem 2 lutas que vão acontecer simultaneamente em tatames diferentes.
+  // Acontece quando o atleta está inscrito em múltiplas categorias (ex: -73kg
+  // + open class) que caíram em áreas distintas.
+  const conflicts = await detectScheduleConflicts(eventoId)
+
   return NextResponse.json({
     ok: true,
     total_brackets: updates.length,
@@ -309,5 +315,153 @@ export async function POST(
       brackets: updates.filter(u => u.area_id === i + 1).length,
       matches: areaAssignments.filter(a => a.area_id === i + 1).reduce((s, a) => s + a.num_matches, 0),
     })),
+    conflicts,
   })
+}
+
+interface ScheduleConflict {
+  registration_id: string
+  atleta_nome: string | null
+  matches: Array<{
+    match_id: string
+    bracket_id: string
+    category_nome: string | null
+    area_id: number | null
+    estimated_start_min: number
+    estimated_end_min: number
+  }>
+}
+
+/**
+ * Para cada atleta com 2+ matches no evento, calcula o tempo estimado de cada
+ * match (hora_estimada do bracket + offset estimado por match_number dentro do
+ * bracket × tempo_luta_seg + intervalo). Se 2 matches do mesmo atleta sobrepõem
+ * em tatames diferentes, registra conflito.
+ *
+ * Limitação: usa tempo médio. Não considera atrasos reais nem byes. Boa o
+ * suficiente pra alertar antes do evento.
+ */
+async function detectScheduleConflicts(
+  eventoId: string,
+): Promise<ScheduleConflict[]> {
+  // Busca todas as lutas + bracket info de uma vez
+  const { data: matches } = await supabaseAdmin
+    .from('event_matches')
+    .select(`
+      id, athlete1_registration_id, athlete2_registration_id, match_number, tipo,
+      bracket:event_brackets!inner(
+        id, area_id, hora_estimada, evento_id,
+        category:event_categories(nome_display, tempo_luta_seg, intervalo_entre_lutas_seg)
+      )
+    `)
+    .eq('bracket.evento_id', eventoId)
+
+  if (!matches || matches.length === 0) return []
+
+  const parseTime = (t: string | null) => {
+    if (!t) return 0
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
+
+  // Calcula start/end estimado por match
+  type MatchInfo = {
+    match_id: string
+    registration_id: string
+    bracket_id: string
+    category_nome: string | null
+    area_id: number | null
+    start_min: number
+    end_min: number
+  }
+  const all: MatchInfo[] = []
+  // Agrupa por bracket pra calcular offset por match_number
+  const byBracket = new Map<string, typeof matches>()
+  for (const m of matches) {
+    const bid = (m.bracket as any)?.id
+    if (!bid) continue
+    if (!byBracket.has(bid)) byBracket.set(bid, [])
+    byBracket.get(bid)!.push(m)
+  }
+  for (const [, bMatches] of byBracket) {
+    const sorted = bMatches.sort((a: any, b: any) => (a.match_number || 0) - (b.match_number || 0))
+    const cat = (sorted[0] as any)?.bracket?.category
+    const tempoLuta = (cat?.tempo_luta_seg || 240) / 60 // minutos
+    const intervalo = (cat?.intervalo_entre_lutas_seg || 60) / 60
+    const bracketStart = parseTime((sorted[0] as any)?.bracket?.hora_estimada)
+    const areaId = (sorted[0] as any)?.bracket?.area_id
+    const catNome = cat?.nome_display ?? null
+    sorted.forEach((m: any, idx: number) => {
+      const offset = idx * (tempoLuta + intervalo)
+      const start = bracketStart + offset
+      const end = start + tempoLuta
+      for (const regId of [m.athlete1_registration_id, m.athlete2_registration_id].filter(Boolean)) {
+        all.push({
+          match_id: m.id,
+          registration_id: regId,
+          bracket_id: m.bracket?.id ?? '',
+          category_nome: catNome,
+          area_id: areaId,
+          start_min: start,
+          end_min: end,
+        })
+      }
+    })
+  }
+
+  // Agrupa por atleta e procura sobreposições em áreas diferentes
+  const byAthlete = new Map<string, MatchInfo[]>()
+  for (const m of all) {
+    if (!byAthlete.has(m.registration_id)) byAthlete.set(m.registration_id, [])
+    byAthlete.get(m.registration_id)!.push(m)
+  }
+
+  const conflictRegistrationIds: string[] = []
+  const conflictsByReg = new Map<string, MatchInfo[]>()
+  for (const [regId, infos] of byAthlete) {
+    if (infos.length < 2) continue
+    // ordena por start
+    infos.sort((a, b) => a.start_min - b.start_min)
+    // overlap entre quaisquer 2 matches em áreas distintas
+    const overlapping: Set<string> = new Set()
+    for (let i = 0; i < infos.length; i++) {
+      for (let j = i + 1; j < infos.length; j++) {
+        const a = infos[i], b = infos[j]
+        const overlap = a.start_min < b.end_min && b.start_min < a.end_min
+        if (overlap && a.area_id !== b.area_id) {
+          overlapping.add(a.match_id)
+          overlapping.add(b.match_id)
+        }
+      }
+    }
+    if (overlapping.size > 0) {
+      conflictRegistrationIds.push(regId)
+      conflictsByReg.set(regId, infos.filter(i => overlapping.has(i.match_id)))
+    }
+  }
+
+  if (conflictRegistrationIds.length === 0) return []
+
+  // Busca nomes dos atletas
+  const { data: regs } = await supabaseAdmin
+    .from('event_registrations')
+    .select('id, dados_atleta')
+    .in('id', conflictRegistrationIds)
+
+  const nomeById = new Map<string, string | null>(
+    (regs || []).map(r => [r.id, (r.dados_atleta as any)?.nome ?? null])
+  )
+
+  return conflictRegistrationIds.map(regId => ({
+    registration_id: regId,
+    atleta_nome: nomeById.get(regId) ?? null,
+    matches: (conflictsByReg.get(regId) || []).map(m => ({
+      match_id: m.match_id,
+      bracket_id: m.bracket_id,
+      category_nome: m.category_nome,
+      area_id: m.area_id,
+      estimated_start_min: m.start_min,
+      estimated_end_min: m.end_min,
+    })),
+  }))
 }
