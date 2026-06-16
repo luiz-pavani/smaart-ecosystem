@@ -57,7 +57,7 @@ export default function EventosAtletaPage() {
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(new Set())
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const [checkoutProduto, setCheckoutProduto] = useState<CheckoutProduto | null>(null)
-  const [atletaInfo, setAtletaInfo] = useState<{ nome: string; email: string; genero?: string; idade?: number; peso?: number } | null>(null)
+  const [atletaInfo, setAtletaInfo] = useState<{ nome: string; email: string; cpf?: string; telefone?: string; genero?: string; idade?: number; peso?: number } | null>(null)
 
   // Category selection modal
   const [categoryModalEvent, setCategoryModalEvent] = useState<EventoDisponivel | null>(null)
@@ -125,6 +125,8 @@ export default function EventosAtletaPage() {
         setAtletaInfo({
           nome: s.nome_completo || '',
           email: s.email || '',
+          cpf: s.cpf || s.documento || undefined,
+          telefone: s.telefone || undefined,
           genero: s.genero || undefined,
           idade: age,
           peso: s.peso_atual || undefined,
@@ -749,8 +751,9 @@ export default function EventosAtletaPage() {
           produto={checkoutProduto}
           customer={{
             name: atletaInfo.nome,
-            identity: '',
+            identity: (atletaInfo.cpf || '').replace(/\D/g, ''),
             email: atletaInfo.email,
+            phone: atletaInfo.telefone || '',
           }}
           onSuccess={() => {
             setCheckoutProduto(null)

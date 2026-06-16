@@ -84,9 +84,17 @@ export async function POST(req: NextRequest) {
 
   // ── Customer Safe2Pay ─────────────────────────────────────────────────────
 
+  const cpfDigits = String(customer.identity || '').replace(/\D/g, '')
+  if (cpfDigits.length !== 11) {
+    return NextResponse.json({
+      error: 'CPF obrigatório. Preencha seu CPF no perfil antes de pagar.',
+      code: 'cpf_missing',
+    }, { status: 400 })
+  }
+
   const s2pCustomer: Safe2PayCustomer = {
     Name: customer.name,
-    Identity: String(customer.identity || '').replace(/\D/g, ''),
+    Identity: cpfDigits,
     Phone: customer.phone || '',
     Email: customer.email || user.email || '',
     Address: customer.address,

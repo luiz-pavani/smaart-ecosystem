@@ -38,7 +38,7 @@ interface CheckoutModalProps {
 }
 
 type Metodo = 'pix' | 'cartao'
-type Stage = 'selecionar' | 'cartao_form' | 'aguardando_pix' | 'pago' | 'erro'
+type Stage = 'selecionar' | 'cartao_form' | 'aguardando_pix' | 'pago' | 'erro' | 'pedir_cpf'
 
 interface CardForm {
   number: string
@@ -61,6 +61,9 @@ export default function CheckoutModal({
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
   const [card, setCard] = useState<CardForm>({ number: '', holder: '', expiry: '', cvv: '' })
+  const [cpfInput, setCpfInput] = useState('')
+  const [cpfSaving, setCpfSaving] = useState(false)
+  const [effectiveCpf, setEffectiveCpf] = useState(customer.identity || '')
 
   // Pix result
   const [pixData, setPixData] = useState<{
@@ -105,7 +108,7 @@ export default function CheckoutModal({
           academia_id: produto.academia_id,
           customer: {
             name: customer.name,
-            identity: customer.identity,
+            identity: effectiveCpf,
             email: customer.email,
             phone: customer.phone,
             address: customer.address,
@@ -115,6 +118,11 @@ export default function CheckoutModal({
       const data = await res.json()
 
       if (!res.ok) {
+        if (data.code === 'cpf_missing') {
+          setStage('pedir_cpf')
+          setLoading(false)
+          return
+        }
         setErro(data.error || 'Erro ao gerar Pix')
         setStage('erro')
         return
@@ -179,7 +187,7 @@ export default function CheckoutModal({
           academia_id: produto.academia_id,
           customer: {
             name: customer.name,
-            identity: customer.identity,
+            identity: effectiveCpf,
             email: customer.email,
             phone: customer.phone,
           },
@@ -188,6 +196,11 @@ export default function CheckoutModal({
       const payData = await payRes.json()
 
       if (!payRes.ok) {
+        if (payData.code === 'cpf_missing') {
+          setStage('pedir_cpf')
+          setLoading(false)
+          return
+        }
         setErro(payData.error || 'Erro ao processar pagamento')
         setStage('erro')
         return
@@ -382,6 +395,55 @@ export default function CheckoutModal({
               >
                 Fechar
               </button>
+            </div>
+          )}
+
+          {/* ── Pedir CPF ─────────────────────────────────────────────────────────── */}
+          {stage === 'pedir_cpf' && (
+            <div className="flex flex-col gap-3 py-2">
+              <div className="text-center">
+                <CreditCard className="w-12 h-12 text-cyan-400 mx-auto mb-2" />
+                <p className="text-base font-semibold text-white">Falta o seu CPF</p>
+                <p className="text-xs text-zinc-400 mt-1">
+                  É exigido pelo gateway de pagamento. Será salvo no seu perfil.
+                </p>
+              </div>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={cpfInput}
+                onChange={e => setCpfInput(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="000.000.000-00"
+                maxLength={11}
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-center font-mono text-lg tracking-wider"
+                autoFocus
+              />
+              <button
+                onClick={async () => {
+                  setCpfSaving(true)
+                  setErro('')
+                  const res = await fetch('/api/atletas/self/cpf', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cpf: cpfInput }),
+                  })
+                  const data = await res.json()
+                  setCpfSaving(false)
+                  if (!res.ok) {
+                    setErro(data.error || 'CPF inválido')
+                    return
+                  }
+                  setEffectiveCpf(cpfInput)
+                  setErro('')
+                  setStage('selecionar')
+                }}
+                disabled={cpfInput.length !== 11 || cpfSaving}
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-white font-medium rounded-lg transition-colors"
+              >
+                {cpfSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Salvar e continuar
+              </button>
+              {erro && <p className="text-xs text-red-400 text-center">{erro}</p>}
             </div>
           )}
 
