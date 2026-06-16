@@ -79,7 +79,7 @@ export async function POST(
     .select(`
       id, category_id, tipo, status, num_rodadas,
       category:event_categories(
-        id, nome_display, tempo_luta_seg, golden_score_seg, intervalo_entre_lutas_seg,
+        id, nome_display, tempo_luta_seg, golden_score_seg, intervalo_entre_lutas_seg, dia_competicao,
         age_group:event_age_groups(tempo_luta_seg, golden_score_seg, intervalo_entre_lutas_seg)
       )
     `)
@@ -145,6 +145,10 @@ export async function POST(
   })
 
   const orderedBrackets = [...brackets].sort((a, b) => {
+    // Primeiro ordena por dia_competicao (multi-day), nulls primeiro (= default day)
+    const aDia = (a.category as any)?.dia_competicao || ''
+    const bDia = (b.category as any)?.dia_competicao || ''
+    if (aDia !== bDia) return aDia.localeCompare(bDia)
     const aIdx = orderMap.has(a.category_id) ? orderMap.get(a.category_id)! : 9999
     const bIdx = orderMap.has(b.category_id) ? orderMap.get(b.category_id)! : 9999
     if (aIdx !== bIdx) return aIdx - bIdx
@@ -153,23 +157,38 @@ export async function POST(
     return aName.localeCompare(bName)
   })
 
-  // Distribute brackets across areas
+  // Multi-day: agrupa brackets por dia_competicao. Cada dia tem seu próprio
+  // schedule (tatames zeram às hora_inicio do dia, não acumulam carga).
+  const bracketsByDay = new Map<string, typeof orderedBrackets>()
+  for (const b of orderedBrackets) {
+    const dia = ((b.category as any)?.dia_competicao as string | null) || '__default__'
+    if (!bracketsByDay.has(dia)) bracketsByDay.set(dia, [])
+    bracketsByDay.get(dia)!.push(b)
+  }
+
+  // Distribute brackets across areas — agora roda 1x por dia
   const areaAssignments: Array<{
     bracket_id: string; area_id: number; ordem: number;
-    num_matches: number; total_minutes: number
+    num_matches: number; total_minutes: number;
+    dia_competicao: string | null;
   }> = []
 
-  if (strategy === 'sequential') {
-    const perArea = Math.ceil(orderedBrackets.length / numAreas)
-    orderedBrackets.forEach((b, i) => {
+  // Para cada dia, roda a estratégia escolhida com clock próprio.
+  // dayKey '__default__' = brackets sem dia_competicao (single-day fallback).
+  for (const [dayKey, dayBrackets] of bracketsByDay) {
+    const diaCompeticao = dayKey === '__default__' ? null : dayKey
+    if (strategy === 'sequential') {
+    const perArea = Math.ceil(dayBrackets.length / numAreas)
+    dayBrackets.forEach((b, i) => {
       const areaId = Math.min(Math.floor(i / perArea) + 1, numAreas)
-      const ordem = areaAssignments.filter(a => a.area_id === areaId).length + 1
+      const ordem = areaAssignments.filter(a => a.area_id === areaId && a.dia_competicao === diaCompeticao).length + 1
       areaAssignments.push({
         bracket_id: b.id,
         area_id: areaId,
         ordem,
         num_matches: bracketMatchCounts.get(b.id) || 0,
         total_minutes: bracketTimeMap.get(b.id) || 0,
+        dia_competicao: diaCompeticao,
       })
     })
   } else if (strategy === 'optimal') {
@@ -192,7 +211,7 @@ export async function POST(
     const areaTimeline: Allocated[][] = Array.from({ length: numAreas }, () => [])
     const interCategoriaMin = Number(intervalo_entre_categorias_min) || 0
 
-    for (const b of orderedBrackets) {
+    for (const b of dayBrackets) {
       const totalMin = bracketTimeMap.get(b.id) || 0
       const athletes = bracketAthletes.get(b.id) || new Set<string>()
       let bestArea = 0
@@ -235,6 +254,7 @@ export async function POST(
         ordem: areaOrdem[bestArea],
         num_matches: bracketMatchCounts.get(b.id) || 0,
         total_minutes: totalMin,
+        dia_competicao: diaCompeticao,
       })
     }
   } else {
@@ -242,7 +262,7 @@ export async function POST(
     const areaLoad = new Array(numAreas).fill(0) // minutes
     const areaOrdem = new Array(numAreas).fill(0)
 
-    for (const b of orderedBrackets) {
+    for (const b of dayBrackets) {
       let minArea = 0
       for (let a = 1; a < numAreas; a++) {
         if (areaLoad[a] < areaLoad[minArea]) minArea = a
@@ -258,9 +278,11 @@ export async function POST(
         ordem: areaOrdem[minArea],
         num_matches: bracketMatchCounts.get(b.id) || 0,
         total_minutes: totalMin,
+        dia_competicao: diaCompeticao,
       })
     }
   }
+  } // fim do for de dias
 
   // Compute hora_estimada per bracket using real times
   const parseTime = (t: string) => {
@@ -274,13 +296,26 @@ export async function POST(
   }
 
   const startMinutes = parseTime(hora_inicio)
-  const areaClock = new Array(numAreas + 1).fill(startMinutes)
 
-  areaAssignments.sort((a, b) => a.area_id - b.area_id || a.ordem - b.ordem)
+  // Multi-day: ordena por dia, depois area, depois ordem. Cada dia tem seu
+  // próprio relógio começando em hora_inicio (não acumula carga entre dias).
+  areaAssignments.sort((a, b) => {
+    const aDia = a.dia_competicao || ''
+    const bDia = b.dia_competicao || ''
+    if (aDia !== bDia) return aDia.localeCompare(bDia)
+    return a.area_id - b.area_id || a.ordem - b.ordem
+  })
 
   const updates: Array<{ bracket_id: string; area_id: number; ordem_no_dia: number; hora_estimada: string }> = []
+  let lastDay: string | null | undefined = undefined
+  let areaClock = new Array(numAreas + 1).fill(startMinutes)
 
   for (const assign of areaAssignments) {
+    if (assign.dia_competicao !== lastDay) {
+      // Novo dia — reseta clocks
+      areaClock = new Array(numAreas + 1).fill(startMinutes)
+      lastDay = assign.dia_competicao
+    }
     const hora = formatTime(areaClock[assign.area_id])
     updates.push({
       bracket_id: assign.bracket_id,

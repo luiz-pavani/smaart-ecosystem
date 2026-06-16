@@ -44,6 +44,7 @@ interface Category {
   golden_score_seg: number | null
   intervalo_entre_lutas_seg: number | null
   modo: 'competitivo' | 'festival'
+  dia_competicao: string | null
   total_inscritos: number
   ativo: boolean
   age_group: { id: string; nome: string } | null
@@ -59,6 +60,9 @@ export default function CategoriasPage() {
 
   const [tab, setTab] = useState<'categorias' | 'divisoes'>('categorias')
   const [eventoNome, setEventoNome] = useState('')
+  // Multi-day: janela do evento pra montar dropdown de dias
+  const [eventoDataIni, setEventoDataIni] = useState<string | null>(null)
+  const [eventoDataFim, setEventoDataFim] = useState<string | null>(null)
 
   // --- Categories state ---
   const [categories, setCategories] = useState<Category[]>([])
@@ -71,7 +75,7 @@ export default function CategoriasPage() {
   const [editFields, setEditFields] = useState<Record<string, unknown>>({})
   const [savingEdit, setSavingEdit] = useState(false)
   const [showAddCat, setShowAddCat] = useState(false)
-  const [newCat, setNewCat] = useState({ nome_display: '', genero: 'Masculino', tempo_luta_seg: 240, golden_score_seg: '', taxa_inscricao: 0, modo: 'competitivo' as string })
+  const [newCat, setNewCat] = useState({ nome_display: '', genero: 'Masculino', tempo_luta_seg: 240, golden_score_seg: '', taxa_inscricao: 0, modo: 'competitivo' as string, dia_competicao: '' as string })
   const [addingCat, setAddingCat] = useState(false)
 
   // --- Divisoes state ---
@@ -104,7 +108,11 @@ export default function CategoriasPage() {
       const catJson = await catRes.json()
       const evJson = await evRes.json()
       if (catRes.ok) setCategories(catJson.categories || [])
-      if (evRes.ok) setEventoNome(evJson.evento?.nome || '')
+      if (evRes.ok) {
+        setEventoNome(evJson.evento?.nome || '')
+        setEventoDataIni(evJson.evento?.data_evento || null)
+        setEventoDataFim(evJson.evento?.data_evento_fim || null)
+      }
     } catch { /* */ } finally { setCatLoading(false) }
   }, [eventoId])
 
@@ -171,10 +179,11 @@ export default function CategoriasPage() {
           golden_score_seg: newCat.golden_score_seg ? parseInt(newCat.golden_score_seg) : null,
           taxa_inscricao: newCat.taxa_inscricao,
           modo: newCat.modo,
+          dia_competicao: newCat.dia_competicao || null,
         }),
       })
       setShowAddCat(false)
-      setNewCat({ nome_display: '', genero: 'Masculino', tempo_luta_seg: 240, golden_score_seg: '', taxa_inscricao: 0, modo: 'competitivo' })
+      setNewCat({ nome_display: '', genero: 'Masculino', tempo_luta_seg: 240, golden_score_seg: '', taxa_inscricao: 0, modo: 'competitivo', dia_competicao: '' })
       await loadCategories()
     } catch { /* */ } finally { setAddingCat(false) }
   }
@@ -276,6 +285,24 @@ export default function CategoriasPage() {
   })
 
   const formatTime = (seg: number) => `${Math.floor(seg / 60)}:${(seg % 60).toString().padStart(2, '0')}`
+
+  // Multi-day helpers
+  const eventDaysBetween = (ini: string, fim: string): string[] => {
+    const days: string[] = []
+    const start = new Date(ini + 'T12:00:00')
+    const end = new Date(fim + 'T12:00:00')
+    const cursor = new Date(start)
+    while (cursor <= end) {
+      days.push(cursor.toISOString().split('T')[0])
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    return days
+  }
+  const formatBRDate = (iso: string): string => {
+    try {
+      return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+    } catch { return iso }
+  }
   const totalCats = categories.length
   const totalInscritos = categories.reduce((s, c) => s + c.total_inscritos, 0)
   const mascCount = categories.filter(c => c.genero === 'Masculino').length
@@ -380,6 +407,24 @@ export default function CategoriasPage() {
                     <span className="text-[10px] text-amber-400/70">(Todos recebem 1o lugar)</span>
                   )}
                 </div>
+                {/* Multi-day: dropdown só aparece se o evento dura mais que 1 dia */}
+                {eventoDataIni && eventoDataFim && eventoDataFim !== eventoDataIni && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-xs text-slate-400">Dia da competição:</span>
+                    <select
+                      value={newCat.dia_competicao}
+                      onChange={e => setNewCat(p => ({ ...p, dia_competicao: e.target.value }))}
+                      className={`${ic} text-xs`}
+                    >
+                      <option value="">Sem restrição (qualquer dia)</option>
+                      {eventDaysBetween(eventoDataIni, eventoDataFim).map(d => (
+                        <option key={d} value={d}>
+                          {formatBRDate(d)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <button onClick={handleAddCat} disabled={addingCat || !newCat.nome_display.trim()}
                   className="flex items-center gap-1 px-4 py-2 bg-cyan-500/20 text-cyan-300 rounded-lg text-xs font-medium hover:bg-cyan-500/30 disabled:opacity-40">
                   {addingCat ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}

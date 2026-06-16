@@ -77,7 +77,7 @@ export async function POST(
   if (!(await checkAdmin(user.id))) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const body = await req.json()
-  const { age_group_id, weight_class_id, genero, kyu_dan_min, kyu_dan_max, nome_display, taxa_inscricao, limite_inscritos, tempo_luta_seg, golden_score_seg, modo } = body
+  const { age_group_id, weight_class_id, genero, kyu_dan_min, kyu_dan_max, nome_display, taxa_inscricao, limite_inscritos, tempo_luta_seg, golden_score_seg, modo, dia_competicao } = body
 
   if (!genero || !nome_display) {
     return NextResponse.json({ error: 'genero e nome_display são obrigatórios' }, { status: 400 })
@@ -98,6 +98,7 @@ export async function POST(
       tempo_luta_seg: tempo_luta_seg ?? 240,
       golden_score_seg: golden_score_seg ?? null,
       modo: modo || 'competitivo',
+      dia_competicao: dia_competicao || null,
     })
     .select()
     .single()
@@ -121,7 +122,7 @@ export async function PATCH(
   const { category_id, ...fields } = body
   if (!category_id) return NextResponse.json({ error: 'category_id obrigatório' }, { status: 400 })
 
-  const allowed = ['nome_display', 'genero', 'taxa_inscricao', 'limite_inscritos', 'tempo_luta_seg', 'golden_score_seg', 'intervalo_entre_lutas_seg', 'kyu_dan_min', 'kyu_dan_max', 'ativo', 'age_group_id', 'weight_class_id', 'modo']
+  const allowed = ['nome_display', 'genero', 'taxa_inscricao', 'limite_inscritos', 'tempo_luta_seg', 'golden_score_seg', 'intervalo_entre_lutas_seg', 'kyu_dan_min', 'kyu_dan_max', 'ativo', 'age_group_id', 'weight_class_id', 'modo', 'dia_competicao']
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (fields[key] !== undefined) updates[key] = fields[key]
