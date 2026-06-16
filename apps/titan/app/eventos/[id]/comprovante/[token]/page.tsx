@@ -68,7 +68,7 @@ export default function ComprovantePage() {
     )
   }
 
-  const isPaid = ['pago', 'confirmado', 'aprovado'].includes(insc.status)
+  const isPaid = ['confirmed', 'pago', 'confirmado', 'aprovado'].includes(insc.status)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-8 px-4">
@@ -93,7 +93,7 @@ export default function ComprovantePage() {
         ) : (
           <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
             <div className="text-red-300 font-bold">Pagamento pendente</div>
-            <div className="text-red-200/70 text-xs mt-1">Status: {insc.status}</div>
+            <div className="text-red-200/70 text-xs mt-1">Conclua o pagamento no portal para liberar o credenciamento</div>
           </div>
         )}
 
