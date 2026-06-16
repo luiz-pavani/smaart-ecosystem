@@ -413,7 +413,19 @@ export default function ScoringPage() {
         body: JSON.stringify({ solicitado_por: 'operador', motivo: varMotivo, timestamp_luta_seg: match ? match.bracket.category.tempo_luta_seg - (score?.clock_seconds || 0) : 0 }),
       })
       const json = await res.json()
-      if (res.ok) setVarId(json.var?.id || null)
+      const newVarId = json.var?.id || null
+      if (res.ok && newVarId) {
+        setVarId(newVarId)
+        // Upload clip persistente em background (best-effort)
+        if (recordedChunksRef.current.length > 0) {
+          const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' })
+          const form = new FormData()
+          form.append('video', blob, `var-${newVarId}.webm`)
+          fetch(`/api/eventos/${eventoId}/scoring/${matchId}/var-upload?var_id=${newVarId}`, {
+            method: 'POST', body: form,
+          }).catch(() => { /* silent — local blob_url segue funcionando */ })
+        }
+      }
     } catch { /* silent */ }
     setVarMotivo(''); setVarMode('review'); setPlaybackSpeed(1)
   }
