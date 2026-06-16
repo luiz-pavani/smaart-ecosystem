@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeftRight, Loader2, Check } from 'lucide-react'
+import { ArrowLeftRight, Loader2, Check, GripVertical } from 'lucide-react'
 
 interface Slot {
   id: string
@@ -37,16 +37,20 @@ function getAcademia(s: Slot): string {
 }
 
 /**
- * MVP do bracket editor: lista os slots da rodada 1 e permite trocar
- * 2 atletas por click.
+ * Bracket editor — versão drag-and-drop nativa HTML5.
  *
- * Funcionamento: clica no 1º slot (vira selecionado), clica no 2º
- * (faz swap). Botão "cancelar" pra desselecionar.
+ * Suporta 2 modos de interação:
+ *   1. Drag-and-drop: arrasta slot e solta em cima de outro → swap.
+ *   2. Click fallback: dois cliques sequenciais em 2 slots → swap.
+ *      Útil em tablets onde drag pode ser inconsistente.
  *
- * Drag-and-drop fica pra v2 quando UX for prioridade.
+ * BYE slots não são draggable nem alvo de drop (não há atleta pra trocar).
+ * Bracket fora de status='draft' bloqueia todas as interações.
  */
 export default function SlotEditor({ eventoId, bracketId, slots, bracketStatus, onAfterSwap }: Props) {
   const [selected, setSelected] = useState<string | null>(null)
+  const [dragging, setDragging] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null)
 
@@ -55,8 +59,8 @@ export default function SlotEditor({ eventoId, bracketId, slots, bracketStatus, 
     .filter(s => s.rodada === 1)
     .sort((a, b) => a.posicao - b.posicao)
 
-  const swap = async (otherId: string) => {
-    if (!selected || selected === otherId || busy) return
+  const swap = async (slotAId: string, slotBId: string) => {
+    if (slotAId === slotBId || busy) return
     setBusy(true)
     setFeedback(null)
     try {
@@ -65,7 +69,7 @@ export default function SlotEditor({ eventoId, bracketId, slots, bracketStatus, 
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slot_a_id: selected, slot_b_id: otherId }),
+          body: JSON.stringify({ slot_a_id: slotAId, slot_b_id: slotBId }),
         }
       )
       const json = await res.json()
@@ -82,6 +86,57 @@ export default function SlotEditor({ eventoId, bracketId, slots, bracketStatus, 
     }
   }
 
+  const onDragStart = (e: React.DragEvent, slotId: string, slot: Slot) => {
+    if (isLocked || busy || slot.is_bye) {
+      e.preventDefault()
+      return
+    }
+    setDragging(slotId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', slotId)
+  }
+
+  const onDragOver = (e: React.DragEvent, slotId: string, slot: Slot) => {
+    if (isLocked || busy || slot.is_bye) return
+    if (dragging && dragging !== slotId) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      setDragOver(slotId)
+    }
+  }
+
+  const onDragLeave = (slotId: string) => {
+    if (dragOver === slotId) setDragOver(null)
+  }
+
+  const onDrop = (e: React.DragEvent, slotId: string, slot: Slot) => {
+    e.preventDefault()
+    setDragOver(null)
+    if (isLocked || busy || slot.is_bye) return
+    const dragSourceId = dragging || e.dataTransfer.getData('text/plain')
+    setDragging(null)
+    if (dragSourceId && dragSourceId !== slotId) {
+      swap(dragSourceId, slotId)
+    }
+  }
+
+  const onDragEnd = () => {
+    setDragging(null)
+    setDragOver(null)
+  }
+
+  // Click fallback (tablets, acessibilidade)
+  const onClick = (slot: Slot) => {
+    if (isLocked || busy || slot.is_bye) return
+    if (!selected) {
+      setSelected(slot.id)
+    } else if (selected === slot.id) {
+      setSelected(null)
+    } else {
+      swap(selected, slot.id)
+    }
+  }
+
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4">
       <div className="flex items-start justify-between mb-3">
@@ -93,7 +148,7 @@ export default function SlotEditor({ eventoId, bracketId, slots, bracketStatus, 
           <p className="text-xs text-slate-400 mt-0.5">
             {isLocked
               ? 'Chave já está publicada/iniciada — edição bloqueada.'
-              : 'Clique em 2 atletas para trocá-los de posição.'}
+              : 'Arraste um atleta sobre outro para trocar, ou clique em 2 atletas em sequência.'}
           </p>
         </div>
         {selected && (
@@ -120,33 +175,37 @@ export default function SlotEditor({ eventoId, bracketId, slots, bracketStatus, 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {rodada1Slots.map((s) => {
           const isSelected = s.id === selected
-          const isCandidate = !!selected && !isSelected
+          const isDragging = s.id === dragging
+          const isDropTarget = s.id === dragOver
           const disabled = isLocked || busy || s.is_bye
           return (
-            <button
+            <div
               key={s.id}
-              disabled={disabled}
-              onClick={() => {
-                if (disabled) return
-                if (!selected) {
-                  setSelected(s.id)
-                } else if (selected === s.id) {
-                  setSelected(null)
-                } else {
-                  swap(s.id)
-                }
-              }}
-              className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-all ${
-                isSelected
-                  ? 'bg-cyan-500/15 border-cyan-500/50 ring-1 ring-cyan-400'
-                  : isCandidate
-                    ? 'bg-white/5 border-white/10 hover:border-cyan-500/30 cursor-pointer'
-                    : disabled
-                      ? 'bg-white/5 border-white/5 text-slate-500 opacity-50 cursor-not-allowed'
-                      : 'bg-white/5 border-white/10 hover:bg-white/10'
+              draggable={!disabled}
+              onDragStart={(e) => onDragStart(e, s.id, s)}
+              onDragOver={(e) => onDragOver(e, s.id, s)}
+              onDragLeave={() => onDragLeave(s.id)}
+              onDrop={(e) => onDrop(e, s.id, s)}
+              onDragEnd={onDragEnd}
+              onClick={() => onClick(s)}
+              className={`text-left px-3 py-2.5 rounded-lg border text-sm transition-all select-none ${
+                isDragging
+                  ? 'opacity-40'
+                  : isDropTarget
+                    ? 'bg-green-500/20 border-green-400 ring-2 ring-green-400 scale-[1.02]'
+                    : isSelected
+                      ? 'bg-cyan-500/15 border-cyan-500/50 ring-1 ring-cyan-400'
+                      : selected
+                        ? 'bg-white/5 border-white/10 hover:border-cyan-500/30 cursor-pointer'
+                        : disabled
+                          ? 'bg-white/5 border-white/5 text-slate-500 opacity-50 cursor-not-allowed'
+                          : 'bg-white/5 border-white/10 hover:bg-white/10 cursor-grab active:cursor-grabbing'
               }`}
             >
               <div className="flex items-center gap-2">
+                {!disabled && (
+                  <GripVertical className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                )}
                 <span className="text-[10px] font-mono text-slate-500 shrink-0 w-6">
                   #{s.posicao + 1}
                 </span>
@@ -156,9 +215,11 @@ export default function SlotEditor({ eventoId, bracketId, slots, bracketStatus, 
                     <div className="text-[10px] text-slate-400 truncate">{getAcademia(s)}</div>
                   )}
                 </div>
-                {busy && isSelected && <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />}
+                {busy && (isSelected || isDragging) && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                )}
               </div>
-            </button>
+            </div>
           )
         })}
       </div>
