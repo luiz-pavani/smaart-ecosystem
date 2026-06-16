@@ -192,6 +192,13 @@ export async function POST(
     else status = 'aprovado' // ignorar
   }
 
+  // Snapshot anterior pra audit log
+  const { data: prev } = await supabaseAdmin
+    .from('event_weigh_ins')
+    .select('id, peso_oficial, status, atleta_id')
+    .eq('registration_id', registration_id)
+    .maybeSingle()
+
   const { data: upserted, error: upErr } = await supabaseAdmin
     .from('event_weigh_ins')
     .upsert({
@@ -212,6 +219,20 @@ export async function POST(
     .single()
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
+
+  // Audit (best-effort — não bloqueia)
+  await supabaseAdmin.from('event_weigh_ins_audit').insert({
+    weigh_in_id: upserted?.id,
+    evento_id: eventoId,
+    atleta_id: prev?.atleta_id ?? null,
+    action: prev ? 'update' : 'create',
+    peso_anterior: prev?.peso_oficial ?? null,
+    peso_novo: peso_oficial,
+    status_anterior: prev?.status ?? null,
+    status_novo: status,
+    changed_by: user.id,
+    observacao: observacao || null,
+  })
 
   return NextResponse.json({ pesagem: upserted })
 }

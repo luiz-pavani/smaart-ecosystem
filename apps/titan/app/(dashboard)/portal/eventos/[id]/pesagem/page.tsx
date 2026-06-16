@@ -140,10 +140,18 @@ export default function PesagemPage() {
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white">
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             <Scale className="w-6 h-6 text-cyan-400" />
             <h1 className="text-2xl font-bold">Pesagem</h1>
           </div>
+          <a
+            href={`/api/eventos/${eventoId}/pesagem/pdf`}
+            target="_blank"
+            rel="noopener"
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-lg text-sm hover:bg-emerald-500/25"
+          >
+            📄 Exportar PDF Oficial
+          </a>
         </div>
 
         {/* Config info bar */}
