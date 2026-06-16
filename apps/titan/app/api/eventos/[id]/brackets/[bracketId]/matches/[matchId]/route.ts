@@ -53,13 +53,23 @@ export async function PATCH(
     return NextResponse.json({ error: 'Luta não encontrada' }, { status: 404 })
   }
 
+  // Lock: após sign-off (confirmed_by), só master_access pode alterar o winner.
+  // Antes do sign-off, qualquer admin pode corrigir resultado (era o central que
+  // registrou e mesa achou erro antes de confirmar).
+  if (match.confirmed_by && role !== 'master_access') {
+    return NextResponse.json({
+      error: 'Resultado já foi confirmado pela mesa. Apenas master_access pode reabrir.',
+    }, { status: 403 })
+  }
+
   // Validate winner is one of the athletes
   if (winner_registration_id !== match.athlete1_registration_id &&
       winner_registration_id !== match.athlete2_registration_id) {
     return NextResponse.json({ error: 'Vencedor deve ser um dos atletas da luta' }, { status: 400 })
   }
 
-  // Update match
+  // Update match. Grava finished_by para o sign-off depois validar que o
+  // confirmed_by é stakeholder diferente.
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from('event_matches')
     .update({
@@ -70,6 +80,8 @@ export async function PATCH(
       pontos_athlete2: pontos_athlete2 || match.pontos_athlete2,
       duracao_segundos: duracao_segundos || null,
       status: 'finished',
+      finished_by: user.id,
+      // Mantém confirmed_by/confirmed_at null — sign-off pendente.
     })
     .eq('id', matchId)
     .select()

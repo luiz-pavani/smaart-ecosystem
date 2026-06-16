@@ -109,6 +109,22 @@ export async function PATCH(
 
   if (!score) return NextResponse.json({ error: 'Score não encontrado' }, { status: 404 })
 
+  // Lock de score: depois que event_matches.status='finished', score não pode
+  // mais ser editado exceto por master_access (reabertura de luta em caso de
+  // contestação). Heartbeat é exceção pra não acumular fila no audit.
+  if (action !== 'heartbeat') {
+    const { data: matchLock } = await supabaseAdmin
+      .from('event_matches')
+      .select('status')
+      .eq('id', matchId)
+      .maybeSingle()
+    if (matchLock?.status === 'finished' && role !== 'master_access') {
+      return NextResponse.json({
+        error: 'Luta encerrada — apenas master_access pode reabrir e alterar o score.',
+      }, { status: 403 })
+    }
+  }
+
   // Golden score backend validation: rejeita PATCHes que mantêm o relógio rodando
   // depois do max de golden_score_seg. Sem isso, um cliente bugado podia manter
   // a luta correndo indefinidamente em golden score.
@@ -293,6 +309,27 @@ export async function PATCH(
       .update({ status: 'in_progress' })
       .eq('id', matchId)
       .in('status', ['ready', 'pending'])
+  }
+
+  // Audit log — pula heartbeat (alto volume, sem valor pra contestação).
+  // Best-effort: erro de insert não bloqueia resposta da action.
+  if (action && action !== 'heartbeat') {
+    try {
+      await supabaseAdmin.from('event_match_audit_log').insert({
+        match_id: matchId,
+        user_id: user.id,
+        action,
+        delta: updates as Record<string, unknown>,
+        clock_seconds: typeof updates.clock_seconds === 'number'
+          ? updates.clock_seconds
+          : (typeof clock_seconds === 'number' ? clock_seconds : null),
+        golden_score: typeof updates.golden_score === 'boolean'
+          ? updates.golden_score
+          : (typeof golden_score === 'boolean' ? golden_score : null),
+      })
+    } catch {
+      // não bloqueia
+    }
   }
 
   return NextResponse.json({ score: updated })
