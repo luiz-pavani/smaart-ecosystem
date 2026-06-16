@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { notifyAtletaPagamentoEvento } from '@/lib/whatsapp/notifications'
 
 /**
  * POST /api/webhooks/safe2pay
@@ -317,6 +318,35 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
         .update({ status: 'confirmed', updated_at: new Date().toISOString() })
         .eq('id', referenciaId)
         .in('status', ['pending_payment', 'pending_waivers'])
+
+      // Notificação WhatsApp — fire-and-forget. Busca dados pro template.
+      try {
+        const { data: reg } = await supabaseAdmin
+          .from('event_registrations')
+          .select(`
+            valor_pago, dados_atleta,
+            atleta:stakeholders!event_registrations_atleta_id_fkey(nome_completo, telefone),
+            evento:eventos(nome)
+          `)
+          .eq('id', referenciaId)
+          .maybeSingle()
+        if (reg) {
+          const atleta = reg.atleta as any
+          const evento = reg.evento as any
+          const valor = Number(reg.valor_pago || 0)
+          if (atleta?.telefone && evento?.nome && valor > 0) {
+            const valorBrl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)
+            await notifyAtletaPagamentoEvento({
+              nome_completo: atleta.nome_completo || (reg.dados_atleta as any)?.nome || 'Atleta',
+              telefone: atleta.telefone,
+              evento_nome: evento.nome,
+              valor_brl: valorBrl,
+            })
+          }
+        }
+      } catch (err) {
+        console.warn('[webhook s2p] falha ao enviar notificação WhatsApp:', err)
+      }
       break
     }
 

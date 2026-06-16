@@ -5,6 +5,7 @@ import {
   notifyAtletaPlanoVencido,
   notifyAcademiaAnualidadeVencendo,
   notifyAcademiaAnualidadeVencida,
+  notifyAtletaPesagemLembrete,
 } from '@/lib/whatsapp/notifications'
 import { sendText as sendWhatsApp } from '@/lib/whatsapp/meta'
 
@@ -166,7 +167,24 @@ export async function GET(req: NextRequest) {
 
       if (!dry) {
         try {
-          await sendWhatsApp(fullPhone, msg)
+          // No D-1, tenta template "lrsj_pesagem_lembrete" primeiro (mais
+          // confiável fora da conversation window). Fallback automático
+          // pra sendText se template não aprovado.
+          if (diasAte === 1) {
+            const templateResult = await notifyAtletaPesagemLembrete({
+              nome_completo: nome,
+              telefone: stk?.telefone || null,
+              evento_nome: evento.nome,
+              data: evento.data_evento,
+              local: evento.local || '—',
+            })
+            if (templateResult === null) {
+              // Template indisponível, usa sendText
+              await sendWhatsApp(fullPhone, msg)
+            }
+          } else {
+            await sendWhatsApp(fullPhone, msg)
+          }
         } catch { results.errors++ }
       }
       eventResults.enviados.push({ evento: evento.nome, nome, telefone: fullPhone, dias: diasAte })

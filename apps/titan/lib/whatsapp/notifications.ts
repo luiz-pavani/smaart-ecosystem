@@ -26,6 +26,88 @@ export async function notifyAtletaBoasVindas(atleta: {
 }
 
 /**
+ * Pagamento de inscrição confirmado.
+ *
+ * Template Meta: lrsj_evento_pagamento_confirmado
+ *   {{1}} nome, {{2}} evento_nome, {{3}} valor_brl
+ */
+export async function notifyAtletaPagamentoEvento(atleta: {
+  nome_completo: string
+  telefone: string | null
+  evento_nome: string
+  valor_brl: string
+}) {
+  const phone = normalizePhone(atleta.telefone)
+  if (!phone) return null
+  try {
+    return await sendTemplate(phone, 'lrsj_evento_pagamento_confirmado', [
+      atleta.nome_completo,
+      atleta.evento_nome,
+      atleta.valor_brl,
+    ])
+  } catch (err) {
+    console.warn('[whatsapp pagamento evento] template indisponível:', err)
+    return null
+  }
+}
+
+/**
+ * Lembrete de pesagem (24h antes do evento).
+ *
+ * Template Meta: lrsj_pesagem_lembrete
+ *   {{1}} nome, {{2}} evento_nome, {{3}} data, {{4}} local
+ */
+export async function notifyAtletaPesagemLembrete(atleta: {
+  nome_completo: string
+  telefone: string | null
+  evento_nome: string
+  data: string
+  local: string
+}) {
+  const phone = normalizePhone(atleta.telefone)
+  if (!phone) return null
+  try {
+    return await sendTemplate(phone, 'lrsj_pesagem_lembrete', [
+      atleta.nome_completo,
+      atleta.evento_nome,
+      atleta.data,
+      atleta.local,
+    ])
+  } catch (err) {
+    console.warn('[whatsapp pesagem lembrete] template indisponível:', err)
+    return null
+  }
+}
+
+/**
+ * Aviso "sua próxima luta" — N minutos antes da hora estimada.
+ *
+ * Template Meta: lrsj_proxima_luta
+ *   {{1}} nome, {{2}} categoria, {{3}} tatame, {{4}} ordem_na_fila
+ */
+export async function notifyAtletaProximaLuta(atleta: {
+  nome_completo: string
+  telefone: string | null
+  categoria: string
+  tatame: string
+  ordem_na_fila: string
+}) {
+  const phone = normalizePhone(atleta.telefone)
+  if (!phone) return null
+  try {
+    return await sendTemplate(phone, 'lrsj_proxima_luta', [
+      atleta.nome_completo,
+      atleta.categoria,
+      atleta.tatame,
+      atleta.ordem_na_fila,
+    ])
+  } catch (err) {
+    console.warn('[whatsapp proxima luta] template indisponível:', err)
+    return null
+  }
+}
+
+/**
  * Confirmação de inscrição em evento.
  *
  * ⚠️ Requer template registrado e aprovado no Meta Business Manager:
