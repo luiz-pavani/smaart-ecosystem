@@ -25,14 +25,15 @@ export async function GET(
 
   const streamIds = streams.map(s => s.id)
 
-  // Verificar pagamentos aprovados para esses streams
+  // Verificar pagamentos pagos pra esses streams.
+  // pagamentos usa stakeholder_id (não user_id) e status canônico 'pago'.
   const { data: pagamentos } = await supabaseAdmin
     .from('pagamentos')
     .select('referencia_id')
-    .eq('user_id', user.id)
+    .eq('stakeholder_id', user.id)
     .eq('referencia_tipo', 'ppv')
     .in('referencia_id', streamIds)
-    .eq('status', 'Aprovado')
+    .eq('status', 'pago')
 
   const unlocked = (pagamentos || []).map(p => p.referencia_id)
 
