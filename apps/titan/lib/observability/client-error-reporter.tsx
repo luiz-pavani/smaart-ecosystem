@@ -23,9 +23,9 @@ export default function ClientErrorReporter() {
       try {
         if (navigator.sendBeacon) {
           const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
-          navigator.sendBeacon('/api/_log', blob)
+          navigator.sendBeacon('/api/observability', blob)
         } else {
-          fetch('/api/_log', {
+          fetch('/api/observability', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),

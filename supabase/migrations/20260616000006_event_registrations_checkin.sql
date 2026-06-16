@@ -17,11 +17,11 @@ create or replace function public.set_checkin_token()
 returns trigger
 language plpgsql
 security invoker
-set search_path to 'public', 'pg_temp'
+set search_path to 'public', 'extensions', 'pg_temp'
 as $$
 begin
   if new.checkin_token is null then
-    new.checkin_token := substr(replace(encode(gen_random_bytes(12), 'base64'), '/', '_'), 1, 12);
+    new.checkin_token := substr(replace(encode(extensions.gen_random_bytes(12), 'base64'), '/', '_'), 1, 12);
   end if;
   return new;
 end;

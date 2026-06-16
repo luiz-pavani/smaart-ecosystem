@@ -34,25 +34,32 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { data: regs } = await supabaseAdmin
     .from('event_registrations')
     .select(`
-      id, peso_inscricao,
-      atletas:atleta_id(nome, sobrenome),
-      categories:category_id(nome),
+      id, atleta_id, peso_inscricao,
+      categories:event_categories!event_registrations_category_id_fkey(nome_display),
       pesagem:event_weigh_ins(peso_oficial, status)
     `)
     .eq('event_id', eventoId)
-    .in('status', ['pago', 'confirmado', 'aprovado'])
+    .in('status', ['confirmed', 'pago', 'confirmado', 'aprovado'])
     .order('category_id', { ascending: true })
 
+  const atletaIds = (regs || []).map(r => r.atleta_id).filter(Boolean) as string[]
+  const stakeMap = new Map<string, string>()
+  if (atletaIds.length) {
+    const { data: stakes } = await supabaseAdmin
+      .from('stakeholders')
+      .select('id, nome_completo')
+      .in('id', atletaIds)
+    for (const s of stakes || []) stakeMap.set(s.id, s.nome_completo || '—')
+  }
+
   const rows = (regs || []).map(r => {
-    const atRaw = Array.isArray(r.atletas) ? r.atletas[0] : r.atletas
     const catRaw = Array.isArray(r.categories) ? r.categories[0] : r.categories
-    const at = atRaw as { nome: string; sobrenome: string } | null
-    const cat = catRaw as { nome: string } | null
+    const cat = catRaw as { nome_display: string } | null
     const p = (Array.isArray(r.pesagem) ? r.pesagem[0] : r.pesagem) as { peso_oficial: number | null; status: string } | null
     return {
       id: r.id,
-      nome: at ? `${at.nome} ${at.sobrenome}`.trim() : '—',
-      categoria: cat?.nome || '—',
+      nome: r.atleta_id ? stakeMap.get(r.atleta_id) || '—' : '—',
+      categoria: cat?.nome_display || '—',
       peso_inscricao: r.peso_inscricao,
       peso_oficial: p?.peso_oficial ?? null,
       status: p?.status ?? 'pendente',

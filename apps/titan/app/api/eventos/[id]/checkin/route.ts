@@ -33,11 +33,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .select(`
       id, atleta_id, category_id, status, checked_in, checked_in_at, checkin_token,
       dados_atleta, peso_inscricao, academia_id,
-      atletas:atleta_id (id, nome, sobrenome),
-      categories:category_id (id, nome, peso_min, peso_max, genero, faixa_etaria)
+      categories:event_categories!event_registrations_category_id_fkey (id, nome_display, genero)
     `)
     .eq('event_id', eventoId)
-    .in('status', ['pago', 'confirmado', 'aprovado'])
+    .in('status', ['confirmed', 'pago', 'confirmado', 'aprovado'])
     .order('created_at', { ascending: true })
 
   if (status === 'checked_in') q = q.eq('checked_in', true)
@@ -46,11 +45,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const total = data?.length || 0
-  const checkedIn = data?.filter(r => r.checked_in).length || 0
+  // Hidrata nome dos atletas em batch via stakeholders (atleta_id aponta pra auth.users — sem FK direta na PostgREST)
+  const atletaIds = (data || []).map(r => r.atleta_id).filter(Boolean) as string[]
+  let stakeMap = new Map<string, { nome: string; sobrenome: string }>()
+  if (atletaIds.length) {
+    const { data: stakes } = await supabaseAdmin
+      .from('stakeholders')
+      .select('id, nome_completo')
+      .in('id', atletaIds)
+    stakeMap = new Map((stakes || []).map(s => {
+      const parts = (s.nome_completo || '').trim().split(/\s+/)
+      return [s.id, { nome: parts[0] || '', sobrenome: parts.slice(1).join(' ') }]
+    }))
+  }
+
+  const inscricoes = (data || []).map(r => ({
+    ...r,
+    atletas: r.atleta_id ? stakeMap.get(r.atleta_id) || null : null,
+  }))
+
+  const total = inscricoes.length
+  const checkedIn = inscricoes.filter(r => r.checked_in).length
 
   return NextResponse.json({
-    inscricoes: data || [],
+    inscricoes,
     summary: { total, checked_in: checkedIn, pendente: total - checkedIn },
   })
 }
@@ -89,7 +107,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (regErr) return NextResponse.json({ error: regErr.message }, { status: 500 })
   if (!reg) return NextResponse.json({ error: 'Inscrição não encontrada neste evento' }, { status: 404 })
 
-  if (!['pago', 'confirmado', 'aprovado'].includes(reg.status)) {
+  if (!['confirmed', 'pago', 'confirmado', 'aprovado'].includes(reg.status)) {
     return NextResponse.json({
       error: `Inscrição com status "${reg.status}" não pode ser credenciada (pagamento pendente?)`,
     }, { status: 400 })
