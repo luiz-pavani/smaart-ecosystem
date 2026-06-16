@@ -4,6 +4,7 @@ import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import ClientErrorReporter from "@/lib/observability/client-error-reporter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +53,7 @@ export default function RootLayout({
         <ToastProvider>
           <CommandPalette />
           <ServiceWorkerRegister />
+          <ClientErrorReporter />
           {children}
         </ToastProvider>
       </body>
