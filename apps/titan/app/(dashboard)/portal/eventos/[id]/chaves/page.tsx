@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import BracketView from '@/components/eventos/BracketView'
 import SlotEditor from '@/components/eventos/SlotEditor'
+import MatchSignOffPanel from '@/components/eventos/MatchSignOffPanel'
+import MatchAuditModal from '@/components/eventos/MatchAuditModal'
 
 interface Bracket {
   id: string
@@ -105,6 +107,9 @@ export default function ChavesPage() {
   const [resultModal, setResultModal] = useState<{ match: Record<string, unknown> } | null>(null)
   const [resultData, setResultData] = useState({ winner: '', resultado: '', resultado_detalhe: '' })
   const [savingResult, setSavingResult] = useState(false)
+
+  // Audit modal
+  const [auditMatchId, setAuditMatchId] = useState<string | null>(null)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -487,6 +492,15 @@ export default function ChavesPage() {
                     />
                   </div>
                 )}
+                {/* Sign-off de matches finalizados aguardando confirmação */}
+                <MatchSignOffPanel
+                  eventoId={eventoId}
+                  bracketId={(bracketDetail.bracket as Bracket).id}
+                  matches={bracketDetail.matches as never[]}
+                  slots={bracketDetail.slots as never[]}
+                  onAfterChange={() => loadBracketDetail((bracketDetail.bracket as Bracket).id)}
+                  onOpenAudit={(matchId) => setAuditMatchId(matchId)}
+                />
                 <BracketView
                 matches={bracketDetail.matches as never[]}
                 slots={bracketDetail.slots as never[]}
@@ -655,6 +669,14 @@ export default function ChavesPage() {
           </div>
         </div>
       )}
+
+      {/* Audit log modal */}
+      <MatchAuditModal
+        eventoId={eventoId}
+        bracketId={selectedBracket || ''}
+        matchId={auditMatchId}
+        onClose={() => setAuditMatchId(null)}
+      />
     </div>
   )
 }
