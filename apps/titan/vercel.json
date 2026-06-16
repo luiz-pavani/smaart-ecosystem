@@ -10,10 +10,6 @@
     {
       "path": "/api/whatsapp/cron",
       "schedule": "0 11 * * *"
-    },
-    {
-      "path": "/api/whatsapp/proxima-luta-cron",
-      "schedule": "*/2 * * * *"
     }
   ]
 }

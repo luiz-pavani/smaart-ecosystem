@@ -10,13 +10,23 @@ const supabaseAdmin = createClient(
 /**
  * GET /api/whatsapp/proxima-luta-cron
  *
- * Cron que roda a cada 1-2 minutos durante eventos ativos. Para cada match
- * com status='ready' (= ambos atletas confirmados, vai ser chamado) cuja
- * hora_estimada está nos próximos 5-15 minutos, dispara WhatsApp pros 2 atletas
- * com aviso "sua próxima luta".
+ * Notifica atletas sobre próxima luta (status='ready' com hora_estimada
+ * nos próximos N minutos). Dedup por (atleta_id, match_id, tipo) via
+ * unique index em event_notifications.
  *
- * Dedup via event_notifications.match_id — unique index garante que cada
- * (atleta, match, 'proxima_luta') só envia uma vez.
+ * ⚠️ NÃO está registrado como Vercel cron — Hobby plan limita a 1×/dia
+ * e esse caso de uso precisa de N×/min durante o evento. Opções para
+ * disparar:
+ *
+ *   1. Curl manual (organizador roda durante evento ao vivo):
+ *      curl -H "x-cron-secret: $CRON_SECRET" \
+ *        "https://titan.smaartpro.com/api/whatsapp/proxima-luta-cron?lead=10"
+ *
+ *   2. Cron externo (Cloudflare Workers, EasyCron, GitHub Actions):
+ *      Configurar trigger a cada 2 min que faz a chamada acima.
+ *
+ *   3. Upgrade pra Vercel Pro e re-adicionar em vercel.json:
+ *      { "path": "/api/whatsapp/proxima-luta-cron", "schedule": "*\/2 * * * *" }
  *
  * Body/query:
  *   ?dry=true  — simula
