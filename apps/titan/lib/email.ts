@@ -82,6 +82,7 @@ interface ConfirmacaoPagamentoParams {
   valor: number
   email: string
   dataPagamento?: string
+  link_comprovante?: string | null
 }
 
 interface ConfirmacaoInscricaoParams {
@@ -110,6 +111,14 @@ export async function emailConfirmacaoPagamento(p: ConfirmacaoPagamentoParams) {
       <tr><td style="padding:6px 0;color:#475569;font-size:13px;">Valor</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#15803d;font-size:16px;">${valorFmt}</td></tr>
       <tr><td style="padding:6px 0;color:#475569;font-size:13px;">Data</td><td style="padding:6px 0;text-align:right;color:#374151;">${data}</td></tr>
     </table>
+    ${p.link_comprovante ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:18px;margin:16px 0;text-align:center;">
+      <tr><td>
+        <p style="margin:0 0 10px;font-size:14px;color:#92400e;font-weight:600;">📲 Seu comprovante com QR Code</p>
+        <p style="margin:0 0 14px;font-size:13px;color:#78350f;">Apresente este QR na mesa de credenciamento no dia do evento.</p>
+        <a href="${escapeAttr(p.link_comprovante)}" style="display:inline-block;background:#15803d;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Abrir comprovante</a>
+      </td></tr>
+    </table>` : ''}
     <p style="margin:16px 0 0;font-size:14px;color:#374151;">
       Você pode consultar o histórico completo no
       <a href="${BASE_URL}/portal/atleta/financeiro" style="color:#15803d;font-weight:600;">portal financeiro</a>.

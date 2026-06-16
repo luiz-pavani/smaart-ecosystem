@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
       registration_date: today,
       valor_pago: valorInscricao > 0 ? valorInscricao : null,
     })
-    .select()
+    .select('id, checkin_token')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -145,6 +145,11 @@ export async function POST(req: NextRequest) {
     const localCompleto = [evento.local, evento.cidade].filter(Boolean).join(' — ') || null
     const dataFmt = new Date(evento.data_evento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://titan.smaartpro.com'
+    // Se já está confirmada (gratuita ou só termos), envia direto pro comprovante com QR.
+    // Senão, mantém o portal pra concluir pagamento/termos.
+    const linkAcompanhar = (!valorInscricao && data?.checkin_token)
+      ? `${baseUrl}/eventos/${event_id}/comprovante/${data.checkin_token}`
+      : `${baseUrl}/portal/atleta/eventos/${event_id}`
     emailConfirmacaoInscricao({
       nome: nomeAtleta,
       email: userEmail,
@@ -154,7 +159,7 @@ export async function POST(req: NextRequest) {
       categoria: categoryData?.nome_display || null,
       precisa_pagar: valorInscricao > 0,
       precisa_assinar_termos: hasMandatoryWaivers,
-      link_acompanhar: `${baseUrl}/portal/atleta/eventos/${event_id}`,
+      link_acompanhar: linkAcompanhar,
     }).catch(err => console.warn('[email confirmacao inscricao] falhou:', err))
   }
 

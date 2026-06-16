@@ -209,11 +209,28 @@ async function confirmarPagamento(safe2payId: string, payload: S2PPayload) {
         .maybeSingle()
       if (stake?.email && stake?.nome_completo) {
         const descricao = descricaoPorReferencia(pag.referencia_tipo)
+
+        // Pra inscrições de evento, monta link do comprovante com QR
+        let linkComprovante: string | null = null
+        const tiposEvento = ['evento', 'evento_inscricao', 'event_registration']
+        if (tiposEvento.includes(pag.referencia_tipo) && pag.referencia_id) {
+          const { data: reg } = await supabaseAdmin
+            .from('event_registrations')
+            .select('event_id, checkin_token')
+            .eq('id', pag.referencia_id)
+            .maybeSingle()
+          if (reg?.event_id && reg?.checkin_token) {
+            const base = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://titan.smaartpro.com'
+            linkComprovante = `${base}/eventos/${reg.event_id}/comprovante/${reg.checkin_token}`
+          }
+        }
+
         await emailConfirmacaoPagamento({
           nome: stake.nome_completo,
           email: stake.email,
           valor: Number(pag.valor) || 0,
           descricao,
+          link_comprovante: linkComprovante,
         })
       }
     } catch (err) {
