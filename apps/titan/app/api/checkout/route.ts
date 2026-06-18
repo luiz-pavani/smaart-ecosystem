@@ -236,6 +236,11 @@ async function resolverValor(
       return { valor: 0, descricao: 'Anuidade LRSJ 2026 (lote)' }
     }
 
+    case 'evento_bulk': {
+      // valor vem no body como override (totalizado client-side a partir das inscrições)
+      return { valor: 0, descricao: 'Inscrições em lote — evento' }
+    }
+
     case 'anuidade_academia': {
       return { valor: 69.0, descricao: 'Anuidade Academia LRSJ 2026' }
     }

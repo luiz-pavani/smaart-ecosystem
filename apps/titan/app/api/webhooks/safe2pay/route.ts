@@ -246,7 +246,8 @@ function descricaoPorReferencia(tipo: string): string {
     case 'filiacao_atleta': return 'Filiação à federação'
     case 'evento':
     case 'evento_inscricao':
-    case 'event_registration': return 'Inscrição em evento'
+    case 'event_registration':
+    case 'evento_bulk': return 'Inscrição em evento'
     case 'academia_anuidade': return 'Anuidade da academia'
     case 'academia_mensalidade': return 'Mensalidade da academia'
     case 'profep':
@@ -327,7 +328,8 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
     }
 
     case 'evento':
-    case 'event_registration': {
+    case 'event_registration':
+    case 'evento_bulk': {
       // event_registrations.status flow: pending_payment → confirmed.
       // Idempotente: re-update em confirmed é no-op.
       await supabaseAdmin

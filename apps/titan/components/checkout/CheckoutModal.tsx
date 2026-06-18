@@ -5,7 +5,7 @@ import { X, CreditCard, QrCode, RefreshCw, Loader2, CheckCircle, AlertCircle } f
 import PixDisplay from './PixDisplay'
 
 export interface CheckoutProduto {
-  produto: 'filiacao_atleta' | 'anuidade_academia' | 'profep' | 'evento' | 'filiacao_bulk' | 'academia_mensalidade'
+  produto: 'filiacao_atleta' | 'anuidade_academia' | 'profep' | 'evento' | 'evento_bulk' | 'filiacao_bulk' | 'academia_mensalidade'
   referencia_id?: string
   referencia_ids?: string[]  // para bulk
   valor?: number              // valor override (obrigatório para filiacao_bulk)

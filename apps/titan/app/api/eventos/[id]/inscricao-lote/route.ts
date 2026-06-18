@@ -92,7 +92,7 @@ export async function POST(
       // Get athlete data for snapshot
       const { data: stkData } = await supabaseAdmin
         .from('stakeholders')
-        .select('full_name, academia_id, kyu_dan_id, genero, data_nascimento, peso_atual')
+        .select('nome_completo, email, academia_id, kyu_dan_id, genero, data_nascimento, peso_atual')
         .eq('id', insc.atleta_id)
         .maybeSingle()
 
@@ -105,7 +105,8 @@ export async function POST(
           peso_inscricao: insc.peso_inscricao || stkData?.peso_atual || null,
           academia_id: stkData?.academia_id || null,
           dados_atleta: stkData ? {
-            nome_completo: stkData.full_name,
+            nome_completo: stkData.nome_completo,
+            email: stkData.email,
             genero: stkData.genero,
             data_nascimento: stkData.data_nascimento,
             kyu_dan_id: stkData.kyu_dan_id,
