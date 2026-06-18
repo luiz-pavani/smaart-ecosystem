@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       id: userId,
       nome_completo: nome,
       nome_usuario: username,
-      funcao: 'professor',
+      funcao: 'ACADEMIA',
       role: finalRole,
       email,
       telefone,
