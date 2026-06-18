@@ -139,18 +139,15 @@ export async function POST(req: NextRequest) {
     academiaCriada = true
   }
 
-  // 3) Stakeholder — criador no Fluxo B vira academia_admin (responsável técnico)
+  // 3) Stakeholder — criador no Fluxo B vira academia_admin (responsável técnico).
+  // A linha de stakeholders já foi criada pela trigger upsert_stakeholder_from_auth_user
+  // disparada pelo createUser. Aqui só completamos os campos role-específicos.
   const finalRole = academiaCriada ? 'academia_admin' : 'professor'
-  const username = genUserName(nome, String(Date.now()).slice(-4))
   const { error: stakeErr } = await supabaseAdmin
     .from('stakeholders')
-    .insert({
-      id: userId,
-      nome_completo: nome,
-      nome_usuario: username,
+    .update({
       funcao: 'ACADEMIA',
       role: finalRole,
-      email,
       telefone,
       cpf,
       academia_id: academiaId,
@@ -158,13 +155,14 @@ export async function POST(req: NextRequest) {
       approval_status: approvalStatus,
       approval_requested_at: approvalStatus !== 'aprovado' ? new Date().toISOString() : null,
     })
+    .eq('id', userId)
 
   if (stakeErr) {
     if (academiaCriada) {
       await supabaseAdmin.from('academias').delete().eq('id', academiaId)
     }
     await supabaseAdmin.auth.admin.deleteUser(userId)
-    return NextResponse.json({ error: `Falha ao criar stakeholder: ${stakeErr.message}` }, { status: 500 })
+    return NextResponse.json({ error: `Falha ao atualizar stakeholder: ${stakeErr.message}` }, { status: 500 })
   }
 
   // 4) Sincroniza profiles.role com a role real
