@@ -65,9 +65,9 @@ export default function PortalPage() {
 
   const getPortals = (): PortalOption[] => {
     const roles = userRoles.map(r => r.role)
-    const canAcademia = roles.includes('academia_admin') || roles.includes('academia_staff') || roles.includes('federacao_admin') || roles.includes('federacao_staff') || roles.includes('master_access')
-    const canFederacao = roles.includes('federacao_admin') || roles.includes('federacao_staff') || roles.includes('master_access')
-    const canEventos = roles.includes('federacao_admin') || roles.includes('event_organizer') || roles.includes('master_access')
+    const canAcademia = roles.includes('master_access') || roles.includes('federacao_admin') || roles.includes('federacao_gestor') || roles.includes('federacao_staff') || roles.includes('academia_admin') || roles.includes('academia_gestor') || roles.includes('academia_staff') || roles.includes('professor')
+    const canFederacao = roles.includes('master_access') || roles.includes('federacao_admin') || roles.includes('federacao_gestor') || roles.includes('federacao_staff')
+    const canEventos = roles.includes('master_access') || roles.includes('federacao_admin') || roles.includes('federacao_gestor') || roles.includes('event_organizer')
     const canCandidato = roles.includes('master_access') || roles.includes('federacao_admin') || roles.includes('admin') || userRoles.some(r => r.candidato === true)
 
     return [

@@ -143,9 +143,12 @@ export async function POST(req: NextRequest) {
   // A linha de stakeholders já foi criada pela trigger upsert_stakeholder_from_auth_user
   // disparada pelo createUser. Aqui só completamos os campos role-específicos.
   const finalRole = academiaCriada ? 'academia_admin' : 'professor'
+  const username = genUserName(nome, String(Date.now()).slice(-4))
   const { error: stakeErr } = await supabaseAdmin
     .from('stakeholders')
     .update({
+      nome_completo: nome,
+      nome_usuario: username,
       funcao: 'ACADEMIA',
       role: finalRole,
       telefone,
