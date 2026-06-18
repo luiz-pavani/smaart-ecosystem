@@ -31,7 +31,7 @@ export async function POST(
   // Verify event
   const { data: evento } = await supabaseAdmin
     .from('eventos')
-    .select('id, status, publicado')
+    .select('id, status, publicado, valor_inscricao, taxa_inscricao')
     .eq('id', eventoId)
     .maybeSingle()
 
@@ -69,7 +69,27 @@ export async function POST(
     .eq('obrigatorio', true)
 
   const hasMandatoryWaivers = (mandatoryWaivers || []).length > 0
-  const statusInicial = hasMandatoryWaivers ? 'pending_waivers' : 'confirmed'
+
+  // Pré-carrega taxa por categoria (categoria > evento). Define se cada inscrição
+  // é "paga" ou gratuita pra decidir status.
+  const catIds = Array.from(new Set(inscricoes.map(i => i.category_id).filter(Boolean)))
+  const { data: cats } = catIds.length
+    ? await supabaseAdmin
+        .from('event_categories')
+        .select('id, taxa_inscricao')
+        .in('id', catIds)
+    : { data: [] as { id: string; taxa_inscricao: number | null }[] }
+  const taxaPorCat = new Map<string, number>()
+  for (const c of cats || []) taxaPorCat.set(c.id, Number(c.taxa_inscricao) || 0)
+  const valorEventoFallback = Number(evento.taxa_inscricao ?? evento.valor_inscricao ?? 0) || 0
+
+  function resolveStatus(categoryId: string | undefined): { status: string; valor: number } {
+    const fromCat = categoryId ? taxaPorCat.get(categoryId) : undefined
+    const taxa: number = fromCat !== undefined ? fromCat : valorEventoFallback
+    if (hasMandatoryWaivers) return { status: 'pending_waivers', valor: taxa }
+    if (taxa > 0) return { status: 'pending_payment', valor: taxa }
+    return { status: 'confirmed', valor: 0 }
+  }
 
   const results: { atleta_id: string; status: 'ok' | 'error'; message?: string; registration_id?: string }[] = []
 
@@ -96,6 +116,7 @@ export async function POST(
         .eq('id', insc.atleta_id)
         .maybeSingle()
 
+      const { status: statusInsc, valor: valorInsc } = resolveStatus(insc.category_id)
       const { data: reg, error } = await supabaseAdmin
         .from('event_registrations')
         .insert({
@@ -113,7 +134,8 @@ export async function POST(
             peso: insc.peso_inscricao || stkData.peso_atual,
             academia: '', // Will be enriched later
           } : {},
-          status: statusInicial,
+          status: statusInsc,
+          valor_pago: valorInsc > 0 ? valorInsc : null,
           registration_date: new Date().toISOString().split('T')[0],
         })
         .select('id')
