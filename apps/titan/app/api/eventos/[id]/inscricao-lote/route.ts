@@ -23,9 +23,9 @@ export async function POST(
     .maybeSingle()
 
   const isAdmin = stk && ADMIN_ROLES.includes(stk.role)
-  const isCoach = stk && stk.role === 'academia_gestor'
+  const isCoach = stk && ['academia_admin', 'academia_gestor', 'professor'].includes(stk.role)
   if (!isAdmin && !isCoach) {
-    return NextResponse.json({ error: 'Sem permissão (admin ou gestor de academia)' }, { status: 403 })
+    return NextResponse.json({ error: 'Sem permissão (admin/gestor/professor de academia)' }, { status: 403 })
   }
 
   // Verify event
