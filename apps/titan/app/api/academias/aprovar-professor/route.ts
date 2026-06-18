@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-
-const APPROVER_ROLES = ['master_access', 'federacao_admin', 'federacao_gestor', 'academia_admin']
+import { canApproveProfessor, isMaster, ROLES } from '@/lib/auth/roles'
 
 /**
  * GET /api/academias/aprovar-professor
@@ -22,7 +21,7 @@ export async function GET() {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!me || !APPROVER_ROLES.includes(me.role)) {
+  if (!me || !canApproveProfessor(me.role)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
@@ -32,19 +31,21 @@ export async function GET() {
     .neq('approval_status', 'aprovado')
     .order('approval_requested_at', { ascending: true })
 
-  if (me.role === 'academia_admin') {
-    if (!me.academia_id) return NextResponse.json({ pendentes: [] })
-    q = q.eq('academia_id', me.academia_id).eq('approval_status', 'pendente_academia')
-  } else if (me.role === 'federacao_admin' || me.role === 'federacao_gestor') {
-    // Pendentes da própria federação
-    if (!me.federacao_id) return NextResponse.json({ pendentes: [] })
-    const { data: acads } = await supabaseAdmin
-      .from('academias')
-      .select('id')
-      .eq('federacao_id', me.federacao_id)
-    const ids = (acads || []).map(a => a.id)
-    if (ids.length === 0) return NextResponse.json({ pendentes: [] })
-    q = q.in('academia_id', ids)
+  // master_access vê tudo (sem filtro); demais filtram por escopo
+  if (!isMaster(me.role)) {
+    if (me.role === ROLES.ACAD_ADMIN) {
+      if (!me.academia_id) return NextResponse.json({ pendentes: [] })
+      q = q.eq('academia_id', me.academia_id).eq('approval_status', 'pendente_academia')
+    } else if (me.role === ROLES.FED_ADMIN || me.role === ROLES.FED_GESTOR) {
+      if (!me.federacao_id) return NextResponse.json({ pendentes: [] })
+      const { data: acads } = await supabaseAdmin
+        .from('academias')
+        .select('id')
+        .eq('federacao_id', me.federacao_id)
+      const ids = (acads || []).map(a => a.id)
+      if (ids.length === 0) return NextResponse.json({ pendentes: [] })
+      q = q.in('academia_id', ids)
+    }
   }
 
   const { data, error } = await q
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!me || !APPROVER_ROLES.includes(me.role)) {
+  if (!me || !canApproveProfessor(me.role)) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
@@ -85,8 +86,8 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
   if (!alvo) return NextResponse.json({ error: 'Professor não encontrado' }, { status: 404 })
 
-  // Permissão escopo
-  if (me.role === 'academia_admin' && alvo.academia_id !== me.academia_id) {
+  // Master pula validação de escopo. Academia_admin restrito à própria academia.
+  if (!isMaster(me.role) && me.role === ROLES.ACAD_ADMIN && alvo.academia_id !== me.academia_id) {
     return NextResponse.json({ error: 'Fora do escopo da sua academia' }, { status: 403 })
   }
 

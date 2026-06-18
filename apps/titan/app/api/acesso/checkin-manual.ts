@@ -35,16 +35,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ erro: 'Não autenticado' }, { status: 401 })
     }
 
-    // Verificar se usuário é gestor da academia via stakeholders
-    const { data: role, error: erroRole } = await supabase
+    // Verificar permissão: master_access bypassa escopo; demais precisam ser gestor da academia
+    const { data: stk } = await supabase
       .from('stakeholders')
-      .select('role')
+      .select('role, academia_id')
       .eq('id', user.id)
-      .eq('academia_id', academia_id)
-      .in('role', ['academia_admin', 'academia_gestor'])
       .single()
 
-    if (erroRole || !role) {
+    const ok = stk && (
+      stk.role === 'master_access' ||
+      stk.role === 'federacao_admin' || stk.role === 'federacao_gestor' ||
+      (['academia_admin', 'academia_gestor'].includes(stk.role) && stk.academia_id === academia_id)
+    )
+
+    if (!ok) {
       return NextResponse.json(
         { erro: 'Sem permissão para registrar entrada' },
         { status: 403 }

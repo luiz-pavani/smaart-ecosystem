@@ -87,14 +87,18 @@ export async function DELETE(
       return NextResponse.json({ error: 'Atleta não encontrado' }, { status: 404 })
     }
 
-    // Check permissions
-    if (perfil.role === 'academia_admin' || perfil.role === 'academia_staff') {
-      if (atleta.academia_id !== perfil.academia_id) {
-        return NextResponse.json({ error: 'Sem permissão para excluir este atleta' }, { status: 403 })
-      }
-    } else if (perfil.role === 'federacao_admin' || perfil.role === 'federacao_staff') {
-      if (atleta.federacao_id !== perfil.federacao_id) {
-        return NextResponse.json({ error: 'Sem permissão para excluir este atleta' }, { status: 403 })
+    // Check permissions — master_access bypassa escopo
+    if (perfil.role !== 'master_access') {
+      if (perfil.role === 'academia_admin' || perfil.role === 'academia_staff' || perfil.role === 'academia_gestor') {
+        if (atleta.academia_id !== perfil.academia_id) {
+          return NextResponse.json({ error: 'Sem permissão para excluir este atleta' }, { status: 403 })
+        }
+      } else if (perfil.role === 'federacao_admin' || perfil.role === 'federacao_staff' || perfil.role === 'federacao_gestor') {
+        if (atleta.federacao_id !== perfil.federacao_id) {
+          return NextResponse.json({ error: 'Sem permissão para excluir este atleta' }, { status: 403 })
+        }
+      } else {
+        return NextResponse.json({ error: 'Sem permissão para excluir atletas' }, { status: 403 })
       }
     }
 
