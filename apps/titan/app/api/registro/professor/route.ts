@@ -78,12 +78,13 @@ export async function POST(req: NextRequest) {
   const { data: dupEmail } = await supabaseAdmin.from('stakeholders').select('id').eq('email', email).maybeSingle()
   if (dupEmail) return NextResponse.json({ error: 'Email já cadastrado' }, { status: 409 })
 
-  // 1) Auth user
+  // 1) Auth user — role final só é conhecido após decidir Fluxo A vs B.
+  // No Fluxo A: professor.  Fluxo B: academia_admin.  Setamos depois via updateUserById.
   const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
     email,
     password: senha,
     email_confirm: true,
-    user_metadata: { nome_completo: nome, role: 'professor' },
+    user_metadata: { full_name: nome, nome_completo: nome },
   })
   if (authErr || !authData?.user) {
     return NextResponse.json({ error: `Falha ao criar usuário: ${authErr?.message || 'desconhecido'}` }, { status: 500 })
@@ -165,6 +166,12 @@ export async function POST(req: NextRequest) {
     await supabaseAdmin.auth.admin.deleteUser(userId)
     return NextResponse.json({ error: `Falha ao criar stakeholder: ${stakeErr.message}` }, { status: 500 })
   }
+
+  // 4) Sincroniza profiles.role com a role real
+  await supabaseAdmin
+    .from('profiles')
+    .update({ role: finalRole, full_name: nome })
+    .eq('id', userId)
 
   return NextResponse.json({
     ok: true,
