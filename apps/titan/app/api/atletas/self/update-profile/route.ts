@@ -8,34 +8,38 @@ export async function PATCH(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    const ALLOWED_TEXT = [
-      'nome_patch', 'genero', 'nacionalidade',
-      'email', 'telefone', 'cidade', 'estado', 'pais', 'tamanho_patch',
-    ] as const
+    // Campos pessoais → stakeholders. Campos de filiação (patch, etc) → stakeholder_filiacoes.
+    const STAKE_FIELDS = ['genero', 'email', 'telefone'] as const
+    const FILIACAO_FIELDS = ['nome_patch', 'tamanho_patch'] as const  // 'nacionalidade','cidade','estado','pais' não têm coluna nova ainda
+    const LRSJ_FED = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d'
 
-    const payload: Record<string, unknown> = {}
+    const stakePayload: Record<string, unknown> = {}
+    const filPayload: Record<string, unknown> = {}
     let fotoFile: File | null = null
 
     const ct = req.headers.get('content-type') || ''
+    const raw: Record<string, unknown> = {}
 
     if (ct.includes('multipart/form-data')) {
       const form = await req.formData()
-      for (const key of ALLOWED_TEXT) {
-        if (form.has(key)) {
-          const val = form.get(key)
-          payload[key] = typeof val === 'string' ? (val.trim() || null) : null
+      for (const k of [...STAKE_FIELDS, ...FILIACAO_FIELDS]) {
+        if (form.has(k)) {
+          const val = form.get(k)
+          raw[k] = typeof val === 'string' ? (val.trim() || null) : null
         }
       }
       const foto = form.get('foto')
       if (foto instanceof File && foto.size > 0) fotoFile = foto
     } else {
       const body = await req.json()
-      for (const key of ALLOWED_TEXT) {
-        if (key in body) payload[key] = body[key] || null
+      for (const k of [...STAKE_FIELDS, ...FILIACAO_FIELDS]) {
+        if (k in body) raw[k] = body[k] || null
       }
     }
 
-    // Upload photo if provided
+    for (const k of STAKE_FIELDS) if (k in raw) stakePayload[k] = raw[k]
+    for (const k of FILIACAO_FIELDS) if (k in raw) filPayload[k] = raw[k]
+
     if (fotoFile) {
       const ext = fotoFile.name.split('.').pop() || 'jpg'
       const path = `1/${user.id}/selfie_${Date.now()}.${ext}`
@@ -46,24 +50,35 @@ export async function PATCH(req: NextRequest) {
       if (uploadErr) return NextResponse.json({ error: uploadErr.message }, { status: 500 })
 
       const { data: urlData } = supabaseAdmin.storage.from('atletas').getPublicUrl(uploadData.path)
-      payload['url_foto'] = urlData.publicUrl
+      filPayload['url_foto'] = urlData.publicUrl
     }
 
-    if (Object.keys(payload).length === 0) {
+    if (Object.keys(stakePayload).length === 0 && Object.keys(filPayload).length === 0) {
       return NextResponse.json({ error: 'Nenhum campo válido enviado' }, { status: 400 })
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('user_fed_lrsj')
-      .update(payload)
-      .eq('stakeholder_id', user.id)
-      .select('*')
-      .single()
+    if (Object.keys(stakePayload).length > 0) {
+      const { error: sErr } = await supabaseAdmin
+        .from('stakeholders')
+        .update(stakePayload)
+        .eq('id', user.id)
+      if (sErr) return NextResponse.json({ error: sErr.message }, { status: 500 })
+    }
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    if (!data) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 })
+    let filData: unknown = null
+    if (Object.keys(filPayload).length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('stakeholder_filiacoes')
+        .update(filPayload)
+        .eq('stakeholder_id', user.id)
+        .eq('federacao_id', LRSJ_FED)
+        .select('*')
+        .maybeSingle()
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      filData = data
+    }
 
-    return NextResponse.json({ data })
+    return NextResponse.json({ data: filData })
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
   }
