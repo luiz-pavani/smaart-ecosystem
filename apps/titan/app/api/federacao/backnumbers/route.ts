@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
         data_expiracao,
         lote_id
       `)
-      .eq('federacao_id', 1)
+      .eq('federacao_id', '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d')
       .order('nome_completo', { ascending: true })
 
     if (statusFilter) {
@@ -99,8 +99,20 @@ export async function GET(req: NextRequest) {
     academia_id: a.academia_id as string | null,
     // sigla: athlete override → academia fallback → ''
     sigla: (a.siglas || acadSiglaMap[a.academia_id] || '') as string,
-    tamanho: ((a.tamanho_patch as string) || 'G') as 'P' | 'M' | 'G',
-    cor: ((a.cor_patch as string)?.toUpperCase() || 'AZUL') as 'AZUL' | 'ROSA',
+    ...(() => {
+      // tamanho_patch vem do CSV Smoothcomp como string longa (ex: "PEQUENO ROSA (28 cm2) *recomendado…" ou "GRANDE (41 cm2)").
+      // Deriva tamanho (P/M/G) + cor (AZUL/ROSA) desse texto, com cor_patch como override explícito.
+      const raw = String(a.tamanho_patch || '').toUpperCase()
+      let tamanho: 'P' | 'M' | 'G' = 'G'
+      if (raw.startsWith('P')) tamanho = 'P'
+      else if (raw.startsWith('M')) tamanho = 'M'
+      const corOverride = (a.cor_patch as string | null)?.toUpperCase()
+      let cor: 'AZUL' | 'ROSA' = 'AZUL'
+      if (corOverride === 'ROSA' || corOverride === 'AZUL') cor = corOverride
+      else if (raw.includes('ROSA')) cor = 'ROSA'
+      else if (raw.includes('AZUL')) cor = 'AZUL'
+      return { tamanho, cor }
+    })(),
     status_plano: a.status_plano as string | null,
     data_expiracao: a.data_expiracao as string | null,
     lote_id: (a.lote_id || null) as string | null,

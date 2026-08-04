@@ -84,13 +84,14 @@ export async function GET(req: NextRequest) {
   const only = req.nextUrl.searchParams.get('only') || 'all'  // certificado | identidade | all
   const academiaFilter = req.nextUrl.searchParams.get('academia_id')  // opcional: só 1 academia
   const semAcademia = req.nextUrl.searchParams.get('sem_academia') === '1'  // só filiados sem academia
+  const loteFilter = req.nextUrl.searchParams.get('lote_id')  // opcional: só 1 lote (ex: "2026 6")
   const geraCertificado = only === 'all' || only === 'certificado'
   const geraIdentidade = only === 'all' || only === 'identidade'
 
   const dataInicio = `${ano}-01-01`
   const dataFimVal = `${ano}-12-01`
 
-  // Filiações do ano
+  // Filiações do ano — se loteFilter, ignora janela de datas (lote pode ser recém-criado)
   let q = supabaseAdmin
     .from('stakeholder_filiacoes')
     .select(`
@@ -98,7 +99,12 @@ export async function GET(req: NextRequest) {
       data_adesao, data_expiracao, nivel_arbitragem
     `)
     .eq('federacao_id', LRSJ_FED)
-    .or(`data_adesao.gte.${dataInicio},data_expiracao.gte.${dataFimVal}`)
+
+  if (loteFilter) {
+    q = q.eq('lote_id', loteFilter)
+  } else {
+    q = q.or(`data_adesao.gte.${dataInicio},data_expiracao.gte.${dataFimVal}`)
+  }
 
   if (academiaFilter) q = q.eq('academia_id', academiaFilter)
   else if (semAcademia) q = q.is('academia_id', null)
