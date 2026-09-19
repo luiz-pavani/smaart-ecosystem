@@ -1,7 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { ExternalLink, Play, BookOpen, Clock, ArrowRight, Lock } from 'lucide-react'
+import { ExternalLink, Play, BookOpen, ClipboardCheck, ArrowRight, Lock, Loader2 } from 'lucide-react'
+
+// Tenant da LRSJ no Profep MAX. O simulado mora lá, não no profepmax.com.br
+// genérico, porque é a prova do Programa de Faixas Pretas desta liga.
+const LRSJ_URL = process.env.NEXT_PUBLIC_PROFEP_LRSJ_URL || 'https://lrsj.profepmax.com.br'
+const SIMULADO_ID = 'dddbc878-9cf6-4093-9a2a-b8d36014f287'
 
 const PLATFORMS = [
   {
@@ -13,6 +19,7 @@ const PLATFORMS = [
     color: 'from-red-700 to-red-900',
     href: '/cursos',
     external: false,
+    sso: false,
     cta: 'Acessar Plataforma',
     available: true,
     tags: ['Judô', 'Arbitragem', 'Gestão'],
@@ -26,26 +33,50 @@ const PLATFORMS = [
     color: 'from-blue-700 to-blue-900',
     href: 'https://www.cob.org.br/cultura-educacao/cursos-do-iob',
     external: true,
+    sso: false,
     cta: 'Acessar IOB',
     available: true,
     tags: ['COB', 'Educação Olímpica', 'Online'],
   },
   {
     id: 'simulado',
-    label: 'EM BREVE',
+    label: 'PRATIQUE',
     title: 'Simulado Geral',
-    description: 'Teste seus conhecimentos teóricos sobre regulamento, arbitragem, história e filosofia do judô. Disponível em breve.',
-    icon: Clock,
-    color: 'from-slate-700 to-slate-900',
-    href: '#',
+    description: 'Teste seus conhecimentos de terminologia, história, kata e arbitragem. Cada tentativa sorteia 20 questões novas, e ao final você vê exatamente onde errou.',
+    icon: ClipboardCheck,
+    color: 'from-emerald-700 to-emerald-900',
+    href: `/avaliacoes/${SIMULADO_ID}`,
     external: false,
-    cta: 'Em breve',
-    available: false,
-    tags: ['Teoria', 'Prática', 'Avaliação'],
+    sso: true,
+    cta: 'Fazer Simulado',
+    available: true,
+    tags: ['Terminologia', 'História', 'Kata'],
   },
 ]
 
 export default function AreaDeEstudoPage() {
+  const [ssoLoading, setSsoLoading] = useState<string | null>(null)
+
+  // Link direto para o simulado cairia na tela de login do Profep. O SSO é o
+  // mesmo que a sidebar já usa; a diferença é o `next`, que leva o candidato
+  // ao simulado em vez do dashboard.
+  const abrirComSSO = async (id: string, destino: string) => {
+    setSsoLoading(id)
+    try {
+      const res = await fetch('/api/candidato/sso/token')
+      const { token, error } = await res.json()
+      if (error || !token) throw new Error(error || 'Erro SSO')
+      window.open(
+        `${LRSJ_URL}/auth/titan?token=${encodeURIComponent(token)}&next=${encodeURIComponent(destino)}`,
+        '_blank'
+      )
+    } catch {
+      alert('Não foi possível abrir o simulado. Verifique se sua inscrição está CONFIRMADA e APROVADA.')
+    } finally {
+      setSsoLoading(null)
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
@@ -87,7 +118,17 @@ export default function AreaDeEstudoPage() {
                 </div>
 
                 {platform.available ? (
-                  platform.external ? (
+                  platform.sso ? (
+                    <button
+                      onClick={() => abrirComSSO(platform.id, platform.href)}
+                      disabled={ssoLoading === platform.id}
+                      className="flex items-center justify-center gap-2 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded-xl text-white font-bold text-sm disabled:opacity-60"
+                    >
+                      {ssoLoading === platform.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <>{platform.cta}<ArrowRight className="w-4 h-4" /></>}
+                    </button>
+                  ) : platform.external ? (
                     <a
                       href={platform.href}
                       target="_blank"
