@@ -4,10 +4,10 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Play, BookOpen, ClipboardCheck, ArrowRight, Lock, Loader2 } from 'lucide-react'
 
-// Tenant da LRSJ no Profep MAX. O simulado mora lá, não no profepmax.com.br
-// genérico, porque é a prova do Programa de Faixas Pretas desta liga.
-const LRSJ_URL = process.env.NEXT_PUBLIC_PROFEP_LRSJ_URL || 'https://lrsj.profepmax.com.br'
-const SIMULADO_ID = 'dddbc878-9cf6-4093-9a2a-b8d36014f287'
+// O simulado passou a morar no domínio principal do Profep MAX (/simulado),
+// que sorteia as questões a cada tentativa. Continua aberto por SSO: sem ele o
+// candidato cairia na tela de login, porque a rota é do AVA.
+const PROFEP_URL = process.env.NEXT_PUBLIC_PROFEP_URL || 'https://www.profepmax.com.br'
 
 const PLATFORMS = [
   {
@@ -45,7 +45,7 @@ const PLATFORMS = [
     description: 'Teste seus conhecimentos de terminologia, história, kata e arbitragem. Cada tentativa sorteia 20 questões novas, e ao final você vê exatamente onde errou.',
     icon: ClipboardCheck,
     color: 'from-emerald-700 to-emerald-900',
-    href: `/avaliacoes/${SIMULADO_ID}`,
+    href: '/simulado',
     external: false,
     sso: true,
     cta: 'Fazer Simulado',
@@ -67,7 +67,7 @@ export default function AreaDeEstudoPage() {
       const { token, error } = await res.json()
       if (error || !token) throw new Error(error || 'Erro SSO')
       window.open(
-        `${LRSJ_URL}/auth/titan?token=${encodeURIComponent(token)}&next=${encodeURIComponent(destino)}`,
+        `${PROFEP_URL}/auth/titan?token=${encodeURIComponent(token)}&next=${encodeURIComponent(destino)}`,
         '_blank'
       )
     } catch {
