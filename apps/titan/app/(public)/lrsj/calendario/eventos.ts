@@ -32,9 +32,9 @@ export const EVENTOS: EventoCalendario[] = [
   { data: '2027-05-16', abrangencia: 'REG', estrelas: 2, titulo: '27ª Super Copa Santa Maria de Judô', complementos: ['Seletiva Sub 18'], local: 'Santa Maria, RS' },
   { data: '2027-06-13', abrangencia: 'NAC', estrelas: 3, titulo: 'Campeonato Sul-Brasileiro de Judô 2027', complementos: ['Seletiva Sub 15'], local: 'Canoas, RS' },
   { data: '2027-07-11', abrangencia: 'CURSO', estrelas: 0, titulo: 'Cursos Presenciais', complementos: [], local: 'Santa Maria e Canoas, RS' },
-  { data: '2027-08-15', abrangencia: 'INT', estrelas: 2, titulo: 'Rivera Open Internacional de Judô 2027', complementos: ['Seletiva'], local: 'Rivera, Uruguai' },
-  { data: '2027-09-12', abrangencia: 'REG', estrelas: 3, titulo: '27º Campeonato Estadual de Judô', complementos: ['Seletiva Sub 21 e Sênior'], local: 'Santa Maria, RS' },
+  { data: '2027-08-15', abrangencia: 'INT', estrelas: 2, titulo: 'Rivera Open Internacional de Judô 2027', complementos: ['Seletiva Sênior'], local: 'Rivera, Uruguai' },
+  { data: '2027-09-12', abrangencia: 'REG', estrelas: 3, titulo: '27º Campeonato Estadual de Judô', complementos: ['Seletiva Sub 21'], local: 'Santa Maria, RS' },
   { data: '2027-10-10', abrangencia: 'REG', estrelas: 0, titulo: 'Copa dos Campeões & Desafio Golden Score', complementos: [], local: 'Júlio de Castilhos, RS' },
-  { data: '2027-11-07', abrangencia: 'CURSO', estrelas: 0, titulo: 'AGO 2027', complementos: ['Exames de Graduação'], local: 'A definir' },
+  { data: '2027-11-07', abrangencia: 'CURSO', estrelas: 0, titulo: 'AGO 2027', complementos: ['Exames de Graduação'], local: 'Santa Maria, RS' },
   { data: '2027-11-28', abrangencia: 'NAC', estrelas: 4, titulo: 'Campeonato Brasileiro de Judô', complementos: [], local: 'Belo Horizonte, MG' },
 ]
