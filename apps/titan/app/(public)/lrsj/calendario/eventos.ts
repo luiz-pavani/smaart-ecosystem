@@ -22,7 +22,7 @@ export const ABRANGENCIAS: Record<Abrangencia, { label: string; cor: string; tex
 }
 
 export const ANO = 2027
-export const VERSAO = '27/09/2026'
+export const VERSAO = 'AGO 2026'
 export const PDF_URL = '/lrsj/calendario-lrsj-2027.pdf'
 
 export const EVENTOS: EventoCalendario[] = [

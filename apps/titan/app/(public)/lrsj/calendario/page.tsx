@@ -47,6 +47,9 @@ export default function CalendarioPublicoPage() {
             <h1 className="mt-1 text-4xl font-black uppercase leading-none tracking-tight md:text-5xl">
               Calendário <span className="text-red-600">{ANO}</span>
             </h1>
+            <span className="mt-2 inline-block rounded bg-white/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-zinc-200">
+              Versão {VERSAO}
+            </span>
             <p className="mt-2 text-sm text-zinc-300">Competições, seletivas, cursos e reuniões da temporada</p>
           </div>
           <div className="ml-auto hidden flex-shrink-0 rounded-xl bg-white px-3 py-2 text-center sm:block">
@@ -68,7 +71,7 @@ export default function CalendarioPublicoPage() {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <p className="inline-flex items-center gap-2 text-sm text-zinc-500">
             <CalendarDays className="h-4 w-4" />
-            {EVENTOS.length} datas · versão de {VERSAO}
+            {EVENTOS.length} datas · Versão {VERSAO}
           </p>
           <a
             href={PDF_URL}
