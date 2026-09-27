@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import { CalendarDays, Download, MapPin, Star } from 'lucide-react'
-import { ANO, CIRCUITOS, EVENTOS, PDF_URL, VERSAO } from './eventos'
+import { ABRANGENCIAS, ANO, EVENTOS, PDF_URL, VERSAO } from './eventos'
 
 export const metadata: Metadata = {
   title: `Calendário ${ANO} · Liga Riograndense de Judô`,
-  description: `Calendário oficial de eventos, seletivas e cursos da LRSJ em ${ANO}.`,
+  description: `Calendário oficial da LRSJ em ${ANO}: competições do Circuito Sul Internacional de Judô, seletivas, cursos e reuniões.`,
 }
 
 // Revalida a cada hora para "próximo evento" e eventos passados andarem sozinhos
@@ -47,7 +47,14 @@ export default function CalendarioPublicoPage() {
             <h1 className="mt-1 text-4xl font-black uppercase leading-none tracking-tight md:text-5xl">
               Calendário <span className="text-red-600">{ANO}</span>
             </h1>
-            <p className="mt-2 text-sm text-zinc-300">Eventos oficiais, seletivas e cursos da temporada</p>
+            <p className="mt-2 text-sm text-zinc-300">Competições, seletivas, cursos e reuniões da temporada</p>
+          </div>
+          <div className="ml-auto hidden flex-shrink-0 rounded-xl bg-white px-3 py-2 text-center sm:block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/lrsj/circuito-sul.png" alt="Circuito Sul de Judô" className="w-32 md:w-36" />
+            <span className="mt-1 block text-[10px] font-bold uppercase tracking-widest text-[#0a5d93]">
+              Internacional {ANO}
+            </span>
           </div>
         </div>
         <div className="flex h-1.5">
@@ -75,7 +82,7 @@ export default function CalendarioPublicoPage() {
         <ol className="space-y-3">
           {EVENTOS.map((e) => {
             const d = parse(e.data)
-            const c = CIRCUITOS[e.circuito]
+            const c = ABRANGENCIAS[e.abrangencia]
             const passado = d < hoje
             const destaque = e === proximo
             return (
@@ -107,12 +114,12 @@ export default function CalendarioPublicoPage() {
                   )}
                   {/* Meta no mobile */}
                   <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 sm:hidden">
-                    <Meta cor={c.cor} label={c.label} estrelas={e.estrelas} local={e.local} />
+                    <Meta cor={c.cor} texto={c.texto} label={c.label} estrelas={e.estrelas} local={e.local} />
                   </div>
                 </div>
 
                 <div className="hidden flex-col items-end gap-1.5 text-right sm:flex">
-                  <Meta cor={c.cor} label={c.label} estrelas={e.estrelas} local={e.local} />
+                  <Meta cor={c.cor} texto={c.texto} label={c.label} estrelas={e.estrelas} local={e.local} />
                 </div>
               </li>
             )
@@ -121,7 +128,7 @@ export default function CalendarioPublicoPage() {
 
         <footer className="mt-8 border-t border-zinc-200 pt-5">
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-zinc-500">
-            {Object.values(CIRCUITOS).map((c) => (
+            {Object.values(ABRANGENCIAS).map((c) => (
               <span key={c.label} className="inline-flex items-center gap-1.5">
                 <i className="inline-block h-3 w-3 rounded-sm" style={{ background: c.cor }} />
                 {c.label}
@@ -131,20 +138,36 @@ export default function CalendarioPublicoPage() {
               <Star className="h-3 w-3 fill-zinc-500" /> Peso no ranking
             </span>
           </div>
-          <p className="mt-3 text-xs text-zinc-400">Datas sujeitas a alteração.</p>
+          <p className="mt-3 text-sm text-zinc-600">
+            Todas as competições integram o{' '}
+            <strong className="text-zinc-900">Circuito Sul Internacional de Judô {ANO}</strong>.
+          </p>
+          <p className="mt-1 text-xs text-zinc-400">Datas sujeitas a alteração.</p>
         </footer>
       </main>
     </div>
   )
 }
 
-function Meta({ cor, label, estrelas, local }: { cor: string; label: string; estrelas: number; local: string }) {
+function Meta({
+  cor,
+  texto,
+  label,
+  estrelas,
+  local,
+}: {
+  cor: string
+  texto: string
+  label: string
+  estrelas: number
+  local: string
+}) {
   return (
     <>
       <span className="inline-flex items-center gap-1.5">
         <span
-          className="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white"
-          style={{ background: cor }}
+          className="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+          style={{ background: cor, color: texto }}
         >
           {label}
         </span>
