@@ -151,6 +151,7 @@ const GRADUACOES = [
 
 export default function RegulamentoPage() {
   return (
+    <div className="min-h-screen bg-[#0a0f1a] px-4 py-8 lg:py-12">
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-black text-white tracking-tight">Regulamento</h1>
@@ -374,6 +375,7 @@ export default function RegulamentoPage() {
           </div>
         </div>
       </section>
+    </div>
     </div>
   )
 }
