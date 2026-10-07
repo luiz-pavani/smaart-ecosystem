@@ -448,11 +448,29 @@ export async function POST(request: NextRequest) {
     let inserted = 0
     const upsert_errors: string[] = []
     const STATUS_MEMBRO: Record<string, string> = { aceito: 'ativo', approved: 'aprovado', rejected: 'rejeitado' }
+    // Stakeholders atuais — também filtra IDs que não existem (createUser que falhou), senão a FK
+    // derruba o lote inteiro do upsert.
+    const ids = [...new Set(importable.map((r) => r.row.stakeholder_id as string))]
+    const atuais = new Map<string, Record<string, unknown>>()
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: sh } = await supabaseAdmin
+        .from('stakeholders')
+        .select('id, data_nascimento, genero, telefone, kyu_dan_id')
+        .in('id', ids.slice(i, i + 200))
+      for (const s of sh ?? []) atuais.set(s.id, s)
+    }
+    for (const r of importable) {
+      if (!atuais.has(r.row.stakeholder_id as string)) {
+        upsert_errors.push(`Sem stakeholder no Titan: ${r.row.nome_completo} (${r.row.email ?? 'sem email'}) — não importado`)
+      }
+    }
+
     // Dois Member No podem cair no mesmo stakeholder (vínculo por email) — o upsert não aceita a mesma
     // chave duas vezes no lote; fica a filiação com validade mais longa.
     const porStakeholder = new Map<string, (typeof importable)[number]>()
     for (const r of importable) {
       const id = r.row.stakeholder_id as string
+      if (!atuais.has(id)) continue
       const atual = porStakeholder.get(id)
       if (!atual || (r.row.data_expiracao || '') > (atual.row.data_expiracao || '')) porStakeholder.set(id, r)
     }
@@ -494,15 +512,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Dados pessoais: só preenche o que está vazio no stakeholder (não sobrescreve edições feitas no Titan).
-    const ids = importable.map((r) => r.row.stakeholder_id as string)
-    const atuais = new Map<string, Record<string, unknown>>()
-    for (let i = 0; i < ids.length; i += 200) {
-      const { data: sh } = await supabaseAdmin
-        .from('stakeholders')
-        .select('id, data_nascimento, genero, telefone, kyu_dan_id')
-        .in('id', ids.slice(i, i + 200))
-      for (const s of sh ?? []) atuais.set(s.id, s)
-    }
     const patches: Array<{ id: string; patch: Record<string, unknown> }> = []
     for (const { row } of importable) {
       const atual = atuais.get(row.stakeholder_id as string)

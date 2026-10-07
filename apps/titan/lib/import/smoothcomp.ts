@@ -217,13 +217,15 @@ export function resolveKyuDanId(
   graduacao: string,
   qualSeuDan: string
 ): number | null {
-  const g = graduacao.trim().toUpperCase()
+  // Campo pode vir com várias linhas (graduação antiga + atual): vale a última
+  const linhas = graduacao.split('\n').map((l) => l.trim()).filter(Boolean)
+  const g = (linhas[linhas.length - 1] || '').toUpperCase()
   const d = qualSeuDan.trim().toUpperCase()
 
   if (!g) return null
 
   // Faixa preta: usar QUAL SEU DAN?
-  if (g.includes('FAIXA PRETA')) {
+  if (g.includes('FAIXA PRET')) {
     if (!d) return null
     // Tentativa de match direto
     if (DAN_MAP[d] !== undefined) return DAN_MAP[d]
@@ -236,6 +238,13 @@ export function resolveKyuDanId(
 
   // Não é faixa preta: match direto em GRADUAÇÃO
   if (GRADUACAO_MAP[g] !== undefined) return GRADUACAO_MAP[g]
+
+  // O Smoothcomp mudou a grafia do kyū ('AZUL | ROKKYŪ', 'BRANCA | MŪKYŪ'...). A cor da faixa
+  // identifica o kyū sem ambiguidade — compara só a parte antes do '|'.
+  const cor = (s: string) => s.split('|')[0].normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '')
+  for (const [key, id] of Object.entries(GRADUACAO_MAP)) {
+    if (g.includes('|') && cor(key) === cor(g)) return id
+  }
 
   // Match parcial (tolerante a variações de espaço/pontuação)
   for (const [key, id] of Object.entries(GRADUACAO_MAP)) {
