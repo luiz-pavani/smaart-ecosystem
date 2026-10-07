@@ -1,6 +1,44 @@
 import { createClient } from '@/lib/supabase/server'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAcademyStaff, isFederationManager } from '@/lib/auth/roles'
+import {
+  LRSJ_FED_UUID,
+  criarStakeholderAtleta,
+  preencherStakeholderVazio,
+  upsertFiliacoesLrsj,
+  type FiliacaoLrsj,
+} from '@/lib/filiacao/lrsj'
 
+interface AtletaInput {
+  nome_completo?: string | null
+  email?: string | null
+  cpf?: string | null
+  data_nascimento?: string | null
+  genero?: string | null
+  celular?: string | null
+  telefone?: string | null
+  academia_id?: string | null
+  kyu_dan_id?: number | string | null
+  graduacao?: string | null
+  dan_nivel?: string | null
+  status?: string | null
+  url_foto?: string | null
+  url_documento_id?: string | null
+  url_certificado_dan?: string | null
+  nivel_arbitragem?: string | null
+  observacoes?: string | null
+  lote_id?: string | null
+}
+
+/**
+ * POST /api/atletas — cadastra atleta(s) e a filiação LRSJ.
+ * JSON: um atleta, ou { atletas: [...] } (import CSV). multipart: um atleta com arquivos.
+ *
+ * user_fed_lrsj é VIEW sem INSERT — grava em stakeholders (dados pessoais, só campos vazios) e
+ * stakeholder_filiacoes (filiação). Staff de academia/federação cadastra terceiros (cria a conta se o
+ * email não existir; staff de academia só na própria academia). Demais usuários só cadastram a si mesmos.
+ */
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -14,19 +52,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const resolveStakeholderId = async (email: string | null, fallbackUserId: string) => {
-      const normalizedEmail = String(email || '').trim().toLowerCase()
-      if (!normalizedEmail) return fallbackUserId
-
-      const { data: stakeholders } = await supabase
-        .from('stakeholders')
-        .select('id')
-        .eq('email', normalizedEmail)
-        .limit(1)
-
-      if (!stakeholders || stakeholders.length === 0) return fallbackUserId
-      return stakeholders[0].id as string
-    }
+    const { data: me } = await supabaseAdmin
+      .from('stakeholders')
+      .select('role, academia_id')
+      .eq('id', user.id)
+      .maybeSingle()
+    const isStaff = isAcademyStaff(me?.role)
+    const isFedStaff = isFederationManager(me?.role)
 
     const resolveKyuDanId = async (params: {
       kyuDanIdRaw: unknown
@@ -52,110 +84,110 @@ export async function POST(request: NextRequest) {
       return Number(data)
     }
 
+    // Stakeholder do atleta: o próprio usuário (auto-cadastro) ou, para staff, o dono do email —
+    // criado se não existir. Nunca cai no id de quem está cadastrando.
+    const resolveStakeholderId = async (a: AtletaInput): Promise<{ id: string | null; error?: string }> => {
+      if (!isStaff) return { id: user.id }
+      const email = String(a.email || '').trim().toLowerCase()
+      if (email) {
+        const { data } = await supabaseAdmin.from('stakeholders').select('id').eq('email', email).limit(1)
+        if (data && data.length > 0) return { id: data[0].id as string }
+      }
+      const nome = String(a.nome_completo || '').trim()
+      if (!nome) return { id: null, error: 'Nome é obrigatório' }
+      const created = await criarStakeholderAtleta(supabaseAdmin, { nome_completo: nome, email, origem: 'cadastro' })
+      return created.id ? { id: created.id } : { id: null, error: created.error ?? 'Falha ao criar atleta' }
+    }
+
+    const cadastrar = async (lista: AtletaInput[]) => {
+      const errors: string[] = []
+      const filiacoes: FiliacaoLrsj[] = []
+      for (const a of lista) {
+        const label = a.nome_completo || a.email || 'atleta'
+        const academiaId = isStaff && !isFedStaff ? me?.academia_id ?? null : a.academia_id || null
+        if (isStaff && !isFedStaff && !academiaId) {
+          errors.push(`${label}: usuário sem academia vinculada`)
+          continue
+        }
+        const { id: stakeholderId, error: idError } = await resolveStakeholderId(a)
+        if (!stakeholderId) {
+          errors.push(`${label}: ${idError}`)
+          continue
+        }
+        const kyuDanId = await resolveKyuDanId({
+          kyuDanIdRaw: a.kyu_dan_id,
+          graduacaoRaw: a.graduacao,
+          danNivelRaw: a.dan_nivel,
+        })
+        const { error: stError } = await preencherStakeholderVazio(supabaseAdmin, stakeholderId, {
+          cpf: a.cpf ? String(a.cpf).replace(/\D/g, '') : null,
+          data_nascimento: a.data_nascimento || null,
+          genero: a.genero || null,
+          telefone: a.celular || a.telefone || null,
+          kyu_dan_id: kyuDanId,
+          academia_id: academiaId,
+          federacao_id: LRSJ_FED_UUID,
+        })
+        if (stError) errors.push(`${label}: ${stError}`)
+        filiacoes.push({
+          stakeholder_id: stakeholderId,
+          academia_id: academiaId,
+          kyu_dan_id: kyuDanId,
+          status_membro: isStaff ? a.status || 'ativo' : 'pendente',
+          url_foto: a.url_foto || null,
+          url_documento_id: a.url_documento_id || null,
+          url_certificado_dan: a.url_certificado_dan || null,
+          nivel_arbitragem: a.nivel_arbitragem || null,
+          observacoes: a.observacoes || null,
+          lote_id: a.lote_id || null,
+        })
+      }
+
+      // Filiação já existente: não mexe no status (não reativa suspenso nem rebaixa aprovado).
+      const ids = filiacoes.map((f) => f.stakeholder_id)
+      if (ids.length > 0) {
+        const { data: existentes } = await supabaseAdmin
+          .from('stakeholder_filiacoes')
+          .select('stakeholder_id')
+          .eq('federacao_id', LRSJ_FED_UUID)
+          .in('stakeholder_id', ids)
+        const jaFiliados = new Set((existentes ?? []).map((e) => e.stakeholder_id as string))
+        for (const f of filiacoes) if (jaFiliados.has(f.stakeholder_id)) delete f.status_membro
+        const { error } = await upsertFiliacoesLrsj(supabaseAdmin, filiacoes)
+        if (error) errors.push(`Filiações: ${error}`)
+      }
+      return { ids, errors }
+    }
+
     const contentType = request.headers.get('content-type') || ''
 
     if (contentType.includes('application/json')) {
       const body = await request.json()
-      const stakeholderId = body.stakeholder_id || await resolveStakeholderId(body.email || null, user.id)
-      const kyuDanId = await resolveKyuDanId({
-        kyuDanIdRaw: body.kyu_dan_id,
-        graduacaoRaw: body.graduacao,
-        danNivelRaw: body.dan_nivel,
-      })
-
-      // Atualizar stakeholders com role e vínculos
-      await supabase.from('stakeholders').update({
-        role: 'atleta',
-        federacao_id: body.federacao_id,
-        academia_id: body.academia_id,
-      }).eq('id', stakeholderId || user.id)
-
-      // Inserir dados esportivos em user_fed_lrsj
-      const { data: atleta, error: insertError } = await supabase
-        .from('user_fed_lrsj')
-        .insert({
-          stakeholder_id: stakeholderId || user.id,
-          kyu_dan_id: kyuDanId,
-          academia_id: body.academia_id,
-          nome_completo: body.nome_completo,
-          cpf: body.cpf,
-          data_nascimento: body.data_nascimento || null,
-          genero: body.genero || null,
-          email: body.email || null,
-          celular: body.celular || null,
-          graduacao: body.graduacao,
-          status_membro: body.status || 'ativo',
-          pais: 'Brasil',
-        })
-        .select()
-        .single()
-
-      if (insertError) {
-        return NextResponse.json(
-          { error: insertError.message },
-          { status: 400 }
-        )
+      const lista: AtletaInput[] = Array.isArray(body.atletas) ? body.atletas : [body]
+      if (lista.length > 1 && !isStaff) {
+        return NextResponse.json({ error: 'Sem permissão para importar atletas' }, { status: 403 })
       }
-
+      const { ids, errors } = await cadastrar(lista)
+      if (ids.length === 0) {
+        return NextResponse.json({ error: errors.join('; ') || 'Nenhum atleta cadastrado' }, { status: 400 })
+      }
       return NextResponse.json({
-        success: true,
-        atleta,
-      }, { status: 201 })
+        success: errors.length === 0,
+        atleta: { stakeholder_id: ids[0], federacao_id: LRSJ_FED_UUID },
+        cadastrados: ids.length,
+        errors,
+      }, { status: errors.length ? 207 : 201 })
     }
 
     // Get form data
     const formData = await request.formData()
+    const field = (k: string) => (formData.get(k) as string | null) || null
 
     // Extract file uploads
     const fotoPerfil = formData.get('foto_perfil') as File | null
     const fotoDocumento = formData.get('foto_documento') as File | null
     const certificadoArbitragem = formData.get('certificado_arbitragem') as File | null
     const certificadoDan = formData.get('certificado_dan') as File | null
-
-    // Extract other fields
-    const resolvedKyuDanId = await resolveKyuDanId({
-      kyuDanIdRaw: formData.get('kyu_dan_id'),
-      graduacaoRaw: formData.get('graduacao'),
-      danNivelRaw: formData.get('dan_nivel'),
-    })
-
-    const atletaData = {
-      user_id: user.id,
-      stakeholder_id: await resolveStakeholderId(formData.get('email') as string || null, user.id),
-      kyu_dan_id: resolvedKyuDanId,
-      federacao_id: formData.get('federacao_id') as string,
-      academia_id: formData.get('academia_id') as string,
-      nome_completo: formData.get('nome_completo') as string,
-      cpf: formData.get('cpf') as string,
-      rg: formData.get('rg') as string || null,
-      data_nascimento: formData.get('data_nascimento') as string,
-      genero: formData.get('genero') as string || null,
-      email: formData.get('email') as string || null,
-      telefone: formData.get('telefone') as string || null,
-      celular: formData.get('celular') as string || null,
-      cep: formData.get('cep') as string || null,
-      endereco: formData.get('endereco') as string || null,
-      numero: formData.get('numero') as string || null,
-      complemento: formData.get('complemento') as string || null,
-      bairro: formData.get('bairro') as string || null,
-      cidade: formData.get('cidade') as string || null,
-      estado: formData.get('estado') as string || null,
-      graduacao: formData.get('graduacao') as string,
-      dan_nivel: formData.get('dan_nivel') as string || null,
-      data_graduacao: formData.get('data_graduacao') as string || null,
-      nivel_arbitragem: formData.get('nivel_arbitragem') as string || null,
-      numero_diploma_dan: formData.get('numero_diploma_dan') as string || null,
-      lote: formData.get('lote') as string || null,
-      observacoes: formData.get('observacoes') as string || null,
-      pais: formData.get('pais') as string || null,
-      created_by: user.id,
-    }
-
-    // Upload files to Storage
-    let fotoPerfilUrl = null
-    let fotoDocumentoUrl = null
-    let certificadoArbitragemUrl = null
-    let certificadoDanUrl = null
 
     const uploadFile = async (file: File, bucket: string, path: string) => {
       const { data, error } = await supabase.storage
@@ -177,82 +209,53 @@ export async function POST(request: NextRequest) {
     }
 
     const timestamp = Date.now()
-    const cpfClean = atletaData.cpf.replace(/\D/g, '')
-
-    if (fotoPerfil && fotoPerfil.size > 0) {
-      const extension = fotoPerfil.name.split('.').pop()
-      fotoPerfilUrl = await uploadFile(
-        fotoPerfil,
-        'atletas',
-        `${atletaData.federacao_id}/${cpfClean}/perfil_${timestamp}.${extension}`
-      )
+    const pasta = `${field('federacao_id') ?? LRSJ_FED_UUID}/${(field('cpf') ?? '').replace(/\D/g, '') || user.id}`
+    const upload = async (file: File | null, prefixo: string) => {
+      if (!file || file.size === 0) return null
+      const extension = file.name.split('.').pop()
+      return uploadFile(file, 'atletas', `${pasta}/${prefixo}_${timestamp}.${extension}`)
     }
 
-    if (fotoDocumento && fotoDocumento.size > 0) {
-      const extension = fotoDocumento.name.split('.').pop()
-      fotoDocumentoUrl = await uploadFile(
-        fotoDocumento,
-        'atletas',
-        `${atletaData.federacao_id}/${cpfClean}/documento_${timestamp}.${extension}`
-      )
-    }
+    const fotoPerfilUrl = await upload(fotoPerfil, 'perfil')
+    const fotoDocumentoUrl = await upload(fotoDocumento, 'documento')
+    const certificadoArbitragemUrl = await upload(certificadoArbitragem, 'cert_arbitragem')
+    const certificadoDanUrl = await upload(certificadoDan, 'cert_dan')
 
-    if (certificadoArbitragem && certificadoArbitragem.size > 0) {
-      const extension = certificadoArbitragem.name.split('.').pop()
-      certificadoArbitragemUrl = await uploadFile(
-        certificadoArbitragem,
-        'atletas',
-        `${atletaData.federacao_id}/${cpfClean}/cert_arbitragem_${timestamp}.${extension}`
-      )
-    }
+    // stakeholder_filiacoes não tem coluna para o certificado de arbitragem — fica nas observações.
+    const observacoes = [
+      field('observacoes'),
+      certificadoArbitragemUrl ? `Certificado de arbitragem: ${certificadoArbitragemUrl}` : null,
+    ].filter(Boolean).join('\n') || null
 
-    if (certificadoDan && certificadoDan.size > 0) {
-      const extension = certificadoDan.name.split('.').pop()
-      certificadoDanUrl = await uploadFile(
-        certificadoDan,
-        'atletas',
-        `${atletaData.federacao_id}/${cpfClean}/cert_dan_${timestamp}.${extension}`
-      )
-    }
+    const { ids, errors } = await cadastrar([{
+      nome_completo: field('nome_completo'),
+      email: field('email'),
+      cpf: field('cpf'),
+      data_nascimento: field('data_nascimento'),
+      genero: field('genero'),
+      celular: field('celular') ?? field('telefone'),
+      academia_id: field('academia_id'),
+      kyu_dan_id: field('kyu_dan_id'),
+      graduacao: field('graduacao'),
+      dan_nivel: field('dan_nivel'),
+      url_foto: fotoPerfilUrl,
+      url_documento_id: fotoDocumentoUrl,
+      url_certificado_dan: certificadoDanUrl,
+      nivel_arbitragem: field('nivel_arbitragem'),
+      observacoes,
+      lote_id: field('lote'),
+    }])
 
-    // Insert athlete record
-    // Inserir dados esportivos em user_fed_lrsj
-    const { data: atleta, error: insertError } = await supabase
-      .from('user_fed_lrsj')
-      .insert({
-        stakeholder_id: atletaData.stakeholder_id,
-        kyu_dan_id: resolvedKyuDanId,
-        academia_id: atletaData.academia_id,
-        nome_completo: atletaData.nome_completo,
-        cpf: atletaData.cpf,
-        data_nascimento: atletaData.data_nascimento || null,
-        genero: atletaData.genero || null,
-        email: atletaData.email || null,
-        celular: atletaData.celular || null,
-        graduacao: atletaData.graduacao,
-        foto_perfil_url: fotoPerfilUrl,
-        foto_documento_url: fotoDocumentoUrl,
-        certificado_arbitragem_url: certificadoArbitragemUrl,
-        certificado_dan_url: certificadoDanUrl,
-        status_membro: 'ativo',
-        pais: atletaData.pais || 'Brasil',
-      })
-      .select()
-      .single()
-
-    if (insertError) {
-      console.error('Insert error:', insertError)
-      return NextResponse.json(
-        { error: insertError.message },
-        { status: 400 }
-      )
+    if (ids.length === 0) {
+      console.error('Insert error:', errors)
+      return NextResponse.json({ error: errors.join('; ') || 'Erro ao cadastrar atleta' }, { status: 400 })
     }
 
     return NextResponse.json({
-      success: true,
-      atleta,
-      numero_registro: atleta.numero_registro,
-    }, { status: 201 })
+      success: errors.length === 0,
+      atleta: { stakeholder_id: ids[0], federacao_id: LRSJ_FED_UUID },
+      errors,
+    }, { status: errors.length ? 207 : 201 })
   } catch (error) {
     console.error('Error creating atleta:', error)
     return NextResponse.json(

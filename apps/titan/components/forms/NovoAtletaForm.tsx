@@ -144,20 +144,6 @@ export default function NovoAtletaForm({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
-  const resolveStakeholderIdByEmail = async (email: string, fallbackUserId: string) => {
-    const normalizedEmail = email.trim().toLowerCase()
-    if (!normalizedEmail) return fallbackUserId
-
-    const { data, error } = await supabase
-      .from('stakeholders')
-      .select('id')
-      .eq('email', normalizedEmail)
-      .limit(1)
-
-    if (error || !data || data.length === 0) return fallbackUserId
-    return data[0].id as string
-  }
-
   const handleFileSelect = async (file: File) => {
     setPhotoLoading(true)
 
@@ -229,13 +215,12 @@ export default function NovoAtletaForm({
         throw new Error('Academia não selecionada')
       }
 
-      const stakeholderId = await resolveStakeholderIdByEmail(formData.email, user.id)
-
-      // Create athlete record in user_fed_lrsj (primary athlete table)
-      const { error } = await supabase
-        .from('user_fed_lrsj')
-        .insert([{
-          stakeholder_id: stakeholderId,
+      // Cadastro via API: user_fed_lrsj é VIEW sem INSERT; a rota grava stakeholders +
+      // stakeholder_filiacoes e cria a conta do atleta quando o email não existe.
+      const response = await fetch('/api/atletas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           academia_id: usedAcademiaId,
           nome_completo: formData.nome_completo,
           cpf: formData.cpf.replace(/\D/g, ''),
@@ -244,12 +229,13 @@ export default function NovoAtletaForm({
           email: formData.email || null,
           celular: formData.celular || null,
           graduacao: formData.graduacao,
-          foto_perfil_url: photoUrl,
-          status_membro: 'ativo',
-          pais: 'Brasil',
-        }])
-
-      if (error) throw error
+          url_foto: photoUrl,
+          status: 'ativo',
+        }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Erro ao cadastrar atleta')
+      if (result.errors?.length) console.warn('Cadastro com avisos:', result.errors)
 
       alert('Atleta cadastrado com sucesso!')
       router.push('/atletas')
@@ -267,29 +253,6 @@ export default function NovoAtletaForm({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Usuário não autenticado')
 
-      const emailSet = Array.from(
-        new Set(
-          rows
-            .map((row) => (row.email || '').trim().toLowerCase())
-            .filter((email) => email.length > 0)
-        )
-      )
-
-      let stakeholderByEmail: Record<string, string> = {}
-      if (emailSet.length > 0) {
-        const { data: stakeholders } = await supabase
-          .from('stakeholders')
-          .select('id, email')
-          .in('email', emailSet)
-
-        stakeholderByEmail = (stakeholders || []).reduce((acc, stakeholder) => {
-          if (stakeholder.email) {
-            acc[String(stakeholder.email).toLowerCase()] = String(stakeholder.id)
-          }
-          return acc
-        }, {} as Record<string, string>)
-      }
-
       // Processar rows para buscar academia_id pela sigla se necessário
       const processedRows = rows.map(row => {
         let academiaIdParaUsar = academiaId
@@ -305,8 +268,6 @@ export default function NovoAtletaForm({
         }
 
         return {
-          user_id: user.id,
-          stakeholder_id: stakeholderByEmail[(row.email || '').trim().toLowerCase()] || user.id,
           federacao_id: federacaoId,
           academia_id: academiaIdParaUsar || row.academia_id,
           nome_completo: row.nome_completo,
@@ -328,9 +289,8 @@ export default function NovoAtletaForm({
         }
       })
 
-      // Insert into user_fed_lrsj (primary athlete table) with safe field subset
+      // Import via API (user_fed_lrsj é VIEW sem INSERT; a rota grava stakeholders + stakeholder_filiacoes)
       const safeRows = processedRows.map(r => ({
-        stakeholder_id: r.stakeholder_id,
         academia_id: r.academia_id,
         nome_completo: r.nome_completo,
         cpf: r.cpf,
@@ -339,14 +299,24 @@ export default function NovoAtletaForm({
         email: r.email,
         celular: r.celular,
         graduacao: r.graduacao,
-        status_membro: 'ativo',
-        pais: 'Brasil',
+        dan_nivel: r.dan_nivel,
+        nivel_arbitragem: r.nivel_arbitragem,
+        observacoes: r.observacoes,
+        status: 'ativo',
       }))
-      const { error } = await supabase
-        .from('user_fed_lrsj')
-        .insert(safeRows)
-
-      if (error) throw error
+      const response = await fetch('/api/atletas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ atletas: safeRows }),
+      })
+      const result = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(result.error || 'Erro na importação')
+      if (result.errors?.length) {
+        return {
+          success: true,
+          message: `${result.cadastrados} de ${rows.length} atleta(s) importado(s). Erros: ${result.errors.join('; ')}`,
+        }
+      }
 
       return {
         success: true,

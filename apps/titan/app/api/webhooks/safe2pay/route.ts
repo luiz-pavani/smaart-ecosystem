@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { notifyAtletaPagamentoEvento } from '@/lib/whatsapp/notifications'
+import { upsertFiliacoesLrsj } from '@/lib/filiacao/lrsj'
 
 /**
  * POST /api/webhooks/safe2pay
@@ -272,7 +273,7 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
     case 'filiacao_pedido':
     case 'filiacao_atleta': {
       // Aprova o pedido (idempotente — re-update em pedido já APROVADO é no-op semântico,
-      // mas precisa retornar o stakeholder_id no segundo webhook pra atualizar user_fed_lrsj).
+      // mas precisa retornar o stakeholder_id no segundo webhook pra gravar a filiação).
       await supabaseAdmin
         .from('filiacao_pedidos')
         .update({
@@ -289,40 +290,23 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
         .eq('id', referenciaId)
         .maybeSingle()
 
-      // Cria/atualiza linha em user_fed_lrsj (UPSERT — atleta de 1ª filiação ainda não tem linha).
-      // nome_completo é NOT NULL — buscar do stakeholder.
+      // Cria/atualiza a filiação LRSJ (atleta de 1ª filiação ainda não tem linha).
+      // user_fed_lrsj é VIEW sem INSERT — grava direto em stakeholder_filiacoes; dados pessoais
+      // já estão em stakeholders.
       if (pedido?.stakeholder_id) {
         const base = new Date(pedido.created_at ?? Date.now())
         base.setFullYear(base.getFullYear() + 1)
         const novaExpiracao = base.toISOString().split('T')[0]
 
-        const { data: stake } = await supabaseAdmin
-          .from('stakeholders')
-          .select('nome_completo, kyu_dan_id, email, telefone, genero, data_nascimento')
-          .eq('id', pedido.stakeholder_id)
-          .maybeSingle()
-
-        await supabaseAdmin
-          .from('user_fed_lrsj')
-          .upsert(
-            {
-              stakeholder_id: pedido.stakeholder_id,
-              nome_completo: stake?.nome_completo ?? 'Sem nome',
-              federacao_id: pedido.federacao_id,
-              academia_id: pedido.academia_id ?? null,
-              kyu_dan_id: stake?.kyu_dan_id ?? null,
-              email: stake?.email ?? null,
-              telefone: stake?.telefone ?? null,
-              genero: stake?.genero ?? null,
-              data_nascimento: stake?.data_nascimento ?? null,
-              status_plano: 'Válido',
-              status_membro: 'Aceito',
-              data_adesao: new Date().toISOString().split('T')[0],
-              data_expiracao: novaExpiracao,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'stakeholder_id' }
-          )
+        const { error: filErr } = await upsertFiliacoesLrsj(supabaseAdmin, [{
+          stakeholder_id: pedido.stakeholder_id,
+          academia_id: pedido.academia_id ?? null,
+          status_plano: 'Válido',
+          status_membro: 'ativo',
+          data_adesao: new Date().toISOString().split('T')[0],
+          data_expiracao: novaExpiracao,
+        }])
+        if (filErr) console.error('[safe2pay] Erro ao gravar filiação:', filErr)
       }
       break
     }
