@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { preencherStakeholderVazio, upsertFiliacoesLrsj } from '@/lib/filiacao/lrsj'
 
 // GET — list pending affiliation requests for the caller's federation
 export async function GET(req: NextRequest) {
@@ -115,23 +116,16 @@ export async function PATCH(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // On approval: sync data to user_fed_lrsj and stakeholders
+  // On approval: sync data to stakeholder_filiacoes and stakeholders
   if (status === 'APROVADO' && pedido) {
     const df = (pedido.dados_formulario || {}) as Record<string, unknown>
 
     // Fetch stakeholder for base data
     const { data: st } = await supabaseAdmin
       .from('stakeholders')
-      .select('nome_completo, email, telefone, genero, data_nascimento, kyu_dan_id')
+      .select('kyu_dan_id')
       .eq('id', pedido.stakeholder_id)
       .single()
-
-    // Fetch academia name
-    const { data: acad } = await supabaseAdmin
-      .from('academias')
-      .select('nome')
-      .eq('id', pedido.academia_id)
-      .maybeSingle()
 
     const hoje = new Date().toISOString().split('T')[0]
     // data_expiracao: override manual ou 365 dias a partir da data de criação do pedido
@@ -149,59 +143,37 @@ export async function PATCH(req: NextRequest) {
     // cor_patch must be uppercase per DB check constraint
     const corPatch = (df.cor_patch as string | undefined)?.toUpperCase() ?? null
 
-    // Resolve integer federacao_id for user_fed_lrsj (column is INTEGER, not UUID)
-    // filiacao_pedidos.federacao_id is UUID → lookup the integer id used in user_fed_lrsj
-    let fedIdInt: number = 1 // default LRSJ
-    if (pedido.federacao_id) {
-      const { data: fedRow } = await supabaseAdmin
-        .from('user_fed_lrsj')
-        .select('federacao_id')
-        .eq('stakeholder_id', pedido.stakeholder_id)
-        .maybeSingle()
-      if (fedRow?.federacao_id) {
-        fedIdInt = fedRow.federacao_id
-      }
-    }
-
-    // Upsert user_fed_lrsj
-    const { error: upsertError } = await supabaseAdmin.from('user_fed_lrsj').upsert(
-      {
-        stakeholder_id: pedido.stakeholder_id,
-        federacao_id: fedIdInt,
-        academia_id: pedido.academia_id,
-        nome_completo: (df.nome_completo as string | undefined) ?? st?.nome_completo ?? null,
-        email: st?.email ?? null,
-        telefone: st?.telefone ?? null,
-        genero: (df.genero as string | undefined) ?? st?.genero ?? null,
-        data_nascimento: (df.data_nascimento as string | undefined) ?? st?.data_nascimento ?? null,
-        nacionalidade: (df.nacionalidade as string | undefined) ?? null,
-        pais: (df.pais as string | undefined) ?? null,
-        cidade: (df.cidade as string | undefined) ?? null,
-        estado: (df.estado as string | undefined) ?? null,
-        nome_patch: (df.nome_patch as string | undefined) ?? null,
-        tamanho_patch: (df.tamanho_patch as string | undefined) ?? null,
-        cor_patch: corPatch,
-        academias: acad?.nome ?? null,
-        kyu_dan_id: kyuDanId,
-        status_membro: 'Aceito',
-        status_plano: 'Válido',
-        data_adesao: hoje,
-        data_expiracao: dataExpiracao,
-        url_documento_id: pedido.url_documento_id ?? null,
-        dados_validados: false,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'stakeholder_id,federacao_id' }
-    )
+    // user_fed_lrsj é VIEW sem INSERT — filiação vai direto em stakeholder_filiacoes.
+    const { error: upsertError } = await upsertFiliacoesLrsj(supabaseAdmin, [{
+      stakeholder_id: pedido.stakeholder_id,
+      academia_id: pedido.academia_id,
+      nome_patch: (df.nome_patch as string | undefined) ?? null,
+      tamanho_patch: (df.tamanho_patch as string | undefined) ?? null,
+      cor_patch: corPatch,
+      kyu_dan_id: kyuDanId,
+      status_membro: 'ativo',
+      status_plano: 'Válido',
+      data_adesao: hoje,
+      data_expiracao: dataExpiracao,
+      url_documento_id: pedido.url_documento_id ?? null,
+      dados_validados: false,
+    }])
 
     if (upsertError) {
-      console.error('[filiacao-pedidos] Erro ao upsert user_fed_lrsj:', upsertError)
+      console.error('[filiacao-pedidos] Erro ao gravar filiação:', upsertError)
     }
 
-    // Update stakeholder federacao_id and kyu_dan_id if set
+    // Stakeholder: vínculo com a federação e graduação do pedido; dados pessoais do formulário
+    // só preenchem o que está vazio.
     const stUpdate: Record<string, unknown> = { federacao_id: pedido.federacao_id }
     if (kyuDanId) stUpdate.kyu_dan_id = kyuDanId
     await supabaseAdmin.from('stakeholders').update(stUpdate).eq('id', pedido.stakeholder_id)
+    const { error: stError } = await preencherStakeholderVazio(supabaseAdmin, pedido.stakeholder_id, {
+      genero: (df.genero as string | undefined) ?? null,
+      data_nascimento: (df.data_nascimento as string | undefined) ?? null,
+      telefone: (df.telefone as string | undefined) ?? null,
+    })
+    if (stError) console.error('[filiacao-pedidos] Erro ao preencher stakeholder:', stError)
   }
 
   return NextResponse.json({ ok: true })
