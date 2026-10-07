@@ -35,8 +35,7 @@ export async function GET(_req: NextRequest) {
   const [atletasRes, academiasRes] = await Promise.all([
     supabaseAdmin
       .from('user_fed_lrsj')
-      .select('status_plano, status_membro, data_expiracao, data_adesao')
-      .eq('federacao_id', 1),
+      .select('status_plano, status_membro, data_expiracao, data_adesao'),
     supabaseAdmin
       .from('academias')
       .select('ativo, anualidade_vencimento')

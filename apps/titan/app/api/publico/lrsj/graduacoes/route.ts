@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { anexarKyuDan, filtroStatusMembro } from '@/lib/filiacao/lrsj'
 
 // Dynamic: sempre lê o banco no momento da requisição.
 // Mudanças em user_fed_lrsj / kyu_dan se refletem na próxima visita.
@@ -17,11 +18,10 @@ export async function GET() {
   type Row = {
     stakeholder_id: string
     nome_completo: string
-    academias: string | null
+    academia_id: string | null
     kyu_dan_id: number | null
     status_plano: string | null
     data_expiracao: string | null
-    kyu_dan: { id: number; cor_faixa: string; kyu_dan: string; ordem: number } | { id: number; cor_faixa: string; kyu_dan: string; ordem: number }[] | null
   }
   const PAGE = 1000
   let from = 0
@@ -32,18 +32,12 @@ export async function GET() {
       .select(`
         stakeholder_id,
         nome_completo,
-        academias,
+        academia_id,
         kyu_dan_id,
         status_plano,
-        data_expiracao,
-        kyu_dan:kyu_dan_id (
-          id,
-          cor_faixa,
-          kyu_dan,
-          ordem
-        )
+        data_expiracao
       `)
-      .eq('status_membro', 'Aceito')
+      .or(filtroStatusMembro('Aceito'))
       .not('kyu_dan_id', 'is', null)
       .order('nome_completo', { ascending: true })
       .range(from, from + PAGE - 1)
@@ -57,8 +51,18 @@ export async function GET() {
     from += PAGE
   }
 
-  const atletas = data.map((a) => {
-    const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
+  // kyu_dan e nome da academia buscados à parte: a view não expõe a FK de kyu_dan
+  // (cast ::bigint) e a coluna texto `academias` agora é NULL.
+  const comKyuDan = await anexarKyuDan(supabaseAdmin, data)
+  const academiaIds = Array.from(new Set(data.map((a) => a.academia_id).filter((id): id is string => !!id)))
+  const academiaNome = new Map<string, string>()
+  if (academiaIds.length) {
+    const { data: acads } = await supabaseAdmin.from('academias').select('id, nome').in('id', academiaIds)
+    for (const ac of acads ?? []) if (ac.nome) academiaNome.set(ac.id, ac.nome)
+  }
+
+  const atletas = comKyuDan.map((a) => {
+    const kd = a.kyu_dan
     const em_dia =
       a.status_plano === 'Válido' &&
       typeof a.data_expiracao === 'string' &&
@@ -66,7 +70,7 @@ export async function GET() {
     return {
       id: a.stakeholder_id,
       nome: a.nome_completo,
-      academia: a.academias || null,
+      academia: (a.academia_id && academiaNome.get(a.academia_id)) || null,
       kyu_dan_id: a.kyu_dan_id,
       cor_faixa: kd?.cor_faixa ?? null,
       kyu_dan: kd?.kyu_dan ?? null,

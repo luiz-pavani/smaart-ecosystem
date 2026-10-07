@@ -127,25 +127,15 @@ export async function POST(
   const atletaIds = [...new Set(targetRegs.map(r => r.atleta_id))]
   const { data: stakeholders } = await supabaseAdmin
     .from('stakeholders')
-    .select('id, telefone, celular')
+    .select('id, telefone')
     .in('id', atletaIds)
 
   const phoneMap: Record<string, string | null> = {}
   for (const s of stakeholders || []) {
-    phoneMap[s.id] = normalizePhone(s.telefone || s.celular)
+    phoneMap[s.id] = normalizePhone(s.telefone)
   }
 
-  // Also try user_fed_lrsj for phone
-  const { data: fedData } = await supabaseAdmin
-    .from('user_fed_lrsj')
-    .select('stakeholder_id, telefone, celular')
-    .in('stakeholder_id', atletaIds)
-
-  for (const f of fedData || []) {
-    if (!phoneMap[f.stakeholder_id]) {
-      phoneMap[f.stakeholder_id] = normalizePhone(f.telefone || f.celular)
-    }
-  }
+  // (user_fed_lrsj.telefone é o próprio stakeholders.telefone — não há fallback a buscar)
 
   let sent = 0, skipped = 0, failed = 0
   const notifRows: Record<string, unknown>[] = []

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Loader2, User, ShieldCheck, ShieldX } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { rotuloStatusMembro } from '@/lib/filiacao/lrsj'
 
 interface AtletaPerfil {
   stakeholder_id: string
@@ -41,14 +42,17 @@ export default function CarteiraPub() {
 
   useEffect(() => {
     const load = async () => {
+      // Página pública (sem sessão): a view user_fed_lrsj não é acessível a anon — a RPC
+      // carteira_publica devolve só os campos não sensíveis de um stakeholder_id.
       const [{ data: fedData }, { data: kdData }] = await Promise.all([
-        supabase.from('user_fed_lrsj').select('*').eq('stakeholder_id', id).maybeSingle(),
+        supabase.rpc('carteira_publica', { p_stakeholder_id: id }).maybeSingle<AtletaPerfil>(),
         supabase.from('kyu_dan').select('id, cor_faixa, kyu_dan, icones').order('id'),
       ])
 
       if (!fedData) { setNotFound(true); setLoading(false); return }
 
-      setAtleta(fedData as AtletaPerfil)
+      // status_membro no banco é ativo/aprovado/…; a carteira usa o rótulo ("Aceito")
+      setAtleta({ ...(fedData as AtletaPerfil), status_membro: rotuloStatusMembro(fedData.status_membro) })
       const kd = (kdData || []).find((k: KyuDan) => k.id === fedData.kyu_dan_id)
       setKyuDan(kd || null)
       setLoading(false)

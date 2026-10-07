@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { LRSJ_FED_UUID, anexarKyuDan, filtroStatusMembro, rotuloStatusMembro } from '@/lib/filiacao/lrsj'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -32,34 +33,42 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin
     .from('user_fed_lrsj')
     .select(
-      'stakeholder_id, nome_completo, academias, academia_id, status_plano, status_membro, data_expiracao, data_adesao, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)',
+      'stakeholder_id, nome_completo, academia_id, status_plano, status_membro, data_expiracao, data_adesao, kyu_dan_id',
       { count: 'exact' }
     )
 
-  // For non-master users scope to their federation's integer id
-  // LRSJ is always federacao_id = 1 in user_fed_lrsj
+  // user_fed_lrsj só tem filiações LRSJ (federacao_id = LRSJ_FED_UUID).
+  // Usuário de outra federação não tem filiados aqui.
   const isMaster = perfil.role === 'master_access'
-  const LRSJ_UUID = '6e5d037e-0dfd-40d5-a1af-b8b2a334fa7d'
   const fedUUID = String(perfil.federacao_id ?? '').trim()
-  const isLrsj = isMaster || fedUUID === LRSJ_UUID || fedUUID === '1'
+  const isLrsj = isMaster || fedUUID === LRSJ_FED_UUID
 
   if (!isLrsj && perfil.federacao_id) {
-    // Non-LRSJ: filter by federacao_id (would need integer mapping — skip for now)
-    query = query.eq('federacao_id', 1)
+    return NextResponse.json({ atletas: [], total: 0 })
   }
-  // For LRSJ/master: no federacao_id filter (show all)
 
   if (search)       query = query.ilike('nome_completo', `%${search}%`)
   if (graduacao)    query = query.eq('kyu_dan_id', Number(graduacao))
-  if (academia)     query = (query as any).ilike('academias', `%${academia}%`)
+  if (academia) {
+    // A UI manda sigla ou nome; a view não tem mais o texto `academias` (NULL) — resolve para academia_id.
+    const { data: acads } = await supabaseAdmin
+      .from('academias')
+      .select('id, sigla, nome')
+    const ids = (acads || [])
+      .filter((a: any) => a.sigla === academia || a.nome === academia)
+      .map((a: any) => a.id)
+    if (!ids.length) return NextResponse.json({ atletas: [], total: 0 })
+    query = query.in('academia_id', ids)
+  }
   if (situacao)     query = query.eq('status_plano', situacao)
-  if (statusMembro) query = query.eq('status_membro', statusMembro)
+  if (statusMembro) query = query.or(filtroStatusMembro(statusMembro))
 
-  const { data, count, error } = await (query as any)
+  const { data: rows, count, error } = await (query as any)
     .order('nome_completo', { ascending: true })
     .range(start, end)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  const data = await anexarKyuDan(supabaseAdmin, rows || [])
 
   // Resolve academia siglas
   const academiaIds: string[] = Array.from(
@@ -85,9 +94,9 @@ export async function GET(req: NextRequest) {
     kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
     academia: siglaById[item.academia_id]
       ? { nome: siglaById[item.academia_id] }
-      : (item.academias ? { nome: item.academias } : null),
+      : null,
     status_plano: item.status_plano ?? null,
-    statusMembro: item.status_membro ?? 'Em análise',
+    statusMembro: rotuloStatusMembro(item.status_membro),
     validade: item.data_expiracao ?? null,
     data_adesao: item.data_adesao ?? null,
   }))

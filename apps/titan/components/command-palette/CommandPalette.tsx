@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Users, Building2, Calendar, Trophy, ArrowRight, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { anexarKyuDan } from '@/lib/filiacao/lrsj'
 
 interface SearchResult {
   id: string
@@ -89,19 +90,19 @@ export function CommandPalette() {
       // Search Atletas
       let atletasQuery = supabase
         .from('user_fed_lrsj')
-        .select('stakeholder_id, nome_completo, academia_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)')
+        .select('stakeholder_id, nome_completo, academia_id, kyu_dan_id')
         .ilike('nome_completo', `%${searchQuery}%`)
-        .eq('federacao_id', 1)
         .limit(5)
 
       if (academiaId && !isMaster) {
         atletasQuery = atletasQuery.eq('academia_id', academiaId)
       }
 
-      const { data: atletas } = await atletasQuery
+      const { data: atletaRows } = await atletasQuery
+      const atletas = await anexarKyuDan(supabase, atletaRows || [])
 
-      atletas?.forEach((a: any) => {
-        const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
+      atletas.forEach((a: any) => {
+        const kd = a.kyu_dan
         searchResults.push({
           id: a.stakeholder_id,
           type: 'atleta',

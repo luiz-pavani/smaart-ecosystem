@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Users, Calendar, BarChart3, Settings, TrendingUp, Clock, FileText, Download, Cake, MapPin, User, Award, UserSearch, MessageSquare, Star, BookText, ShieldAlert, DollarSign } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { anexarKyuDan } from '@/lib/filiacao/lrsj'
 import { MetricCard } from '@/components/dashboard/MetricCard'
 import { LineChart } from '@/components/dashboard/LineChart'
 import { PieChart } from '@/components/dashboard/PieChart'
@@ -132,14 +133,12 @@ export default function PortalAcademiaPage() {
         .from('user_fed_lrsj')
         .select('*', { count: 'exact', head: true })
         .eq('academia_id', resolvedAcademiaId)
-        .eq('federacao_id', 1)
 
       // Atletas ativos (plano válido)
       const { count: atletasAtivos } = await supabase
         .from('user_fed_lrsj')
         .select('*', { count: 'exact', head: true })
         .eq('academia_id', resolvedAcademiaId)
-        .eq('federacao_id', 1)
         .eq('status_plano', 'Válido')
 
       // Total aulas
@@ -170,11 +169,11 @@ export default function PortalAcademiaPage() {
       }))
 
       // Distribuição por graduação
-      const { data: atletasData } = await supabase
+      const { data: atletasGrad } = await supabase
         .from('user_fed_lrsj')
-        .select('kyu_dan:kyu_dan_id(cor_faixa)')
+        .select('kyu_dan_id')
         .eq('academia_id', resolvedAcademiaId)
-        .eq('federacao_id', 1)
+      const atletasData = await anexarKyuDan(supabase, atletasGrad || [])
 
       const GRAD_GROUPS: Record<string, string> = {
         'Branca': 'Branca a Cinza',
@@ -195,8 +194,8 @@ export default function PortalAcademiaPage() {
       }
 
       const graduacaoMap = new Map<string, number>()
-      atletasData?.forEach((a: any) => {
-        const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
+      atletasData.forEach((a: any) => {
+        const kd = a.kyu_dan
         const cor = kd?.cor_faixa
         const group = cor ? (GRAD_GROUPS[cor] ?? 'Não definida') : 'Não definida'
         graduacaoMap.set(group, (graduacaoMap.get(group) || 0) + 1)
@@ -253,7 +252,6 @@ export default function PortalAcademiaPage() {
         .from('user_fed_lrsj')
         .select('nome_completo, telefone, status_plano, data_expiracao')
         .eq('academia_id', resolvedAcademiaId)
-        .eq('federacao_id', 1)
         .neq('status_plano', 'Válido')
         .order('data_expiracao', { ascending: true })
         .limit(10)
@@ -270,7 +268,6 @@ export default function PortalAcademiaPage() {
         .from('user_fed_lrsj')
         .select('nome_completo, data_nascimento, telefone')
         .eq('academia_id', resolvedAcademiaId)
-        .eq('federacao_id', 1)
         .not('data_nascimento', 'is', null)
 
       const today = new Date()

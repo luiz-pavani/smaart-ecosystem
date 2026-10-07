@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { anexarKyuDan } from '@/lib/filiacao/lrsj'
 
 async function resolveAcademiaIdServer(userId: string): Promise<string | null> {
   const { data: perfil } = await supabaseAdmin
@@ -21,12 +22,12 @@ export async function GET(req: NextRequest) {
   if (!academiaId) return NextResponse.json({ error: 'Academia não vinculada' }, { status: 400 })
 
   // Primary: get all user_fed_lrsj entries for this academia
-  const { data: lrsjRows } = await supabaseAdmin
+  const { data: lrsjBase } = await supabaseAdmin
     .from('user_fed_lrsj')
-    .select('stakeholder_id, nome_completo, status_plano, data_expiracao, kyu_dan_id, kyu_dan:kyu_dan_id(id, cor_faixa, kyu_dan)')
+    .select('stakeholder_id, nome_completo, status_plano, data_expiracao, kyu_dan_id')
     .eq('academia_id', academiaId)
-    .eq('federacao_id', 1)
     .order('nome_completo')
+  const lrsjRows = await anexarKyuDan(supabaseAdmin, lrsjBase ?? [])
 
   if (!lrsjRows?.length) return NextResponse.json({ atletas: [] })
 

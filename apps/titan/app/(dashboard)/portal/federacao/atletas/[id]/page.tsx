@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Loader2, User, Mail, Award, Building2, FileText, CreditCard, CheckCircle2, XCircle, RefreshCw, Zap, ShieldCheck } from "lucide-react";
 import AtletaDocumentos from "@/components/AtletaDocumentos";
+import { rotuloStatusMembro } from "@/lib/filiacao/lrsj";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,12 @@ type EditCtx = {
 const NIVEL_1_3_FIELDS: (keyof AthleteRecord)[] = ['status_plano', 'data_expiracao', 'status_membro', 'lote_id'];
 // Fields writable by 1–7, but locked to 1–3 once status_membro = "Aceito"
 const GRAD_FIELDS: (keyof AthleteRecord)[] = ['kyu_dan_id', 'nivel_arbitragem'];
+
+// status_membro no banco é ativo/aprovado/pendente/rejeitado…; a página trabalha com os rótulos
+// "Aceito" / "Em análise" / "Rejeitado" e o update-fed normaliza de volta ao gravar.
+function comRotuloStatus(rec: AthleteRecord): AthleteRecord {
+  return { ...rec, status_membro: rotuloStatusMembro(rec.status_membro) };
+}
 
 function canEditField(field: keyof AthleteRecord, nivelHierarquico: number, statusMembro: string | null | undefined): boolean {
   if (NIVEL_1_3_FIELDS.includes(field)) return nivelHierarquico <= 3;
@@ -419,7 +426,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
         }
 
         const normalized = fedData
-          ? { ...(fedData as AthleteRecord), idade: computeAgeByBirthYear((fedData as AthleteRecord).data_nascimento) }
+          ? comRotuloStatus({ ...(fedData as AthleteRecord), idade: computeAgeByBirthYear((fedData as AthleteRecord).data_nascimento) })
           : null;
 
         setAtleta(normalized);
@@ -443,7 +450,7 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
   const isSelfAthlete = Boolean(currentUserEmail && atleta?.email && currentUserEmail.toLowerCase() === String(atleta.email).toLowerCase());
 
   const statusMembroAtual = String(atleta?.status_membro ?? "").trim().toLowerCase();
-  const membroAceito = statusMembroAtual === "aceito" || statusMembroAtual === "approved";
+  const membroAceito = statusMembroAtual === "aceito";
   const canValidate = isMaster || isFederacao;
   const canEdit = isMaster || isFederacao || (!membroAceito && (isAcademia || isAtletaRole || isSelfAthlete));
 
@@ -509,8 +516,9 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Erro ao salvar");
 
-      setAtleta(json.data as AthleteRecord);
-      setFormData(json.data as AthleteRecord);
+      const rec = comRotuloStatus(json.data as AthleteRecord);
+      setAtleta(rec);
+      setFormData(rec);
       setEditMode(false);
       setMessage("Dados salvos com sucesso.");
     } catch (err: any) {
@@ -532,8 +540,9 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Erro ao validar");
-      setAtleta(json.data as AthleteRecord);
-      setFormData(json.data as AthleteRecord);
+      const rec = comRotuloStatus(json.data as AthleteRecord);
+      setAtleta(rec);
+      setFormData(rec);
       setEditMode(false);
       setMessage("Dados validados pela federação.");
     } catch (err: any) {
@@ -555,8 +564,9 @@ export default function AtletaDetailPage({ params }: { params: Promise<{ id: str
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Erro');
-      setAtleta(json.data as AthleteRecord);
-      setFormData(json.data as AthleteRecord);
+      const rec = comRotuloStatus(json.data as AthleteRecord);
+      setAtleta(rec);
+      setFormData(rec);
       setQaAction(null);
       setMessage(successMsg);
     } catch (err: any) {

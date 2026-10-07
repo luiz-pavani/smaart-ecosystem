@@ -5,6 +5,7 @@ import { ArrowLeft, Search, Loader2, Download, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
+import { anexarKyuDan, filtroStatusMembro, rotuloStatusMembro } from '@/lib/filiacao/lrsj'
 
 interface KyuDanOption {
   id: number
@@ -68,24 +69,25 @@ export default function AtletasAcademiaPage() {
 
         let query = supabase
           .from('user_fed_lrsj')
-          .select('stakeholder_id, nome_completo, status_plano, status_membro, data_expiracao, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan, icones)', { count: 'exact' })
+          .select('stakeholder_id, nome_completo, status_plano, status_membro, data_expiracao, kyu_dan_id', { count: 'exact' })
           .eq('academia_id', resolvedAcademiaId)
 
         if (search) query = query.ilike('nome_completo', `%${search}%`)
         if (filterGraduacao) query = query.eq('kyu_dan_id', Number(filterGraduacao))
         if (filterSituacao) query = query.eq('status_plano', filterSituacao)
-        if (filterStatusMembro) query = query.eq('status_membro', filterStatusMembro)
+        if (filterStatusMembro) query = query.or(filtroStatusMembro(filterStatusMembro))
 
-        const { data, count } = await query.order('nome_completo', { ascending: true }).range(start, end)
+        const { data: rows, count } = await query.order('nome_completo', { ascending: true }).range(start, end)
+        const data = await anexarKyuDan(supabase, rows || [])
 
-        setAtletas((data || []).map((item: any) => ({
+        setAtletas(data.map((item: any) => ({
           id: item.stakeholder_id,
           nome_completo: item.nome_completo ?? '',
           graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
           kyuDanIcones: item.kyu_dan?.icones || null,
           kyuDanNome: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
           status_plano: item.status_plano ?? null,
-          statusMembro: item.status_membro ?? 'Em análise',
+          statusMembro: rotuloStatusMembro(item.status_membro),
           validade: item.data_expiracao ?? '—',
         })))
         setTotalCount(count || 0)
@@ -114,13 +116,14 @@ export default function AtletasAcademiaPage() {
         .select(`
           stakeholder_id, nome_completo, nome_patch, genero, data_nascimento,
           email, telefone, status_membro, status_plano, data_expiracao,
-          kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)
+          kyu_dan_id
         `)
         .order('nome_completo', { ascending: true })
 
       if (academiaId) csvQuery = csvQuery.eq('academia_id', academiaId)
 
-      const { data, error } = await csvQuery
+      const { data: csvRows, error } = await csvQuery
+      const data = await anexarKyuDan(supabase, csvRows || [])
 
       if (error || !data?.length) {
         alert('Nenhum atleta encontrado')
@@ -139,7 +142,7 @@ export default function AtletasAcademiaPage() {
           r.telefone || '',
           `"${(r.kyu_dan?.cor_faixa || '').replace(/"/g, '""')}"`,
           `"${(r.kyu_dan?.kyu_dan || '').replace(/"/g, '""')}"`,
-          `"${(r.status_membro || '').replace(/"/g, '""')}"`,
+          `"${rotuloStatusMembro(r.status_membro)}"`,
           `"${(r.status_plano || '').replace(/"/g, '""')}"`,
           r.data_expiracao || '',
         ].join(','))

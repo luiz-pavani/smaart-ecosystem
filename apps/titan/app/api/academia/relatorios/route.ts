@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { anexarKyuDan } from '@/lib/filiacao/lrsj'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -40,9 +41,8 @@ export async function GET(req: NextRequest) {
 
     supabaseAdmin
       .from('user_fed_lrsj')
-      .select('id, nome_completo, status_membro, status_plano, data_expiracao, kyu_dan:kyu_dan_id(cor_faixa, nome)')
+      .select('stakeholder_id, nome_completo, status_membro, status_plano, data_expiracao, kyu_dan_id')
       .eq('academia_id', academiaId)
-      .eq('federacao_id', 1)
       .order('nome_completo'),
 
     supabaseAdmin
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
   ])
 
   const academia = academiaRes.data
-  const atletas = atletasRes.data || []
+  const atletas = await anexarKyuDan(supabaseAdmin, atletasRes.data || [])
   const classes = classesRes.data || []
 
   // Checkins
@@ -125,15 +125,15 @@ export async function GET(req: NextRequest) {
   }
 
   const atletasReport = atletas.map((a: any) => {
-    const kd = Array.isArray(a.kyu_dan) ? a.kyu_dan[0] : a.kyu_dan
+    const kd = a.kyu_dan
     return {
-      id: a.id,
+      id: a.stakeholder_id,
       nome_completo: a.nome_completo,
-      graduacao: kd?.nome || a.graduacao || '—',
+      graduacao: kd?.kyu_dan || '—',
       cor_faixa: kd?.cor_faixa || null,
       status_plano: a.status_plano || '—',
       data_expiracao: a.data_expiracao || null,
-      checkins_30d: checkinsByAthlete[a.id] || 0,
+      checkins_30d: checkinsByAthlete[a.stakeholder_id] || 0,
     }
   })
 
