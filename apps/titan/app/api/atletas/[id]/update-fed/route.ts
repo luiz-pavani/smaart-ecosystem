@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { notifyAtletaBoasVindas } from '@/lib/whatsapp/notifications'
+import { isMembroAceito, normalizarStatusMembro } from '@/lib/filiacao/lrsj'
 
 export async function PATCH(
   req: NextRequest,
@@ -29,12 +30,12 @@ export async function PATCH(
     // Fetch current athlete record to check status_membro
     const { data: current } = await supabaseAdmin
       .from('user_fed_lrsj')
-      .select('status_membro, nome_completo, telefone, academias')
+      .select('status_membro, nome_completo, telefone')
       .eq('stakeholder_id', id)
       .maybeSingle()
 
-    const statusMembro = String(current?.status_membro ?? '').trim().toLowerCase()
-    const isAceito = statusMembro === 'aceito'
+    // status_membro no banco: ativo/aprovado = "Aceito" na UI (chk_status_membro)
+    const isAceito = isMembroAceito(current?.status_membro)
 
     const body = await req.json()
 
@@ -61,6 +62,8 @@ export async function PATCH(
       const v = body[key]
       payload[key] = v === '' ? null : v
     }
+    // UI manda rótulos legados ('Aceito', 'Em análise', 'Rejeitado') — grava o valor aceito pelo check
+    if (typeof payload.status_membro === 'string') payload.status_membro = normalizarStatusMembro(payload.status_membro)
 
     if (Object.keys(payload).length === 0) {
       return NextResponse.json({ error: 'Nenhum campo válido enviado' }, { status: 400 })
@@ -77,8 +80,8 @@ export async function PATCH(
     if (!data) return NextResponse.json({ error: 'Registro não encontrado' }, { status: 404 })
 
     // Quando aprovado, marcar dados como validados
-    const wasNotAceito = statusMembro !== 'aceito'
-    const nowAceito = String(payload.status_membro ?? '').toLowerCase() === 'aceito'
+    const wasNotAceito = !isAceito
+    const nowAceito = 'status_membro' in payload && isMembroAceito(payload.status_membro as string | null)
     if (wasNotAceito && nowAceito) {
       await supabaseAdmin
         .from('user_fed_lrsj')

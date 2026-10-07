@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { anexarKyuDan } from '@/lib/filiacao/lrsj'
 import { NextResponse } from 'next/server'
 
 export async function GET(
@@ -21,23 +22,16 @@ export async function GET(
     }
 
     // 2. Buscar dados do atleta com joins necessários
-    const { data: atleta, error: atletaError } = await supabase
+    const { data: atletaRow, error: atletaError } = await supabase
       .from('user_fed_lrsj')
       .select(`
         stakeholder_id,
         nome_completo,
-        academias,
         academia_id,
         data_nascimento,
         data_expiracao,
         nivel_arbitragem,
-        kyu_dan_id,
-        kyu_dan:kyu_dan_id (
-          id,
-          kyu_dan,
-          cor_faixa,
-          icones
-        )
+        kyu_dan_id
       `)
       .eq('stakeholder_id', id)
       .single()
@@ -49,6 +43,8 @@ export async function GET(
       )
     }
 
+    // kyu_dan buscado à parte: o cast ::bigint da view esconde a FK do PostgREST
+    const [atleta] = atletaRow ? await anexarKyuDan(supabaseAdmin, [atletaRow]) : []
     if (!atleta) {
       return NextResponse.json(
         { error: 'Atleta não encontrado' },
@@ -58,6 +54,7 @@ export async function GET(
 
     // 4. Buscar logo da academia via academia_id → academias → academy_logos
     let academiaLogo = null
+    let academiaNome: string | null = null
     {
       const namesToTry: string[] = []
 
@@ -68,12 +65,10 @@ export async function GET(
           .select('nome, sigla')
           .eq('id', atleta.academia_id)
           .single()
+        academiaNome = academiaData?.nome ?? null
         if (academiaData?.nome) namesToTry.push(academiaData.nome)
         if (academiaData?.sigla) namesToTry.push(academiaData.sigla)
       }
-
-      // Fallback: campo texto direto
-      if (atleta.academias) namesToTry.push(atleta.academias.trim())
 
       for (const name of namesToTry) {
         const { data: logoData } = await supabaseAdmin
@@ -96,7 +91,7 @@ export async function GET(
       .single()
 
     // 6. Formatar dados para o frontend
-    const kyuDanData = Array.isArray(atleta.kyu_dan) ? atleta.kyu_dan[0] : atleta.kyu_dan
+    const kyuDanData = atleta.kyu_dan
     // Graduação combina cor_faixa e kyu_dan (ex.: "Preta | 1º dan"), igual ao
     // card "Graduação e Arbitragem" do portal do atleta.
     const graduacaoLabel = (() => {
@@ -110,7 +105,7 @@ export async function GET(
       atleta: {
         id: atleta.stakeholder_id,
         nome: atleta.nome_completo,
-        academia: atleta.academias || '—',
+        academia: academiaNome || '—',
         dataNascimento: atleta.data_nascimento ?
           new Date(atleta.data_nascimento).toLocaleDateString('pt-BR') : '—',
         graduacao: graduacaoLabel,

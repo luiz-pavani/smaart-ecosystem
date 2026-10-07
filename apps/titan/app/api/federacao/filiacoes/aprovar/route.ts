@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { notifyAtletaBoasVindas } from '@/lib/whatsapp/notifications'
+import { isMembroAceito, rotuloStatusMembro } from '@/lib/filiacao/lrsj'
 
 // POST — bulk approve or reject filiation requests
 export async function POST(req: NextRequest) {
@@ -27,12 +28,13 @@ export async function POST(req: NextRequest) {
   if (!ids.length) return NextResponse.json({ error: 'Nenhum ID fornecido' }, { status: 400 })
   if (!['aprovar', 'rejeitar'].includes(action)) return NextResponse.json({ error: 'Ação inválida' }, { status: 400 })
 
-  const novoStatus = action === 'aprovar' ? 'Aceito' : 'Rejeitado'
+  // chk_status_membro: 'Aceito' → ativo, 'Rejeitado' → rejeitado
+  const novoStatus = action === 'aprovar' ? 'ativo' : 'rejeitado'
 
-  // Fetch current records to know who was NOT already Aceito (for welcome notification)
+  // Fetch current records to know who was NOT already accepted (ativo/aprovado) for the welcome notification
   const { data: current } = await supabaseAdmin
     .from('user_fed_lrsj')
-    .select('stakeholder_id, nome_completo, telefone, academias, status_membro')
+    .select('stakeholder_id, nome_completo, telefone, status_membro')
     .in('stakeholder_id', ids)
 
   const { error } = await supabaseAdmin
@@ -50,7 +52,7 @@ export async function POST(req: NextRequest) {
   // Send welcome notification to newly approved athletes
   if (action === 'aprovar') {
     for (const a of current || []) {
-      if (a.status_membro !== 'Aceito' && a.telefone) {
+      if (!isMembroAceito(a.status_membro) && a.telefone) {
         notifyAtletaBoasVindas({
           nome_completo: a.nome_completo,
           telefone: a.telefone,
@@ -59,5 +61,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, updated: ids.length, status: novoStatus })
+  return NextResponse.json({ ok: true, updated: ids.length, status: rotuloStatusMembro(novoStatus) })
 }

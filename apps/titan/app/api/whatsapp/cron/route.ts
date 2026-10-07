@@ -44,7 +44,6 @@ export async function GET(req: NextRequest) {
   const { data: vencendo } = await supabaseAdmin
     .from('user_fed_lrsj')
     .select('nome_completo, telefone, data_expiracao')
-    .eq('federacao_id', 1)
     .eq('status_plano', 'Válido')
     .not('telefone', 'is', null)
     .not('data_expiracao', 'is', null)
@@ -69,7 +68,6 @@ export async function GET(req: NextRequest) {
   const { data: vencidos } = await supabaseAdmin
     .from('user_fed_lrsj')
     .select('nome_completo, telefone, data_expiracao')
-    .eq('federacao_id', 1)
     .eq('status_plano', 'Vencido')
     .not('telefone', 'is', null)
     .gte('data_expiracao', hoje.toISOString().split('T')[0])

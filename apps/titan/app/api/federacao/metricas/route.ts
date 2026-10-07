@@ -29,16 +29,15 @@ export async function GET() {
     { count: vencendo },
     { data: lotes },
   ] = await Promise.all([
-    supabaseAdmin.from('user_fed_lrsj').select('*', { count: 'exact', head: true }).eq('federacao_id', 1),
-    supabaseAdmin.from('user_fed_lrsj').select('*', { count: 'exact', head: true }).eq('federacao_id', 1).eq('status_plano', 'Válido'),
-    supabaseAdmin.from('user_fed_lrsj').select('*', { count: 'exact', head: true }).eq('federacao_id', 1).eq('status_plano', 'Vencido'),
+    supabaseAdmin.from('user_fed_lrsj').select('*', { count: 'exact', head: true }),
+    supabaseAdmin.from('user_fed_lrsj').select('*', { count: 'exact', head: true }).eq('status_plano', 'Válido'),
+    supabaseAdmin.from('user_fed_lrsj').select('*', { count: 'exact', head: true }).eq('status_plano', 'Vencido'),
     supabaseAdmin.from('user_fed_lrsj').select('*', { count: 'exact', head: true })
-      .eq('federacao_id', 1)
       .eq('status_plano', 'Válido')
       .not('data_expiracao', 'is', null)
       .gte('data_expiracao', hoje.toISOString().split('T')[0])
       .lte('data_expiracao', em30dias.toISOString().split('T')[0]),
-    supabaseAdmin.from('user_fed_lrsj').select('lote_id').eq('federacao_id', 1),
+    supabaseAdmin.from('user_fed_lrsj').select('lote_id'),
   ])
 
   // Agrupa por lote

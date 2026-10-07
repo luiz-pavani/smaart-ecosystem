@@ -68,9 +68,8 @@ export async function POST(req: NextRequest) {
   // Base query — all athletes of this academia with a phone
   let query = supabaseAdmin
     .from('user_fed_lrsj')
-    .select('nome_completo, telefone, celular, data_expiracao')
+    .select('nome_completo, telefone, data_expiracao')
     .eq('academia_id', academiaId)
-    .eq('federacao_id', 1)
 
   if (group === 'plano_vencendo') {
     query = query
@@ -91,7 +90,7 @@ export async function POST(req: NextRequest) {
   let errors = 0
 
   for (const atleta of atletas ?? []) {
-    const phone = normalizePhone(atleta.telefone || atleta.celular)
+    const phone = normalizePhone(atleta.telefone)
     if (!phone) { skipped++; continue }
 
     try {
@@ -136,9 +135,8 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('user_fed_lrsj')
-    .select('id, telefone, celular', { count: 'exact', head: false })
+    .select('stakeholder_id, telefone', { count: 'exact', head: false })
     .eq('academia_id', academiaId)
-    .eq('federacao_id', 1)
 
   if (group === 'plano_vencendo') {
     query = query
@@ -153,6 +151,6 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const comTelefone = (data ?? []).filter((a: any) => a.telefone || a.celular).length
+  const comTelefone = (data ?? []).filter((a: any) => a.telefone).length
   return NextResponse.json({ total: (data ?? []).length, com_telefone: comTelefone })
 }

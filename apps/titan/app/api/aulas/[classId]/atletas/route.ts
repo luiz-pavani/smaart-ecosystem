@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { anexarKyuDan } from '@/lib/filiacao/lrsj'
 
 type Params = { params: Promise<{ classId: string }> }
 
@@ -26,8 +27,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   // Available athletes from this academy (for search)
   let query = supabaseAdmin
     .from('user_fed_lrsj')
-    .select('stakeholder_id, nome_completo, data_nascimento, kyu_dan_id, kyu_dan:kyu_dan_id(cor_faixa, kyu_dan)')
-    .eq('federacao_id', 1)
+    .select('stakeholder_id, nome_completo, data_nascimento, kyu_dan_id')
     .order('nome_completo')
     .limit(50)
 
@@ -38,8 +38,9 @@ export async function GET(req: NextRequest, { params }: Params) {
   if (minKyuDanId != null) query = query.gte('kyu_dan_id', minKyuDanId)
   if (maxKyuDanId != null) query = query.lte('kyu_dan_id', maxKyuDanId)
 
-  const { data: athletes, error: athErr } = await query
+  const { data: athleteRows, error: athErr } = await query
   if (athErr) return NextResponse.json({ error: athErr.message }, { status: 400 })
+  const athletes = await anexarKyuDan(supabaseAdmin, athleteRows || [])
 
   // Age filter (computed from data_nascimento)
   const today = new Date()

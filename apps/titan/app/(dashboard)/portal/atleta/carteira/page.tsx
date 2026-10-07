@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2, User, Download } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { rotuloStatusMembro } from '@/lib/filiacao/lrsj'
 import { QRCodeSVG } from 'qrcode.react'
 
 interface AtletaPerfil {
@@ -60,7 +61,14 @@ export default function CarteiraPage() {
       ])
 
       if (fedData) {
-        setAtleta(fedData as AtletaPerfil)
+        // status_membro no banco é ativo/aprovado/…; a carteira usa o rótulo ("Aceito").
+        // A view não traz mais o texto `academias` (NULL) — resolve o nome por academia_id.
+        let academias: string | null = null
+        if (fedData.academia_id) {
+          const { data: ac } = await supabase.from('academias').select('nome').eq('id', fedData.academia_id).maybeSingle()
+          academias = ac?.nome ?? null
+        }
+        setAtleta({ ...(fedData as AtletaPerfil), status_membro: rotuloStatusMembro(fedData.status_membro), academias })
         const kd = (kdData || []).find((k: KyuDan) => k.id === fedData.kyu_dan_id)
         setKyuDan(kd || null)
       }

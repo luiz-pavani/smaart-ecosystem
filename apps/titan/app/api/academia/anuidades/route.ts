@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { anexarKyuDan } from '@/lib/filiacao/lrsj'
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient()
@@ -20,12 +21,12 @@ export async function GET(req: NextRequest) {
   if (!academiaId) return NextResponse.json({ error: 'Academia não encontrada' }, { status: 403 })
 
   // Primary source: user_fed_lrsj.academia_id (where most athletes are stored)
-  const { data: lrsjRows } = await supabaseAdmin
+  const { data: lrsjBase } = await supabaseAdmin
     .from('user_fed_lrsj')
-    .select('stakeholder_id, nome_completo, telefone, celular, status_plano, data_expiracao, kyu_dan:kyu_dan_id(kyu_dan, cor_faixa)')
+    .select('stakeholder_id, nome_completo, telefone, status_plano, data_expiracao, kyu_dan_id')
     .eq('academia_id', academiaId)
-    .eq('federacao_id', 1)
     .order('nome_completo', { ascending: true })
+  const lrsjRows = await anexarKyuDan(supabaseAdmin, lrsjBase ?? [])
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -35,7 +36,6 @@ export async function GET(req: NextRequest) {
     stakeholder_id: string
     nome_completo: string | null
     telefone: string | null
-    celular: string | null
     status_plano: string | null
     data_expiracao: string | null
     kyu_dan:
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     const base = {
       id: a.stakeholder_id,
       nome_completo: a.nome_completo,
-      telefone: a.telefone || a.celular || null,
+      telefone: a.telefone || null,
       status_plano: a.status_plano,
       data_expiracao: a.data_expiracao,
       graduacao: kd?.kyu_dan ?? null,

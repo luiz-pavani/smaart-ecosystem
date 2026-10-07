@@ -900,7 +900,7 @@ function FiliadosTab() {
           slug=""
           onClose={() => setShowImportModal(false)}
           onSuccess={() => {
-            setShowImportModal(false)
+            // mantém o modal aberto no passo 'done' para mostrar o resultado e os erros
             setReloadKey(k => k + 1)
           }}
         />

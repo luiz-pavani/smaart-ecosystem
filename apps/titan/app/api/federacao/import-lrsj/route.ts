@@ -439,20 +439,102 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Upsert user_fed_lrsj via stakeholder_id (PK) — safe with or without unique on email
+    // user_fed_lrsj é uma VIEW (stakeholders + stakeholder_filiacoes) só com trigger de UPDATE —
+    // upsert nela falha. Grava direto nas tabelas.
+    // Filiação: upsert em stakeholder_filiacoes por (stakeholder_id, federacao_id). Campo vazio no CSV
+    // não apaga o valor do banco: as linhas são agrupadas pelo conjunto de campos preenchidos, e o
+    // upsert só toca as colunas enviadas.
     const BATCH_SIZE = 250
     let inserted = 0
     const upsert_errors: string[] = []
-    for (let i = 0; i < importable.length; i += BATCH_SIZE) {
-      const batch = importable.slice(i, i + BATCH_SIZE).map((r) => r.row)
-      const { error } = await supabaseAdmin
-        .from('user_fed_lrsj')
-        .upsert(batch, { onConflict: 'stakeholder_id', ignoreDuplicates: false })
-      if (error) {
-        upsert_errors.push(`Lote ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}`)
-      } else {
-        inserted += batch.length
+    const STATUS_MEMBRO: Record<string, string> = { aceito: 'ativo', approved: 'aprovado', rejected: 'rejeitado' }
+    // Stakeholders atuais — também filtra IDs que não existem (createUser que falhou), senão a FK
+    // derruba o lote inteiro do upsert.
+    const ids = [...new Set(importable.map((r) => r.row.stakeholder_id as string))]
+    const atuais = new Map<string, Record<string, unknown>>()
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: sh } = await supabaseAdmin
+        .from('stakeholders')
+        .select('id, data_nascimento, genero, telefone, kyu_dan_id')
+        .in('id', ids.slice(i, i + 200))
+      for (const s of sh ?? []) atuais.set(s.id, s)
+    }
+    for (const r of importable) {
+      if (!atuais.has(r.row.stakeholder_id as string)) {
+        upsert_errors.push(`Sem stakeholder no Titan: ${r.row.nome_completo} (${r.row.email ?? 'sem email'}) — não importado`)
       }
+    }
+
+    // Dois Member No podem cair no mesmo stakeholder (vínculo por email) — o upsert não aceita a mesma
+    // chave duas vezes no lote; fica a filiação com validade mais longa.
+    const porStakeholder = new Map<string, (typeof importable)[number]>()
+    for (const r of importable) {
+      const id = r.row.stakeholder_id as string
+      if (!atuais.has(id)) continue
+      const atual = porStakeholder.get(id)
+      if (!atual || (r.row.data_expiracao || '') > (atual.row.data_expiracao || '')) porStakeholder.set(id, r)
+    }
+    const grupos = new Map<string, Record<string, unknown>[]>()
+    for (const { row } of porStakeholder.values()) {
+      const fil: Record<string, unknown> = {
+        stakeholder_id: row.stakeholder_id,
+        federacao_id: LRSJ_FED_UUID,
+        academia_id: row.academia_id,
+        plano_tipo: row.plano_tipo,
+        status_membro: row.status_membro ? STATUS_MEMBRO[row.status_membro.toLowerCase()] ?? row.status_membro.toLowerCase() : null,
+        status_plano: row.status_plano,
+        data_adesao: row.data_adesao?.slice(0, 10) || null,
+        data_expiracao: row.data_expiracao?.slice(0, 10) || null,
+        lote_id: row.lote_id,
+        observacoes: row.observacoes,
+        url_foto: row.url_foto,
+        url_documento_id: row.url_documento_id,
+        url_certificado_dan: row.url_certificado_dan,
+        nome_patch: row.nome_patch,
+        tamanho_patch: row.tamanho_patch,
+        kyu_dan_id: row.kyu_dan_id,
+        nivel_arbitragem: row.nivel_arbitragem,
+      }
+      for (const k of Object.keys(fil)) if (fil[k] === null || fil[k] === undefined) delete fil[k]
+      const chave = Object.keys(fil).sort().join(',')
+      if (!grupos.has(chave)) grupos.set(chave, [])
+      grupos.get(chave)!.push(fil)
+    }
+    for (const batchAll of grupos.values()) {
+      for (let i = 0; i < batchAll.length; i += BATCH_SIZE) {
+        const batch = batchAll.slice(i, i + BATCH_SIZE)
+        const { error } = await supabaseAdmin
+          .from('stakeholder_filiacoes')
+          .upsert(batch, { onConflict: 'stakeholder_id,federacao_id', ignoreDuplicates: false })
+        if (error) upsert_errors.push(`Filiações (${batch.length}): ${error.message}`)
+        else inserted += batch.length
+      }
+    }
+
+    // Dados pessoais: só preenche o que está vazio no stakeholder (não sobrescreve edições feitas no Titan).
+    const patches: Array<{ id: string; patch: Record<string, unknown> }> = []
+    for (const { row } of importable) {
+      const atual = atuais.get(row.stakeholder_id as string)
+      if (!atual) continue
+      const novo: Record<string, unknown> = {
+        data_nascimento: row.data_nascimento?.slice(0, 10) || null,
+        genero: row.genero,
+        telefone: row.telefone,
+        kyu_dan_id: row.kyu_dan_id,
+      }
+      const patch: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(novo)) if (v != null && atual[k] == null) patch[k] = v
+      if (Object.keys(patch).length) patches.push({ id: row.stakeholder_id as string, patch })
+    }
+    let stakeholders_filled = 0
+    for (let i = 0; i < patches.length; i += 10) {
+      const res = await Promise.all(
+        patches.slice(i, i + 10).map((p) => supabaseAdmin.from('stakeholders').update(p.patch).eq('id', p.id))
+      )
+      res.forEach((r, j) => {
+        if (r.error) upsert_errors.push(`Stakeholder ${patches[i + j].id}: ${r.error.message}`)
+        else stakeholders_filled++
+      })
     }
 
     return NextResponse.json({
@@ -465,6 +547,7 @@ export async function POST(request: NextRequest) {
       shared_emails,
       to_insert: importable.length,
       inserted,
+      stakeholders_filled,
       new_stakeholders_inserted,
       new_stakeholders_with_synthetic_email: new_stakeholder_inserts.filter((s) => s.email.endsWith('@import.lrsj.local')).length,
       backfill_member_no,

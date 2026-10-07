@@ -42,15 +42,13 @@ export async function GET(req: NextRequest) {
     supabaseAdmin
       .from('user_fed_lrsj')
       .select('stakeholder_id, status_plano, kyu_dan_id, data_adesao')
-      .eq('academia_id', academiaId)
-      .eq('federacao_id', 1),
+      .eq('academia_id', academiaId),
 
     // Active athletes count
     supabaseAdmin
       .from('user_fed_lrsj')
       .select('stakeholder_id', { count: 'exact', head: true })
       .eq('academia_id', academiaId)
-      .eq('federacao_id', 1)
       .eq('status_plano', 'Válido'),
 
     // Active classes

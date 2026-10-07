@@ -65,7 +65,6 @@ export default function EventosAcademiaPage() {
           .from('user_fed_lrsj')
           .select('stakeholder_id')
           .eq('academia_id', academiaId)
-          .eq('federacao_id', 1)
         atletaIds = (ats || []).map((a: any) => a.stakeholder_id).filter(Boolean)
       }
 

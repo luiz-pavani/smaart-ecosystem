@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AtletaDocumentos from '@/components/AtletaDocumentos'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
+import { rotuloStatusMembro } from '@/lib/filiacao/lrsj'
 
 interface KyuDan { id: number; cor_faixa: string; kyu_dan: string; icones?: string }
 
@@ -108,7 +109,14 @@ export default function AtletaAcademiaDetailPage() {
         if (fedErr) throw fedErr
 
         if (fedData) {
-          setAtleta(fedData as AtletaPerfil)
+          // status_membro no banco é ativo/aprovado/…; a página usa o rótulo ("Aceito").
+          // A view não traz mais o texto `academias` (NULL) — resolve o nome por academia_id.
+          let academias: string | null = null
+          if (fedData.academia_id) {
+            const { data: ac } = await supabase.from('academias').select('nome').eq('id', fedData.academia_id).maybeSingle()
+            academias = ac?.nome ?? null
+          }
+          setAtleta({ ...(fedData as AtletaPerfil), status_membro: rotuloStatusMembro(fedData.status_membro), academias })
           const kd = (kdData || []).find((k: KyuDan) => k.id === fedData.kyu_dan_id)
           setKyuDan(kd || null)
         } else {

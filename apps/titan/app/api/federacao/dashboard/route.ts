@@ -18,11 +18,10 @@ export async function GET(req: NextRequest) {
     academiaMap.set(a.id, { nome: a.nome || a.id, cidade: a.endereco_cidade || '' })
   })
 
-  // Filiados (user_fed_lrsj, federacao_id=1 = inteiro LRSJ)
+  // Filiados (user_fed_lrsj — view já restrita à LRSJ)
   const { data: filiados } = await supabaseAdmin
     .from('user_fed_lrsj')
     .select('academia_id, status_plano, data_adesao')
-    .eq('federacao_id', 1)
 
   const totalFiliados = (filiados || []).length
   const filiadosAtivos = (filiados || []).filter((f: any) => f.status_plano === 'Válido').length
