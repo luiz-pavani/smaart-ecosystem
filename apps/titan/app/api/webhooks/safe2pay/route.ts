@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { notifyAtletaPagamentoEvento } from '@/lib/whatsapp/notifications'
 import { upsertFiliacoesLrsj } from '@/lib/filiacao/lrsj'
+import { concluirFiliacaoRegistro, isPedidoRegistroAcademia } from '@/lib/registro/federacao'
 
 /**
  * POST /api/webhooks/safe2pay
@@ -272,6 +273,11 @@ async function processarReferencia(tipo: string, referenciaId: string | null) {
   switch (tipo) {
     case 'filiacao_pedido':
     case 'filiacao_atleta': {
+      // Pedido do registro de atleta pela academia: a aprovação depende da verificação do documento.
+      if (await isPedidoRegistroAcademia(referenciaId)) {
+        await concluirFiliacaoRegistro(referenciaId)
+        break
+      }
       // Aprova o pedido (idempotente — re-update em pedido já APROVADO é no-op semântico,
       // mas precisa retornar o stakeholder_id no segundo webhook pra gravar a filiação).
       await supabaseAdmin

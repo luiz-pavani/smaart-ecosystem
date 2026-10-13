@@ -19,6 +19,8 @@ import {
   type GraduacaoHistoricoInput,
   type TipoDocumento,
 } from '@/lib/registro/atleta'
+import { Campo, Secao, inputCls } from './ui'
+import FiliacaoFederacao, { type ResultadoFederacao } from './FiliacaoFederacao'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -26,46 +28,18 @@ interface Plano { id: string; nome: string; valor: number; periodicidade: string
 interface Graduacao { id: number; cor_faixa: string | null; kyu_dan: string | null }
 interface Opcoes { academia: { id: string; nome: string; sigla: string }; planos: Plano[]; graduacoes: Graduacao[] }
 
-type Passo = 1 | 2 | 3 | 'fim'
+type Passo = 1 | 2 | 3 | 4 | 5 | 'fim'
 
 const PASSOS = [
   { n: 1, titulo: 'Atleta e acesso' },
   { n: 2, titulo: 'Cadastro' },
   { n: 3, titulo: 'Filiação' },
-  { n: 4, titulo: 'Federação', emBreve: true },
-  { n: 5, titulo: 'Pagamento', emBreve: true },
+  { n: 4, titulo: 'Federação' },
+  { n: 5, titulo: 'Pagamento' },
 ] as const
 
 const vazio = <T extends Record<string, unknown>>(o: T) =>
   Object.fromEntries(Object.entries(o).map(([k, v]) => [k, v ?? ''])) as Record<keyof T, string>
-
-// ── UI helpers ────────────────────────────────────────────────────────────────
-
-const inputCls =
-  'w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors'
-
-function Campo({ label, obrigatorio, children, className = '' }: { label: string; obrigatorio?: boolean; children: React.ReactNode; className?: string }) {
-  return (
-    <label className={`block ${className}`}>
-      <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-        {label}{obrigatorio && <span className="text-red-400"> *</span>}
-      </span>
-      {children}
-    </label>
-  )
-}
-
-function Secao({ titulo, descricao, children }: { titulo: string; descricao?: string; children: React.ReactNode }) {
-  return (
-    <section className="bg-white/5 border border-white/10 rounded-xl p-5 space-y-4">
-      <div>
-        <h3 className="text-white font-bold">{titulo}</h3>
-        {descricao && <p className="text-slate-400 text-sm mt-0.5">{descricao}</p>}
-      </div>
-      {children}
-    </section>
-  )
-}
 
 function rotuloGraduacao(g: Graduacao) {
   return [g.cor_faixa, g.kyu_dan].filter(Boolean).join(' | ')
@@ -95,6 +69,7 @@ function RegistroAtletaWizard() {
 
   const [fichaId, setFichaId] = useState<string | null>(searchParams.get('ficha'))
   const [stakeholderId, setStakeholderId] = useState<string | null>(null)
+  const [resultado, setResultado] = useState<ResultadoFederacao | null>(null)
   const [ativacao, setAtivacao] = useState<{ canal: CanalAcesso; enviado: boolean } | null>(null)
 
   // Passo 1
@@ -163,7 +138,7 @@ function RegistroAtletaWizard() {
           }) }))
           setCondicoes(f.ficha.condicoes_saude ?? [])
           setHistorico(f.historico ?? [])
-          setPasso(f.ficha.etapa === 'cadastro' ? 2 : 3)
+          setPasso(f.ficha.etapa === 'cadastro' ? 2 : f.ficha.etapa === 'filiacao' ? 3 : 4)
         }
       } catch (e) {
         setErro(e instanceof Error ? e.message : 'Erro ao carregar')
@@ -239,7 +214,7 @@ function RegistroAtletaWizard() {
       plano_id: filiacao.plano_id || null,
       historico,
     }
-    if (await chamar(`/api/academia/registro-atleta/${fichaId}`, 'PATCH', { passo: 'filiacao', dados })) setPasso('fim')
+    if (await chamar(`/api/academia/registro-atleta/${fichaId}`, 'PATCH', { passo: 'filiacao', dados })) setPasso(4)
   }
 
   const escolherPlano = (id: string) => {
@@ -272,7 +247,7 @@ function RegistroAtletaWizard() {
           <ol className="flex gap-2 overflow-x-auto pt-2">
             {PASSOS.map((p) => {
               const atual = passo === p.n
-              const feito = passo === 'fim' ? p.n <= 3 : typeof passo === 'number' && p.n < passo
+              const feito = passo === 'fim' ? p.n <= (resultado?.tipo === 'pago' ? 5 : resultado?.tipo === 'pagamento_pendente' ? 4 : 3) : typeof passo === 'number' && p.n < passo
               return (
                 <li key={p.n} className={`flex items-center gap-2 shrink-0 px-3 py-1.5 rounded-full border text-xs font-semibold ${
                   atual ? 'border-blue-500 bg-blue-500/20 text-white'
@@ -282,7 +257,6 @@ function RegistroAtletaWizard() {
                     {feito ? <Check className="w-3 h-3" /> : p.n}
                   </span>
                   {p.titulo}
-                  {'emBreve' in p && <span className="text-[10px] uppercase text-slate-500">em breve</span>}
                 </li>
               )
             })}
@@ -613,10 +587,30 @@ function RegistroAtletaWizard() {
         )}
 
         {/* ── Fim ── */}
+        {/* ── Passos 4 e 5 ── */}
+        {(passo === 4 || passo === 5) && fichaId && (
+          <FiliacaoFederacao
+            fichaId={fichaId}
+            onEtapa={(n) => setPasso(n)}
+            onVoltar={() => setPasso(3)}
+            onConcluir={(r) => { setResultado(r); setPasso('fim') }}
+          />
+        )}
+
+        {/* ── Fim ── */}
         {passo === 'fim' && (
-          <Secao titulo="Atleta registrado na academia">
+          <Secao titulo={resultado?.tipo === 'pago' && resultado.aprovado ? 'Atleta registrado e filiado' : 'Atleta registrado na academia'}>
             <p className="text-slate-300">
-              <strong className="text-white">{nome}</strong> está registrado(a). O registro na federação (dados exigidos, verificação do documento com IA e pagamento das taxas) é o próximo passo e entra em breve.
+              <strong className="text-white">{nome}</strong>{' '}
+              {resultado?.tipo === 'pago'
+                ? resultado.aprovado
+                  ? `está filiado(a) à ${resultado.federacao}. Certificado, carteira digital e amostra do back number foram enviados por ${canal === 'email' ? 'email' : 'email e WhatsApp'}.`
+                  : `está registrado(a) e o pagamento da ${resultado.federacao} foi recebido. A federação vai revisar o documento; os documentos são enviados quando ela aprovar.`
+                : resultado?.tipo === 'pagamento_pendente'
+                  ? `está registrado(a). A filiação à ${resultado.federacao} (${resultado.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) aguarda pagamento: abra este registro de novo para pagar.`
+                  : resultado?.tipo === 'ja_filiado'
+                    ? `está registrado(a) e já é filiado(a) à ${resultado.federacao}.`
+                    : 'está registrado(a) na academia. A filiação à federação pode ser feita depois.'}
             </p>
             <div className="flex flex-wrap gap-3">
               {stakeholderId && (

@@ -8,6 +8,7 @@ import {
   createPlan,
   Safe2PayCustomer,
 } from '@/lib/safe2pay'
+import { concluirFiliacaoRegistro, isPedidoRegistroAcademia } from '@/lib/registro/federacao'
 
 /**
  * POST /api/checkout
@@ -341,6 +342,11 @@ async function processarReferencia(tipo: string, referenciaId: string) {
   switch (tipo) {
     case 'filiacao_atleta':
     case 'filiacao_bulk':
+      // Cartão aprovado na hora não passa pelo processamento do webhook (pagamento já está pago).
+      if (await isPedidoRegistroAcademia(referenciaId)) {
+        await concluirFiliacaoRegistro(referenciaId)
+        break
+      }
       await supabaseAdmin
         .from('filiacao_pedidos')
         .update({ status: 'APROVADO', revisado_em: new Date().toISOString(), observacao: 'Pago online' })

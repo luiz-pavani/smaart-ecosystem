@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { preencherStakeholderVazio, upsertFiliacoesLrsj } from '@/lib/filiacao/lrsj'
+import { entregarDocumentosFiliacao } from '@/lib/registro/federacao'
 
 // GET — list pending affiliation requests for the caller's federation
 export async function GET(req: NextRequest) {
@@ -174,6 +175,18 @@ export async function PATCH(req: NextRequest) {
       telefone: (df.telefone as string | undefined) ?? null,
     })
     if (stError) console.error('[filiacao-pedidos] Erro ao preencher stakeholder:', stError)
+
+    // Pedido do registro pela academia: aprovação manual (documento revisado) libera os documentos.
+    if (df.origem === 'registro_academia') {
+      if (df.url_foto) {
+        await upsertFiliacoesLrsj(supabaseAdmin, [{ stakeholder_id: pedido.stakeholder_id, url_foto: df.url_foto as string }])
+      }
+      try {
+        await entregarDocumentosFiliacao(pedido.stakeholder_id, pedido.federacao_id)
+      } catch (err) {
+        console.error('[filiacao-pedidos] Erro ao entregar documentos:', err)
+      }
+    }
   }
 
   return NextResponse.json({ ok: true })

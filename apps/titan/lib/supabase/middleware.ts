@@ -42,6 +42,8 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/signup') &&
     !request.nextUrl.pathname.startsWith('/acesso') &&
     request.nextUrl.pathname !== '/portal/candidato/regulamento' &&
+    !request.nextUrl.pathname.startsWith('/documentos/') &&
+    !request.nextUrl.pathname.startsWith('/carteira/') &&
     !request.nextUrl.pathname.startsWith('/auth/callback') &&
     !request.nextUrl.pathname.startsWith('/api/')
   ) {
