@@ -103,18 +103,15 @@ export function comparar(cadastro: DadosCadastro, ext: ExtracaoDocumento): Compa
   return linhas
 }
 
-/** Envia o documento à IA e compara com o cadastro. Nunca lança: falhas viram 'revisao_manual'. */
-export async function verificarDocumento(
-  arquivo: { bytes: Buffer; mediaType: string },
-  cadastro: DadosCadastro
-): Promise<ResultadoVerificacao> {
-  const agora = new Date().toISOString()
-  const base = { modelo: MODELO, verificado_em: agora }
+export type ResultadoExtracao =
+  | { ok: true; extracao: ExtracaoDocumento; modelo: string }
+  | { ok: false; motivo: string; modelo: string }
 
+/** Lê o documento com a IA. Nunca lança: falhas voltam como { ok: false }. */
+export async function extrairDocumento(arquivo: { bytes: Buffer; mediaType: string }): Promise<ResultadoExtracao> {
   if (!process.env.ANTHROPIC_API_KEY) {
-    return { ...base, status: 'revisao_manual', motivo: 'Verificação automática indisponível (ANTHROPIC_API_KEY não configurada).', extracao: null, comparacao: [] }
+    return { ok: false, modelo: MODELO, motivo: 'Verificação automática indisponível (ANTHROPIC_API_KEY não configurada).' }
   }
-
   const data = arquivo.bytes.toString('base64')
   const bloco: Anthropic.Beta.BetaContentBlockParam = arquivo.mediaType === 'application/pdf'
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }
@@ -130,34 +127,48 @@ export async function verificarDocumento(
       output_config: { effort: 'low', format: betaZodOutputFormat(ExtracaoSchema) },
       messages: [{ role: 'user', content: [bloco, { type: 'text', text: PROMPT }] }],
     })
-
     if (resposta.stop_reason === 'refusal' || !resposta.parsed_output) {
-      return { ...base, status: 'revisao_manual', motivo: 'A verificação automática não conseguiu ler o documento.', extracao: null, comparacao: [] }
+      return { ok: false, modelo: MODELO, motivo: 'A verificação automática não conseguiu ler o documento.' }
     }
-
-    const ext = resposta.parsed_output
-    if (!ext.legivel || ext.tipo_documento === 'NAO_E_DOCUMENTO') {
-      return {
-        ...base,
-        status: 'divergente',
-        motivo: ext.tipo_documento === 'NAO_E_DOCUMENTO' ? 'A imagem não parece ser um documento de identidade.' : 'Documento ilegível. Envie uma foto nítida, sem reflexo e com o documento inteiro.',
-        extracao: ext,
-        comparacao: [],
-      }
-    }
-
-    const comparacao = comparar(cadastro, ext)
-    const divergentes = comparacao.filter((c) => !c.ok)
-    if (divergentes.length) {
-      const rotulos: Record<ComparacaoCampo['campo'], string> = { nome: 'nome', data_nascimento: 'data de nascimento', cpf: 'CPF', rg: 'RG' }
-      return { ...base, status: 'divergente', motivo: `Não confere com o cadastro: ${divergentes.map((d) => rotulos[d.campo]).join(', ')}.`, extracao: ext, comparacao }
-    }
-    if (ext.sinais_de_problema.length) {
-      return { ...base, status: 'revisao_manual', motivo: `Dados conferem, mas a federação vai revisar: ${ext.sinais_de_problema.join('; ')}`, extracao: ext, comparacao }
-    }
-    return { ...base, status: 'aprovado', motivo: 'Documento confere com o cadastro.', extracao: ext, comparacao }
+    return { ok: true, modelo: MODELO, extracao: resposta.parsed_output }
   } catch (err) {
     console.error('[verificacao-documento] falha na IA:', err instanceof Anthropic.APIError ? `${err.status} ${err.message}` : err)
-    return { ...base, status: 'revisao_manual', motivo: 'A verificação automática falhou. O documento vai para revisão da federação.', extracao: null, comparacao: [] }
+    return { ok: false, modelo: MODELO, motivo: 'A verificação automática falhou. O documento vai para revisão da federação.' }
   }
+}
+
+/** Compara a extração com o cadastro e decide o status. */
+export function avaliarDocumento(extraido: ResultadoExtracao, cadastro: DadosCadastro): ResultadoVerificacao {
+  const base = { modelo: extraido.modelo, verificado_em: new Date().toISOString() }
+  if (!extraido.ok) return { ...base, status: 'revisao_manual', motivo: extraido.motivo, extracao: null, comparacao: [] }
+
+  const ext = extraido.extracao
+  if (!ext.legivel || ext.tipo_documento === 'NAO_E_DOCUMENTO') {
+    return {
+      ...base,
+      status: 'divergente',
+      motivo: ext.tipo_documento === 'NAO_E_DOCUMENTO' ? 'A imagem não parece ser um documento de identidade.' : 'Documento ilegível. Envie uma foto nítida, sem reflexo e com o documento inteiro.',
+      extracao: ext,
+      comparacao: [],
+    }
+  }
+
+  const comparacao = comparar(cadastro, ext)
+  const divergentes = comparacao.filter((c) => !c.ok)
+  if (divergentes.length) {
+    const rotulos: Record<ComparacaoCampo['campo'], string> = { nome: 'nome', data_nascimento: 'data de nascimento', cpf: 'CPF', rg: 'RG' }
+    return { ...base, status: 'divergente', motivo: `Não confere com o cadastro: ${divergentes.map((d) => rotulos[d.campo]).join(', ')}.`, extracao: ext, comparacao }
+  }
+  if (ext.sinais_de_problema.length) {
+    return { ...base, status: 'revisao_manual', motivo: `Dados conferem, mas a federação vai revisar: ${ext.sinais_de_problema.join('; ')}`, extracao: ext, comparacao }
+  }
+  return { ...base, status: 'aprovado', motivo: 'Documento confere com o cadastro.', extracao: ext, comparacao }
+}
+
+/** Lê o documento com a IA e compara com o cadastro. */
+export async function verificarDocumento(
+  arquivo: { bytes: Buffer; mediaType: string },
+  cadastro: DadosCadastro
+): Promise<ResultadoVerificacao> {
+  return avaliarDocumento(await extrairDocumento(arquivo), cadastro)
 }

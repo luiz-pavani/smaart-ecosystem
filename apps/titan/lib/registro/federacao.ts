@@ -1,7 +1,6 @@
 import crypto from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { emailDocumentosFiliacao } from '@/lib/email'
-import { sendTemplate } from '@/lib/whatsapp/meta'
 import { LRSJ_FED_UUID, upsertFiliacoesLrsj } from '@/lib/filiacao/lrsj'
 
 /**
@@ -101,9 +100,48 @@ export async function concluirFiliacaoRegistro(pedidoId: string): Promise<void> 
 }
 
 /**
- * Cria o link de documentos e envia ao contato do atleta (e ao email do responsável, se houver).
- * WhatsApp usa o template definido em WHATSAPP_TEMPLATE_DOCUMENTOS ({{1}} nome, {{2}} link);
- * sem a variável, só email.
+ * Pagamento confirmado de um pedido de filiação (webhook Safe2Pay ou cartão aprovado na hora).
+ * Pedido do registro pela academia → concluirFiliacaoRegistro (depende da verificação do documento).
+ * Demais pedidos (filiação pelo atleta, lote da tela de filiações) → aprovados e filiação LRSJ ativa.
+ * Idempotente.
+ */
+export async function ativarFiliacaoPaga(pedidoId: string): Promise<void> {
+  if (await isPedidoRegistroAcademia(pedidoId)) {
+    await concluirFiliacaoRegistro(pedidoId)
+    return
+  }
+  const agora = new Date().toISOString()
+  await supabaseAdmin
+    .from('filiacao_pedidos')
+    .update({ status: 'APROVADO', revisado_em: agora, pago_em: agora, observacao: 'Pagamento confirmado via Safe2Pay', updated_at: agora })
+    .eq('id', pedidoId)
+
+  const { data: pedido } = await supabaseAdmin
+    .from('filiacao_pedidos')
+    .select('stakeholder_id, academia_id, created_at, dados_formulario')
+    .eq('id', pedidoId)
+    .maybeSingle()
+  if (!pedido?.stakeholder_id) return
+
+  // user_fed_lrsj é VIEW sem INSERT — a filiação vai direto em stakeholder_filiacoes.
+  const df = (pedido.dados_formulario ?? {}) as Record<string, unknown>
+  const base = new Date(pedido.created_at ?? Date.now())
+  base.setFullYear(base.getFullYear() + 1)
+  const { error } = await upsertFiliacoesLrsj(supabaseAdmin, [{
+    stakeholder_id: pedido.stakeholder_id,
+    academia_id: pedido.academia_id ?? null,
+    kyu_dan_id: (df.kyu_dan_id as number | undefined) ?? null,
+    status_plano: 'Válido',
+    status_membro: 'ativo',
+    data_adesao: agora.slice(0, 10),
+    data_expiracao: base.toISOString().slice(0, 10),
+  }])
+  if (error) console.error('[registro/federacao] erro ao gravar filiação paga:', error)
+}
+
+/**
+ * Cria o link de documentos e envia por email ao atleta e ao responsável (se houver).
+ * Sem email, os documentos ficam na conta do atleta no Titan (Perfil e Carteira).
  */
 export async function entregarDocumentosFiliacao(stakeholderId: string, federacaoId: string): Promise<{ link: string }> {
   const token = crypto.randomBytes(24).toString('base64url')
@@ -131,20 +169,9 @@ export async function entregarDocumentosFiliacao(stakeholderId: string, federaca
     if (await emailDocumentosFiliacao({ email, nome, federacao: fedNome, link })) enviouEmail = true
   }
 
-  let enviouWhats = false
-  const template = process.env.WHATSAPP_TEMPLATE_DOCUMENTOS
-  if (template && atleta?.telefone) {
-    try {
-      const res = await sendTemplate(atleta.telefone, template, [nome.split(' ')[0], link])
-      enviouWhats = !!res && !res.error
-    } catch (err) {
-      console.warn('[registro/federacao] WhatsApp de documentos falhou:', err)
-    }
-  }
-
   await supabaseAdmin
     .from('documentos_entrega')
-    .update({ enviado_email_em: enviouEmail ? agora : null, enviado_whatsapp_em: enviouWhats ? agora : null })
+    .update({ enviado_email_em: enviouEmail ? agora : null })
     .eq('token', token)
   return { link }
 }

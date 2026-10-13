@@ -604,7 +604,7 @@ function RegistroAtletaWizard() {
               <strong className="text-white">{nome}</strong>{' '}
               {resultado?.tipo === 'pago'
                 ? resultado.aprovado
-                  ? `está filiado(a) à ${resultado.federacao}. Certificado, carteira digital e amostra do back number foram enviados por ${canal === 'email' ? 'email' : 'email e WhatsApp'}.`
+                  ? `está filiado(a) à ${resultado.federacao}. Certificado, carteira digital e amostra do back number foram enviados por email${canal === 'email' ? '' : ' (quando houver email do atleta ou do responsável)'}, e também podem ser baixados na conta de aluno do Titan.`
                   : `está registrado(a) e o pagamento da ${resultado.federacao} foi recebido. A federação vai revisar o documento; os documentos são enviados quando ela aprovar.`
                 : resultado?.tipo === 'pagamento_pendente'
                   ? `está registrado(a). A filiação à ${resultado.federacao} (${resultado.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}) aguarda pagamento: abra este registro de novo para pagar.`

@@ -142,7 +142,8 @@ export default async function DocumentosPage({ params }: { params: Promise<{ tok
         )}
 
         <p className="pt-4 text-center text-xs text-slate-500">
-          Estes documentos também ficam no Titan. <Link href="/acesso" className="underline">Entrar</Link>
+          O certificado e a carteira também podem ser baixados na sua conta de aluno do Titan (Portal do Atleta → Perfil e Carteira).{' '}
+          <Link href="/acesso" className="underline">Entrar</Link>
         </p>
       </div>
     </main>

@@ -8,7 +8,7 @@ import {
   createPlan,
   Safe2PayCustomer,
 } from '@/lib/safe2pay'
-import { concluirFiliacaoRegistro, isPedidoRegistroAcademia } from '@/lib/registro/federacao'
+import { ativarFiliacaoPaga } from '@/lib/registro/federacao'
 
 /**
  * POST /api/checkout
@@ -73,6 +73,14 @@ export async function POST(req: NextRequest) {
   let descricaoProduto = descricao || ''
   let referenciaId = referencia_id as string | undefined
   const referenciaIds = referencia_ids as string[] | undefined  // bulk
+
+  // Filiação: o valor vem sempre dos pedidos gravados no servidor, nunca do navegador.
+  if (produto === 'filiacao_atleta') valor = undefined
+  if (produto === 'filiacao_bulk') {
+    const total = await somarPedidosFiliacao(referenciaIds)
+    if (total.error) return NextResponse.json({ error: total.error }, { status: 400 })
+    valor = total.valor
+  }
 
   if (!valor) {
     const resolved = await resolverValor(produto, referencia_id, user.id)
@@ -214,6 +222,20 @@ export async function POST(req: NextRequest) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** Soma de dados_formulario.valor dos pedidos de filiação de um lote (todos pendentes e não pagos). */
+async function somarPedidosFiliacao(ids: string[] | undefined): Promise<{ valor?: number; error?: string }> {
+  if (!ids?.length) return { error: 'referencia_ids obrigatório para filiacao_bulk' }
+  const { data } = await supabaseAdmin
+    .from('filiacao_pedidos')
+    .select('id, status, pago_em, dados_formulario')
+    .in('id', ids)
+  if (!data || data.length !== new Set(ids).size) return { error: 'Pedido de filiação não encontrado' }
+  if (data.some((p) => p.status !== 'PENDENTE' || p.pago_em)) return { error: 'Há pedidos já pagos ou analisados no lote' }
+  const valores = data.map((p) => Number((p.dados_formulario as Record<string, unknown> | null)?.valor))
+  if (valores.some((v) => !Number.isFinite(v) || v <= 0)) return { error: 'Pedido sem valor definido' }
+  return { valor: Math.round(valores.reduce((a, b) => a + b, 0) * 100) / 100 }
+}
+
 async function resolverValor(
   produto: string,
   referenciaId: string | undefined,
@@ -342,16 +364,9 @@ async function processarReferencia(tipo: string, referenciaId: string) {
   switch (tipo) {
     case 'filiacao_atleta':
     case 'filiacao_bulk':
-      // Cartão aprovado na hora não passa pelo processamento do webhook (pagamento já está pago).
-      if (await isPedidoRegistroAcademia(referenciaId)) {
-        await concluirFiliacaoRegistro(referenciaId)
-        break
-      }
-      await supabaseAdmin
-        .from('filiacao_pedidos')
-        .update({ status: 'APROVADO', revisado_em: new Date().toISOString(), observacao: 'Pago online' })
-        .eq('id', referenciaId)
-        .eq('status', 'PENDENTE')
+      // Cartão aprovado na hora: o webhook encontra o pagamento já pago e não processa de novo,
+      // então a filiação é ativada aqui.
+      await ativarFiliacaoPaga(referenciaId)
       break
     case 'event_registration':
       await supabaseAdmin

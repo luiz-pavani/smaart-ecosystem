@@ -267,8 +267,13 @@ export async function emailDocumentosFiliacao(p: DocumentosFiliacaoParams) {
         Ver meus documentos
       </a>
     </p>
+    <p style="margin:0 0 16px;font-size:14px;color:#374151;">
+      O certificado e a carteira também podem ser baixados a qualquer momento na sua conta de aluno do Titan,
+      em <a href="${escapeAttr(BASE_URL)}/portal/atleta/perfil" style="color:#15803d;">Portal do Atleta → Perfil</a>
+      e <a href="${escapeAttr(BASE_URL)}/portal/atleta/carteira" style="color:#15803d;">Carteira</a>.
+    </p>
     <p style="margin:24px 0 0;font-size:13px;color:#6b7280;">
-      Guarde este email: o link vale por 180 dias. Depois disso, os documentos continuam disponíveis no Titan.
+      O link acima vale por 180 dias.
     </p>
   `
   return sendEmail({

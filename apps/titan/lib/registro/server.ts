@@ -51,3 +51,11 @@ export async function carregarFicha(staff: StaffRegistro, fichaId: string) {
   if (!staff.podeEscolherAcademia && ficha.academia_id !== staff.academiaId) return null
   return ficha
 }
+
+/** Lote de registro acessível ao staff (mesma academia, ou qualquer uma para gestor de federação). */
+export async function carregarLote(staff: StaffRegistro, loteId: string) {
+  const { data: lote } = await supabaseAdmin.from('registro_lotes').select('id, academia_id, origem, total_linhas, created_at').eq('id', loteId).maybeSingle()
+  if (!lote) return null
+  if (!staff.podeEscolherAcademia && lote.academia_id !== staff.academiaId) return null
+  return lote
+}

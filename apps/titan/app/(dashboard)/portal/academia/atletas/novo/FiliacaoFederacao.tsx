@@ -267,7 +267,7 @@ export default function FiliacaoFederacao({
                 ['Graduação de judô', true],
                 ['Gênero', !!form.genero],
                 ['CPF ou RG', temCpfOuRg || form.cpf.replace(/\D/g, '').length === 11],
-                ['Foto do atleta', !!estado.foto_url],
+                ['Foto do atleta (recomendada)', !!estado.foto_url],
                 ['Documento verificado', !!estado.documento.verificacao_status],
               ].map(([rotulo, ok]) => (
                 <li key={rotulo as string} className={`flex items-center gap-2 ${ok ? 'text-green-300' : 'text-slate-400'}`}>
@@ -323,7 +323,7 @@ export default function FiliacaoFederacao({
             </div>
           </Secao>
 
-          <Secao titulo="Foto do atleta" descricao="Rosto de frente, fundo claro. Vai na carteira digital.">
+          <Secao titulo="Foto do atleta" descricao="Opcional, mas recomendada: rosto de frente, fundo claro. Vai na carteira digital.">
             <div className="flex items-center gap-4">
               {estado.foto_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
