@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Search, Loader2, Download, X } from 'lucide-react'
+import { ArrowLeft, Search, Loader2, Download, X, UserPlus, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
@@ -80,7 +80,7 @@ export default function AtletasAcademiaPage() {
         const { data: rows, count } = await query.order('nome_completo', { ascending: true }).range(start, end)
         const data = await anexarKyuDan(supabase, rows || [])
 
-        setAtletas(data.map((item: any) => ({
+        setAtletas(data.map((item) => ({
           id: item.stakeholder_id,
           nome_completo: item.nome_completo ?? '',
           graduacao: item.kyu_dan ? `${item.kyu_dan.cor_faixa} | ${item.kyu_dan.kyu_dan}` : null,
@@ -133,7 +133,7 @@ export default function AtletasAcademiaPage() {
       const headers = ['Nome', 'Nome Patch', 'Gênero', 'Nascimento', 'Email', 'Telefone', 'Faixa', 'Kyu/Dan', 'Status Membro', 'Status Plano', 'Validade']
       const csv = [
         headers.join(','),
-        ...data.map((r: any) => [
+        ...data.map((r) => [
           `"${(r.nome_completo || '').replace(/"/g, '""')}"`,
           `"${(r.nome_patch || '').replace(/"/g, '""')}"`,
           `"${(r.genero || '').replace(/"/g, '""')}"`,
@@ -174,7 +174,25 @@ export default function AtletasAcademiaPage() {
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
-          <h1 className="text-3xl font-bold text-white">Meus Atletas</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-3xl font-bold text-white">Meus Atletas</h1>
+            <div className="flex gap-2">
+            <button
+              onClick={() => router.push('/portal/academia/atletas/lote')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-semibold text-sm"
+            >
+              <Users className="w-4 h-4" />
+              Registro em bloco
+            </button>
+            <button
+              onClick={() => router.push('/portal/academia/atletas/novo')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm"
+            >
+              <UserPlus className="w-4 h-4" />
+              Registrar atleta
+            </button>
+            </div>
+          </div>
         </div>
       </div>
 

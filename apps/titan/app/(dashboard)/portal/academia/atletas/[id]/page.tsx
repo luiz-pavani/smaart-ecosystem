@@ -175,7 +175,7 @@ export default function AtletaAcademiaDetailPage() {
                 )}
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-white mb-1">{atleta.nome_completo || '—'}</h2>
-                  {atleta.nome_patch && <p className="text-gray-400 text-sm mb-3">"{atleta.nome_patch}"</p>}
+                  {atleta.nome_patch && <p className="text-gray-400 text-sm mb-3">&ldquo;{atleta.nome_patch}&rdquo;</p>}
                   <div className="flex flex-wrap gap-2">
                     {kyuDan && (
                       <span className="px-3 py-1 rounded-full text-xs font-medium border bg-blue-500/20 text-blue-300 border-blue-500/30">

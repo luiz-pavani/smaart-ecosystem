@@ -13,6 +13,7 @@
     "test:smoke": "playwright test --reporter=line"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "@hookform/resolvers": "^5.2.2",
     "@next-auth/supabase-adapter": "^0.2.1",
     "@react-pdf/renderer": "^4.3.2",

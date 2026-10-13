@@ -211,6 +211,78 @@ export async function emailResetSenha(p: ResetSenhaParams) {
   })
 }
 
+interface AtivacaoContaParams {
+  email: string
+  nome: string
+  academia: string
+  linkAtivacao: string
+}
+
+/** Atleta registrado pela academia: convite para criar a própria senha. */
+export async function emailAtivacaoConta(p: AtivacaoContaParams) {
+  const body = `
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">
+      Olá <strong>${escapeHtml(p.nome)}</strong>, você foi registrado(a) no Titan pela academia <strong>${escapeHtml(p.academia)}</strong>.
+    </p>
+    <p style="margin:0 0 24px;font-size:14px;color:#374151;">
+      Seu acesso é este email. Clique no botão abaixo para criar sua senha. O link é válido por <strong>1 hora</strong>.
+    </p>
+    <p style="margin:24px 0;">
+      <a href="${escapeAttr(p.linkAtivacao)}" style="display:inline-block;background:#15803d;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;">
+        Criar minha senha
+      </a>
+    </p>
+    <p style="margin:24px 0 0;font-size:13px;color:#6b7280;">
+      Se o link expirar, use “Esqueci minha senha” em ${escapeHtml(BASE_URL)}/acesso com este email.
+    </p>
+  `
+  return sendEmail({
+    to: p.email,
+    subject: 'Ative sua conta — Titan',
+    html: baseLayout('Bem-vindo(a) ao Titan', body),
+  })
+}
+
+interface DocumentosFiliacaoParams {
+  email: string
+  nome: string
+  federacao: string
+  link: string
+}
+
+/** Filiação concluída: link com certificado, carteira digital e amostra do back number. */
+export async function emailDocumentosFiliacao(p: DocumentosFiliacaoParams) {
+  const body = `
+    <p style="margin:0 0 16px;font-size:15px;color:#374151;">
+      Olá <strong>${escapeHtml(p.nome)}</strong>, sua filiação à <strong>${escapeHtml(p.federacao)}</strong> está ativa.
+    </p>
+    <p style="margin:0 0 8px;font-size:14px;color:#374151;">No link abaixo estão:</p>
+    <ul style="margin:0 0 24px;padding-left:20px;font-size:14px;color:#374151;">
+      <li>o certificado de graduação;</li>
+      <li>a carteira digital de atleta;</li>
+      <li>uma amostra do seu back number, que será produzido e entregue depois.</li>
+    </ul>
+    <p style="margin:24px 0;">
+      <a href="${escapeAttr(p.link)}" style="display:inline-block;background:#15803d;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;">
+        Ver meus documentos
+      </a>
+    </p>
+    <p style="margin:0 0 16px;font-size:14px;color:#374151;">
+      O certificado e a carteira também podem ser baixados a qualquer momento na sua conta de aluno do Titan,
+      em <a href="${escapeAttr(BASE_URL)}/portal/atleta/perfil" style="color:#15803d;">Portal do Atleta → Perfil</a>
+      e <a href="${escapeAttr(BASE_URL)}/portal/atleta/carteira" style="color:#15803d;">Carteira</a>.
+    </p>
+    <p style="margin:24px 0 0;font-size:13px;color:#6b7280;">
+      O link acima vale por 180 dias.
+    </p>
+  `
+  return sendEmail({
+    to: p.email,
+    subject: `Filiação ativa — ${p.federacao}`,
+    html: baseLayout('Seus documentos de atleta', body),
+  })
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function escapeHtml(s: string): string {
