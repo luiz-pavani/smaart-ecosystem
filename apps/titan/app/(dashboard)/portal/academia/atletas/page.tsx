@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Search, Loader2, Download, X } from 'lucide-react'
+import { ArrowLeft, Search, Loader2, Download, X, UserPlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { resolveAcademiaId } from '@/lib/portal/resolveAcademiaId'
@@ -174,7 +174,16 @@ export default function AtletasAcademiaPage() {
             <ArrowLeft className="w-5 h-5" />
             Voltar
           </button>
-          <h1 className="text-3xl font-bold text-white">Meus Atletas</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-3xl font-bold text-white">Meus Atletas</h1>
+            <button
+              onClick={() => router.push('/portal/academia/atletas/novo')}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm"
+            >
+              <UserPlus className="w-4 h-4" />
+              Registrar atleta
+            </button>
+          </div>
         </div>
       </div>
 
