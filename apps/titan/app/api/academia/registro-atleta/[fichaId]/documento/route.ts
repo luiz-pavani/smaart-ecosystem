@@ -28,10 +28,11 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   if (tipo === 'foto') {
     if (file.type === 'application/pdf') return NextResponse.json({ error: 'A foto precisa ser uma imagem' }, { status: 400 })
-    const arq = await prepararArquivo(file, 900)
+    const arq = await prepararArquivo(file)
     if ('erro' in arq) return NextResponse.json({ error: arq.erro }, { status: 400 })
-    const path = `fotos/${ficha.stakeholder_id}/foto_${Date.now()}.jpg`
-    const { error: upErr } = await supabaseAdmin.storage.from('atletas').upload(path, arq.bytes, { contentType: 'image/jpeg', upsert: true })
+    const ext = arq.mediaType.split('/')[1].replace('jpeg', 'jpg')
+    const path = `fotos/${ficha.stakeholder_id}/foto_${Date.now()}.${ext}`
+    const { error: upErr } = await supabaseAdmin.storage.from('atletas').upload(path, arq.bytes, { contentType: arq.mediaType, upsert: true })
     if (upErr) return NextResponse.json({ error: `Erro no upload: ${upErr.message}` }, { status: 500 })
     const url = supabaseAdmin.storage.from('atletas').getPublicUrl(path).data.publicUrl
     await supabaseAdmin.from('academia_atleta_fichas').update({ foto_url: url, updated_at: new Date().toISOString() }).eq('id', ficha.id)

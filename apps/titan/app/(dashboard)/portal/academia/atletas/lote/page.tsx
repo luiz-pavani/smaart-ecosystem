@@ -15,6 +15,7 @@ import {
   COLUNAS_MODELO, LINHA_VAZIA, MAX_LINHAS_LOTE, linhasDaPlanilha, montarLinha, validarLinha,
   type GraduacaoOpcao, type LinhaLote,
 } from '@/lib/registro/lote'
+import { prepararImagemUpload } from '@/lib/registro/imagem-cliente'
 import CheckoutModal, { type CheckoutCustomer } from '@/components/checkout/CheckoutModal'
 import { Secao, inputCls } from '../novo/ui'
 
@@ -55,20 +56,6 @@ const ETAPAS: { id: Etapa; titulo: string }[] = [
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const cell = 'bg-white/5 border border-white/10 rounded px-2 py-1 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500'
 
-async function reduzirImagem(file: File, lado = 2400): Promise<Blob> {
-  if (!file.type.startsWith('image/') || file.size < 1.5 * 1024 * 1024) return file
-  try {
-    const bmp = await createImageBitmap(file)
-    const k = Math.min(1, lado / Math.max(bmp.width, bmp.height))
-    const c = document.createElement('canvas')
-    c.width = Math.round(bmp.width * k)
-    c.height = Math.round(bmp.height * k)
-    c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height)
-    return await new Promise<Blob>((res) => c.toBlob((b) => res(b ?? file), 'image/jpeg', 0.9))
-  } catch {
-    return file
-  }
-}
 
 function sugestaoNomePatch(nome: string) {
   const p = nome.trim().toUpperCase().split(/\s+/)
@@ -197,7 +184,7 @@ function RegistroLote() {
       for (const [i, f] of Array.from(files).entries()) {
         setOcupado(`Lendo foto ${i + 1} de ${files.length}…`)
         const corpo = new FormData()
-        corpo.append('file', f.type === 'application/pdf' ? f : await reduzirImagem(f), f.name)
+        corpo.append('file', await prepararImagemUpload(f, 2400), f.name)
         const res = await fetch('/api/academia/registro-atleta/lote/extrair', { method: 'POST', body: corpo })
         const json = await res.json().catch(() => ({}))
         if (!res.ok) { avisos.push(`${f.name}: ${json.error || 'falha na leitura'}`); continue }
@@ -284,7 +271,7 @@ function RegistroLote() {
     for (const [i, f] of Array.from(files).entries()) {
       setOcupado(fichaId ? 'Verificando o documento…' : `Verificando documento ${i + 1} de ${files.length}…`)
       const corpo = new FormData()
-      corpo.append('file', f.type === 'application/pdf' ? f : await reduzirImagem(f, 2000), f.name)
+      corpo.append('file', await prepararImagemUpload(f, 2000), f.name)
       if (fichaId) corpo.append('ficha_id', fichaId)
       const res = await fetch(`/api/academia/registro-atleta/lote/${loteId}/documentos`, { method: 'POST', body: corpo })
       const j = await res.json().catch(() => ({}))

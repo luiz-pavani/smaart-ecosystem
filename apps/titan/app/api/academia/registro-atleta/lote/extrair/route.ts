@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   const file = (await req.formData()).get('file')
   if (!(file instanceof File)) return NextResponse.json({ error: 'Envie a foto da planilha' }, { status: 400 })
-  const arq = await prepararArquivo(file, 2400)
+  const arq = await prepararArquivo(file)
   if ('erro' in arq) return NextResponse.json({ error: arq.erro }, { status: 400 })
 
   const { data: graduacoes } = await supabaseAdmin.from('kyu_dan').select('id, cor_faixa, kyu_dan').eq('ativo', true).neq('id', 24).order('ordem')

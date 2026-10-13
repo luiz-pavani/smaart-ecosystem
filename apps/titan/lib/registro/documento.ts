@@ -1,24 +1,24 @@
-import sharp from 'sharp'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { avaliarDocumento, extrairDocumento, type ResultadoExtracao, type ResultadoVerificacao } from '@/lib/registro/verificacao-documento'
 
 /** Limite do corpo de requisição nas funções da Vercel (~4,5 MB); o navegador reduz as fotos antes de enviar. */
 export const MAX_BYTES_UPLOAD = 4.4 * 1024 * 1024
 
-export interface ArquivoDocumento { bytes: Buffer; mediaType: 'image/jpeg' | 'application/pdf' }
+export type MidiaDocumento = 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf'
+export interface ArquivoDocumento { bytes: Buffer; mediaType: MidiaDocumento }
 
-/** Imagens: orientação EXIF, até `lado` px, JPEG (converte HEIC quando o sharp suporta). PDF passa direto. */
-export async function prepararArquivo(file: File, lado = 2000): Promise<ArquivoDocumento | { erro: string }> {
+const ACEITOS: MidiaDocumento[] = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+
+/**
+ * Valida tipo e tamanho. O navegador já reduz e converte as fotos para JPEG antes do envio
+ * (sem processamento de imagem no servidor: o sharp não carrega no runtime da Vercel).
+ */
+export async function prepararArquivo(file: File): Promise<ArquivoDocumento | { erro: string }> {
   if (file.size === 0) return { erro: 'Arquivo vazio' }
   if (file.size > MAX_BYTES_UPLOAD) return { erro: 'Arquivo acima de 4 MB. Envie uma foto menor ou um PDF mais leve.' }
-  const bruto = Buffer.from(await file.arrayBuffer())
-  if (file.type === 'application/pdf') return { bytes: bruto, mediaType: 'application/pdf' }
-  try {
-    const bytes = await sharp(bruto).rotate().resize(lado, lado, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer()
-    return { bytes, mediaType: 'image/jpeg' }
-  } catch {
-    return { erro: 'Formato não suportado. Use foto (JPG/PNG) ou PDF.' }
-  }
+  const tipo = file.type as MidiaDocumento
+  if (!ACEITOS.includes(tipo)) return { erro: 'Formato não suportado. Envie foto em JPG ou PNG, ou um PDF.' }
+  return { bytes: Buffer.from(await file.arrayBuffer()), mediaType: tipo }
 }
 
 /** Ficha como lida de academia_atleta_fichas (select *). */
@@ -33,7 +33,7 @@ export async function salvarDocumentoFicha(
   arquivo: ArquivoDocumento,
   extraido?: ResultadoExtracao
 ): Promise<{ resultado: ResultadoVerificacao } | { erro: string }> {
-  const ext = arquivo.mediaType === 'application/pdf' ? 'pdf' : 'jpg'
+  const ext = { 'application/pdf': 'pdf', 'image/png': 'png', 'image/webp': 'webp', 'image/jpeg': 'jpg' }[arquivo.mediaType]
   const path = `${ficha.stakeholder_id}/documento_${Date.now()}.${ext}`
   const { error: upErr } = await supabaseAdmin.storage
     .from('documentos-identidade')

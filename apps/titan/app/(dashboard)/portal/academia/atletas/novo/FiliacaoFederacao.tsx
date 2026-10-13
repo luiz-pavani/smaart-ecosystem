@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Camera, CheckCircle2, CreditCard, FileSearch, Loader2, ShieldCheck, Upload, XCircle } from 'lucide-react'
+import { prepararImagemUpload } from '@/lib/registro/imagem-cliente'
 import CheckoutModal, { type CheckoutCustomer } from '@/components/checkout/CheckoutModal'
 import { Campo, Secao, inputCls } from './ui'
 
@@ -29,21 +30,6 @@ export type ResultadoFederacao =
 const ROTULO_CAMPO: Record<Comparacao['campo'], string> = { nome: 'Nome', data_nascimento: 'Nascimento', cpf: 'CPF', rg: 'RG' }
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-/** Reduz fotos grandes no navegador antes do upload (limite de ~4,5 MB por requisição na Vercel). */
-async function reduzirImagem(file: File, lado = 2000): Promise<Blob> {
-  if (!file.type.startsWith('image/') || file.size < 1.5 * 1024 * 1024) return file
-  try {
-    const bitmap = await createImageBitmap(file)
-    const k = Math.min(1, lado / Math.max(bitmap.width, bitmap.height))
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.round(bitmap.width * k)
-    canvas.height = Math.round(bitmap.height * k)
-    canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-    return await new Promise<Blob>((res) => canvas.toBlob((b) => res(b ?? file), 'image/jpeg', 0.9))
-  } catch {
-    return file // formato que o navegador não decodifica (ex.: HEIC no Chrome): o servidor tenta converter
-  }
-}
 
 function sugestaoNomePatch(nome: string) {
   const partes = nome.trim().toUpperCase().split(/\s+/)
@@ -107,7 +93,7 @@ export default function FiliacaoFederacao({
     try {
       const corpo = new FormData()
       corpo.append('tipo', tipo)
-      const blob = file.type === 'application/pdf' ? file : await reduzirImagem(file, tipo === 'foto' ? 1200 : 2000)
+      const blob = await prepararImagemUpload(file, tipo === 'foto' ? 1200 : 2000)
       corpo.append('file', blob, file.name)
       const res = await fetch(`/api/academia/registro-atleta/${fichaId}/documento`, { method: 'POST', body: corpo })
       const json = await res.json().catch(() => ({}))
